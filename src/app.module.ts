@@ -1,31 +1,37 @@
+import { validateEnv } from '@Configs/env.config';
+import { DISCORD_BOT_PROVIDERS } from '@Modules/discord_bot/discord-bot.config';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { IntentsBitField } from 'discord.js';
-import { NecordModule } from 'necord';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { BotModule } from './bot/bot.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: (config) => validateEnv(config),
     }),
-    NecordModule.forRootAsync({
-      imports: [ConfigModule],
+    TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
-        token: configService.get<string>('DISCORD_BOT_TOKEN')!,
-        intents: [
-          IntentsBitField.Flags.Guilds,
-          IntentsBitField.Flags.GuildMessages,
-          IntentsBitField.Flags.MessageContent,
+        type: 'postgres',
+        host: configService.get<string>('POSTGRES_HOST')!,
+        port: configService.get<number>('POSTGRES_PORT')!,
+        username: configService.get<string>('POSTGRES_USER')!,
+        password: configService.get<string>('POSTGRES_PASSWORD')!,
+        database: configService.get<string>('POSTGRES_DB')!,
+        entities: [
+          join(__dirname, 'database', 'entities', '**/*.entity.{ts,js}'),
         ],
+        synchronize: false,
+        extra: {
+          options: '-c timezone=UTC',
+        },
       }),
       inject: [ConfigService],
     }),
-    BotModule,
+    ...DISCORD_BOT_PROVIDERS,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

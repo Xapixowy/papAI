@@ -20,6 +20,17 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@Configs/*": ["src/configs/*"],
+      "@Database/*": ["src/database/*"],
+      "@Entities/*": ["src/database/entities/*"],
+      "@Enums/*": ["src/enums/*"],
+      "@Models/*": ["src/models/*"],
+      "@Modules/*": ["src/modules/*"],
+      "@DiscordBot/*": ["src/modules/discord_bot/*"],
+      "@Services/*": ["src/services/*"],
+      "@Utils/*": ["src/utils/*"]
+    }
   }
 }
