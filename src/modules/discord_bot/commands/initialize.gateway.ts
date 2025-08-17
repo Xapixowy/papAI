@@ -1,8 +1,9 @@
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
-import { DiscordUserService } from '@Services/discord-user.service';
-import { GatewayIntentBits } from 'discord.js';
+import { DiscordSettingsService } from '@Services/discord-settings.service';
+import { DiscordUsersService } from '@Services/discord-users.service';
+import { GatewayIntentBits, MessageFlags } from 'discord.js';
 import { Context, SlashCommand, type SlashCommandContext } from 'necord';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { EmbedBuilderService } from '../services/embed-builder.service';
@@ -10,7 +11,10 @@ import { BaseCommand } from './base-command';
 
 @Injectable()
 export class InitializeGateway extends BaseCommand {
-  constructor(private readonly discordUserService: DiscordUserService) {
+  constructor(
+    private readonly discordUsersService: DiscordUsersService,
+    private readonly discordSettingsService: DiscordSettingsService,
+  ) {
     super();
   }
 
@@ -30,7 +34,7 @@ export class InitializeGateway extends BaseCommand {
   public async onInitializeCommand(
     @Context() [interaction]: SlashCommandContext,
   ) {
-    const superAdminUsers = await this.discordUserService.findAllByRoles([
+    const superAdminUsers = await this.discordUsersService.findAllByRoles([
       DiscordUserRole.SUPER_ADMIN,
     ]);
 
@@ -47,7 +51,7 @@ export class InitializeGateway extends BaseCommand {
       });
     }
 
-    const newSuperAdminUser = await this.discordUserService.create({
+    const newSuperAdminUser = await this.discordUsersService.create({
       userId: interaction.user.id,
       username: interaction.user.username,
       roles: [DiscordUserRole.SUPER_ADMIN],
@@ -63,11 +67,11 @@ export class InitializeGateway extends BaseCommand {
         roles: [DiscordUserRole.SUPER_ADMIN],
       });
 
-      await this.discordUserService.update(newSuperAdminUserDto);
+      await this.discordUsersService.update(newSuperAdminUserDto);
     }
 
     return interaction.reply({
-      ephemeral: true,
+      flags: [MessageFlags.Ephemeral],
       embeds: [
         EmbedBuilderService.simpleSuccess({
           message: `Bot is now initialized. The user who executes this command will become the SuperAdmin.`,
@@ -75,6 +79,30 @@ export class InitializeGateway extends BaseCommand {
           interaction,
         }),
       ],
+    });
+  }
+
+  @SlashCommand({
+    name: 'test',
+    description: 'Test',
+  })
+  public async onTestCommand(@Context() [interaction]: SlashCommandContext) {
+    const settings = {
+      string: await this.discordSettingsService.getValueByKey('test1'),
+      number: await this.discordSettingsService.getValueByKey('test2'),
+      boolean: await this.discordSettingsService.getValueByKey('test3'),
+      array: await this.discordSettingsService.getValueByKey('test4'),
+      json: await this.discordSettingsService.getValueByKey('test5'),
+    };
+
+    for (const [key, value] of Object.entries(settings)) {
+      if (value.isErr()) continue;
+      console.log(key, value.value);
+    }
+
+    return interaction.reply({
+      flags: [MessageFlags.Ephemeral],
+      content: 'Test',
     });
   }
 }

@@ -8,7 +8,7 @@ import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class DiscordUserService {
+export class DiscordUsersService {
   constructor(
     @InjectRepository(DiscordUser)
     private readonly repository: Repository<DiscordUser>,
