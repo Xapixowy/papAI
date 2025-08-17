@@ -38,21 +38,20 @@ export class DiscordSettingsService {
     value: unknown,
     type: DiscordSettingType = this.detectType(value),
   ): Promise<Result<DiscordSetting, ErrorCode>> {
-    const existing = await this.repository.findOne({
-      where: { key },
-    });
-    if (existing) {
+    const existingSetting = await this.findByKey(key);
+
+    if (existingSetting.isOk()) {
       return err(ErrorCode.DISCORD_SETTING_EXISTS);
     }
 
-    const entity = this.repository.create({
+    const newSetting = this.repository.create({
       key,
       type,
       value,
     });
 
-    const saved = await this.repository.save(entity);
-    return ok(saved);
+    const savedSetting = await this.repository.save(newSetting);
+    return ok(savedSetting);
   }
 
   async update(
@@ -60,18 +59,18 @@ export class DiscordSettingsService {
     value: unknown,
     type: DiscordSettingType = this.detectType(value),
   ): Promise<Result<DiscordSetting, ErrorCode>> {
-    const entity = await this.findByKey(key);
-    if (!entity) {
-      return err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
+    const existingSetting = await this.findByKey(key);
+
+    if (existingSetting.isErr()) {
+      return existingSetting;
     }
 
-    const updated = await this.repository.save({
-      ...entity,
-      value,
-      type,
-    });
+    const settingToUpdate = existingSetting.value;
+    settingToUpdate.value = value;
+    settingToUpdate.type = type;
 
-    return ok(updated);
+    const updatedSetting = await this.repository.save(settingToUpdate);
+    return ok(updatedSetting);
   }
 
   async deleteById(id: string): Promise<Result<void, ErrorCode>> {
