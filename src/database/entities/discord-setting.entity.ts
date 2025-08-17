@@ -1,4 +1,4 @@
-import { DiscordSettingType } from '@Enums/discord-setting.type.enum';
+import { DiscordSettingType } from '@Enums/discord-setting-type.enum';
 import {
   Column,
   CreateDateColumn,

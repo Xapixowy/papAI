@@ -2,7 +2,8 @@ import { DynamicModule, Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ColorResolvable, GatewayIntentBits } from 'discord.js';
 import { NecordModule } from 'necord';
-import { InitializeCommandsService } from './commands/initialize-commands.service';
+import { BotCommandsService } from './commands/bot-commands.service';
+import { ChatgptCommandsService } from './commands/chatgpt-commands.service';
 import { DiscordBotModule } from './discord-bot.module';
 
 export const DISCORD_BOT_CONFIG: {
@@ -24,7 +25,8 @@ export const DISCORD_BOT_CONFIG: {
 };
 
 export const DISCORD_BOT_INTENTS: GatewayIntentBits[] = [
-  ...InitializeCommandsService.botIntents,
+  ...BotCommandsService.botIntents,
+  ...ChatgptCommandsService.botIntents,
 ];
 
 export const DISCORD_BOT_PROVIDERS: (DynamicModule | Type<DiscordBotModule>)[] =

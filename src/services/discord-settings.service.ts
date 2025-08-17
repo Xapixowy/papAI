@@ -1,5 +1,6 @@
 import { DiscordSetting } from '@Database/entities/discord-setting.entity';
-import { DiscordSettingType } from '@Enums/discord-setting.type.enum';
+import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
+import { DiscordSettingType } from '@Enums/discord-setting-type.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,18 +19,22 @@ export class DiscordSettingsService {
     return entity ? ok(entity) : err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
   }
 
-  async findByKey(key: string): Promise<Result<DiscordSetting, ErrorCode>> {
+  async findByKey(
+    key: DiscordSettingKey,
+  ): Promise<Result<DiscordSetting, ErrorCode>> {
     const entity = await this.repository.findOne({ where: { key } });
     return entity ? ok(entity) : err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
   }
 
-  async getValueByKey<T = unknown>(key: string): Promise<Result<T, ErrorCode>> {
+  async getValueByKey<T = unknown>(
+    key: DiscordSettingKey,
+  ): Promise<Result<T, ErrorCode>> {
     const res = await this.findByKey(key);
     return res.map((s) => s.value as T);
   }
 
   async create(
-    key: string,
+    key: DiscordSettingKey,
     value: unknown,
     type: DiscordSettingType = this.detectType(value),
   ): Promise<Result<DiscordSetting, ErrorCode>> {
@@ -51,7 +56,7 @@ export class DiscordSettingsService {
   }
 
   async update(
-    key: string,
+    key: DiscordSettingKey,
     value: unknown,
     type: DiscordSettingType = this.detectType(value),
   ): Promise<Result<DiscordSetting, ErrorCode>> {
@@ -76,7 +81,7 @@ export class DiscordSettingsService {
       : err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
   }
 
-  async deleteByKey(key: string): Promise<Result<void, ErrorCode>> {
+  async deleteByKey(key: DiscordSettingKey): Promise<Result<void, ErrorCode>> {
     const result = await this.repository.delete({ key });
     return result.affected && result.affected > 0
       ? ok(undefined)
@@ -84,7 +89,7 @@ export class DiscordSettingsService {
   }
 
   async set(
-    key: string,
+    key: DiscordSettingKey,
     value: unknown,
     type: DiscordSettingType = this.detectType(value),
   ): Promise<Result<DiscordSetting, ErrorCode>> {
@@ -109,15 +114,5 @@ export class DiscordSettingsService {
       default:
         return DiscordSettingType.JSON;
     }
-  }
-
-  private validate(type: DiscordSettingType, value: unknown): boolean {
-    if (type === DiscordSettingType.ARRAY) return Array.isArray(value);
-    if (type === DiscordSettingType.STRING) return typeof value === 'string';
-    if (type === DiscordSettingType.NUMBER)
-      return typeof value === 'number' && Number.isFinite(value);
-    if (type === DiscordSettingType.BOOLEAN) return typeof value === 'boolean';
-    if (type === DiscordSettingType.JSON) return typeof value === 'object';
-    return false;
   }
 }

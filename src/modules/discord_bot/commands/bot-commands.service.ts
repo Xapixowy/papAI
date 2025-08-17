@@ -1,23 +1,35 @@
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable, UseGuards } from '@nestjs/common';
-import { DiscordSettingsService } from '@Services/discord-settings.service';
 import { DiscordUsersService } from '@Services/discord-users.service';
-import { GatewayIntentBits, MessageFlags } from 'discord.js';
-import { Context, SlashCommand, type SlashCommandContext } from 'necord';
+import {
+  GatewayIntentBits,
+  InteractionResponse,
+  MessageFlags,
+} from 'discord.js';
+import {
+  Context,
+  createCommandGroupDecorator,
+  SlashCommand,
+  Subcommand,
+  type SlashCommandContext,
+} from 'necord';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { RequiresDiscordUserRole } from '../decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '../guards/discord-user-role.guard';
 import { EmbedBuilderService } from '../services/embed-builder.service';
 import { BaseCommandsService } from './base-commands-service';
 
+const BotCommandDecorator = createCommandGroupDecorator({
+  name: 'bot',
+  description: 'Bot commands',
+});
+
 @Injectable()
 @UseGuards(DiscordUserRoleGuard)
-export class InitializeCommandsService extends BaseCommandsService {
-  constructor(
-    private readonly discordUsersService: DiscordUsersService,
-    private readonly discordSettingsService: DiscordSettingsService,
-  ) {
+@BotCommandDecorator()
+export class BotCommandsService extends BaseCommandsService {
+  constructor(private readonly discordUsersService: DiscordUsersService) {
     super();
   }
 
@@ -29,14 +41,14 @@ export class InitializeCommandsService extends BaseCommandsService {
     return 'Bot initialization';
   }
 
-  @SlashCommand({
+  @Subcommand({
     name: 'initialize',
     description:
       'Initialize the bot (the user who executes this command will become the SuperAdmin)',
   })
   public async onInitializeCommand(
     @Context() [interaction]: SlashCommandContext,
-  ) {
+  ): Promise<InteractionResponse<boolean>> {
     const superAdminUsers = await this.discordUsersService.findAllByRoles([
       DiscordUserRole.SUPER_ADMIN,
     ]);
@@ -47,7 +59,7 @@ export class InitializeCommandsService extends BaseCommandsService {
         embeds: [
           EmbedBuilderService.simpleError({
             message: 'Bot is already initialized.',
-            title: InitializeCommandsService.embedTitle,
+            title: BotCommandsService.embedTitle,
             interaction,
           }),
         ],
@@ -78,7 +90,7 @@ export class InitializeCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           message: `Bot is now initialized. The user who executes this command will become the SuperAdmin.`,
-          title: InitializeCommandsService.embedTitle,
+          title: BotCommandsService.embedTitle,
           interaction,
         }),
       ],
@@ -90,20 +102,9 @@ export class InitializeCommandsService extends BaseCommandsService {
     description: 'Test',
   })
   @RequiresDiscordUserRole(DiscordUserRole.SUPER_ADMIN)
-  public async onTestCommand(@Context() [interaction]: SlashCommandContext) {
-    const settings = {
-      string: await this.discordSettingsService.deleteByKey('test1'),
-      number: await this.discordSettingsService.deleteByKey('test2'),
-      boolean: await this.discordSettingsService.deleteByKey('test3'),
-      array: await this.discordSettingsService.deleteByKey('test4'),
-      json: await this.discordSettingsService.deleteByKey('test5'),
-    };
-
-    for (const [key, value] of Object.entries(settings)) {
-      if (value.isErr()) continue;
-      console.log(key, value.value);
-    }
-
+  public async onTestCommand(
+    @Context() [interaction]: SlashCommandContext,
+  ): Promise<InteractionResponse<boolean>> {
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
       content: 'Test',
