@@ -1,6 +1,6 @@
 import { GatewayIntentBits } from 'discord.js';
 
-export abstract class BaseCommand {
+export abstract class BaseCommandsService {
   static get botIntents(): GatewayIntentBits[] {
     throw new Error('Must be implemented in subclass');
   }
