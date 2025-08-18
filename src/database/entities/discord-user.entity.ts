@@ -3,9 +3,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { DiscordChatgptTransactionSummary } from './discord-chatgpt-transaction-summary.entity';
+import { DiscordChatgptTransaction } from './discord-chatgpt-transaction.entity';
 
 @Entity('discord_users')
 export class DiscordUser {
@@ -25,6 +28,12 @@ export class DiscordUser {
     array: true,
   })
   roles: DiscordUserRole[];
+
+  @OneToMany(() => DiscordChatgptTransaction, (t) => t.discordUser)
+  chatgptTransactions: DiscordChatgptTransaction[];
+
+  @OneToMany(() => DiscordChatgptTransactionSummary, (s) => s.discordUser)
+  chatgptTransactionSummaries: DiscordChatgptTransactionSummary[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

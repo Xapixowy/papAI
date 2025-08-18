@@ -1,3 +1,4 @@
+import { EnvKey } from '@Enums/env-key.enum';
 import { DynamicModule, Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ColorResolvable, GatewayIntentBits } from 'discord.js';
@@ -33,10 +34,10 @@ export const DISCORD_BOT_PROVIDERS: (DynamicModule | Type<DiscordBotModule>)[] =
   [
     NecordModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
-        token: configService.get<string>('DISCORD_BOT_TOKEN')!,
+        token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
         intents: DISCORD_BOT_INTENTS,
         development: [
-          configService.get<string>('DISCORD_BOT_DEVELOPMENT_GUILD_ID')!,
+          configService.get<string>(EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID)!,
         ],
       }),
       inject: [ConfigService],

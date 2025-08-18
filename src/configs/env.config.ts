@@ -1,15 +1,17 @@
+import { EnvKey } from '@Enums/env-key.enum';
 import { z } from 'zod';
 
 const envSchema = z.object({
-  APP_PORT: z.coerce.number().int().positive(),
-  DISCORD_BOT_TOKEN: z.string(),
-  DISCORD_BOT_DEVELOPMENT_GUILD_ID: z.string(),
-  GEMINI_API_KEY: z.string(),
-  POSTGRES_HOST: z.string(),
-  POSTGRES_PORT: z.coerce.number().int().positive(),
-  POSTGRES_DB: z.string(),
-  POSTGRES_USER: z.string(),
-  POSTGRES_PASSWORD: z.string(),
+  [EnvKey.APP_PORT]: z.coerce.number().int().positive(),
+  [EnvKey.APP_TIMEZONE]: z.string(),
+  [EnvKey.DISCORD_BOT_TOKEN]: z.string(),
+  [EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID]: z.string(),
+  [EnvKey.GEMINI_API_KEY]: z.string(),
+  [EnvKey.POSTGRES_HOST]: z.string(),
+  [EnvKey.POSTGRES_PORT]: z.coerce.number().int().positive(),
+  [EnvKey.POSTGRES_DB]: z.string(),
+  [EnvKey.POSTGRES_USER]: z.string(),
+  [EnvKey.POSTGRES_PASSWORD]: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

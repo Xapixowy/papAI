@@ -7,5 +7,5 @@ export class PriceOption {
     required: true,
     min_value: 0.01,
   })
-  price: string;
+  price: number;
 }

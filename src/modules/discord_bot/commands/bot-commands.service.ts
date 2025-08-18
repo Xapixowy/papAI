@@ -3,6 +3,7 @@ import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import {
+  Client,
   GatewayIntentBits,
   InteractionResponse,
   MessageFlags,
@@ -29,7 +30,10 @@ const BotCommandDecorator = createCommandGroupDecorator({
 @UseGuards(DiscordUserRoleGuard)
 @BotCommandDecorator()
 export class BotCommandsService extends BaseCommandsService {
-  constructor(private readonly discordUsersService: DiscordUsersService) {
+  constructor(
+    private readonly discordUsersService: DiscordUsersService,
+    private readonly client: Client,
+  ) {
     super();
   }
 
@@ -60,7 +64,7 @@ export class BotCommandsService extends BaseCommandsService {
           EmbedBuilderService.simpleError({
             message: 'Bot is already initialized.',
             title: BotCommandsService.embedTitle,
-            interaction,
+            client: this.client,
           }),
         ],
       });
@@ -91,7 +95,7 @@ export class BotCommandsService extends BaseCommandsService {
         EmbedBuilderService.simpleSuccess({
           message: `Bot is now initialized. The user who executes this command will become the SuperAdmin.`,
           title: BotCommandsService.embedTitle,
-          interaction,
+          client: this.client,
         }),
       ],
     });

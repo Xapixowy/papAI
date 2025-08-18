@@ -2,8 +2,13 @@ import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DiscordUsersService } from '@Services/discord-users.service';
-import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import { SlashCommandContext } from 'necord';
+import {
+  ChatInputCommandInteraction,
+  Client,
+  MessageFlags,
+  StringSelectMenuInteraction,
+} from 'discord.js';
+import { SlashCommandContext, StringSelectContext } from 'necord';
 import { REQUIRES_DISCORD_USER_ROLE } from '../decorators/requires-discord-user-role.decorator';
 import { EmbedBuilderService } from '../services/embed-builder.service';
 
@@ -12,6 +17,7 @@ export class DiscordUserRoleGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly discordUsersService: DiscordUsersService,
+    private readonly client: Client,
   ) {}
 
   static get embedTitle(): string {
@@ -28,21 +34,21 @@ export class DiscordUserRoleGuard implements CanActivate {
       return true;
     }
 
-    const discordCommandInteraction =
-      this.getDiscordChatInputCommandInteraction(context);
+    const discordInteraction = this.getDiscordInteraction(context);
 
-    if (!discordCommandInteraction) {
+    if (!discordInteraction) {
       return false;
     }
 
     const discordUser = await this.discordUsersService.findByUserId(
-      discordCommandInteraction.user.id,
+      discordInteraction.user.id,
     );
 
     if (discordUser.isErr()) {
       return this.forbidWithMessage(
         'User not found.',
-        discordCommandInteraction,
+        discordInteraction,
+        this.client,
       );
     }
 
@@ -65,23 +71,26 @@ export class DiscordUserRoleGuard implements CanActivate {
       ? true
       : await this.forbidWithMessage(
           'You do not have permission to do this.',
-          discordCommandInteraction,
+          discordInteraction,
+          this.client,
         );
   }
 
-  private getDiscordChatInputCommandInteraction(
+  private getDiscordInteraction(
     context: ExecutionContext,
-  ): ChatInputCommandInteraction | null {
+  ): ChatInputCommandInteraction | StringSelectMenuInteraction | null {
     const args = context.getArgs() ?? [];
 
     if (!args.length) {
       return null;
     }
 
-    const commandContext = args[0] as SlashCommandContext;
+    const commandContext = args[0] as SlashCommandContext | StringSelectContext;
 
     const interaction = commandContext.find(
-      (arg) => arg instanceof ChatInputCommandInteraction,
+      (arg) =>
+        arg instanceof ChatInputCommandInteraction ||
+        arg instanceof StringSelectMenuInteraction,
     );
 
     return interaction ?? null;
@@ -89,7 +98,8 @@ export class DiscordUserRoleGuard implements CanActivate {
 
   private async forbidWithMessage(
     message: string,
-    interaction: ChatInputCommandInteraction,
+    interaction: ChatInputCommandInteraction | StringSelectMenuInteraction,
+    client: Client,
   ): Promise<false> {
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -97,7 +107,7 @@ export class DiscordUserRoleGuard implements CanActivate {
         EmbedBuilderService.simpleError({
           message,
           title: DiscordUserRoleGuard.embedTitle,
-          interaction,
+          client,
         }),
       ],
     });
