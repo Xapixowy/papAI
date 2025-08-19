@@ -37,7 +37,9 @@ export const DISCORD_BOT_PROVIDERS: (DynamicModule | Type<DiscordBotModule>)[] =
         token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
         intents: DISCORD_BOT_INTENTS,
         development: [
-          configService.get<string>(EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID)!,
+          configService.get<string | undefined>(
+            EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID,
+          )!,
         ],
       }),
       inject: [ConfigService],

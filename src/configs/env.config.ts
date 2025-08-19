@@ -5,7 +5,7 @@ const envSchema = z.object({
   [EnvKey.APP_PORT]: z.coerce.number().int().positive(),
   [EnvKey.APP_TIMEZONE]: z.string(),
   [EnvKey.DISCORD_BOT_TOKEN]: z.string(),
-  [EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID]: z.string(),
+  [EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID]: z.string().optional(),
   [EnvKey.GEMINI_API_KEY]: z.string(),
   [EnvKey.POSTGRES_HOST]: z.string(),
   [EnvKey.POSTGRES_PORT]: z.coerce.number().int().positive(),
