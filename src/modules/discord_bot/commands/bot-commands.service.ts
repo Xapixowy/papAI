@@ -59,7 +59,7 @@ export class BotCommandsService extends BaseCommandsService {
 
     if (superAdminUsers.isOk()) {
       return interaction.reply({
-        ephemeral: true,
+        flags: [MessageFlags.Ephemeral],
         embeds: [
           EmbedBuilderService.simpleError({
             message: 'Bot is already initialized.',
