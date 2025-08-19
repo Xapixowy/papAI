@@ -1,5 +1,6 @@
 import { CurrencyCode } from '@Enums/currency-code.enum';
 import { DateFormat } from '@Enums/date-format.enum';
+import { EnvKey } from '@Enums/env-key.enum';
 import { DISCORD_BOT_CONFIG } from '@Modules/discord_bot/discord-bot.config';
 import { DateHelper } from '@Utils/helpers/date.helper';
 import { APIEmbedField, Client, EmbedBuilder } from 'discord.js';
@@ -188,9 +189,12 @@ export class EmbedBuilderService {
     iconURL: string | undefined;
   } {
     const { user } = client;
+    const version = process.env[EnvKey.APP_VERSION];
 
     return {
-      text: `${user?.displayName ?? DISCORD_BOT_CONFIG.botName} v${process.env.npm_package_version}`,
+      text:
+        `${user?.displayName ?? DISCORD_BOT_CONFIG.botName}` +
+        (version ? ` v${version}` : ''),
       iconURL: user?.displayAvatarURL() ?? undefined,
     };
   }
