@@ -93,8 +93,8 @@ export class BotCommandsService extends BaseCommandsService {
       flags: [MessageFlags.Ephemeral],
       embeds: [
         EmbedBuilderService.simpleSuccess({
-          message: `Bot is now initialized. The user who executes this command will become the SuperAdmin.`,
           title: BotCommandsService.embedTitle,
+          description: `Bot is now initialized. The user who executes this command will become the SuperAdmin.`,
           client: this.client,
         }),
       ],

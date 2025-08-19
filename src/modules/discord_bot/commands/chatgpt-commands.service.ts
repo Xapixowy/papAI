@@ -21,7 +21,6 @@ import {
   Channel,
   ChannelManager,
   Client,
-  EmbedBuilder,
   Events,
   GatewayIntentBits,
   InteractionResponse,
@@ -65,6 +64,17 @@ const ChatgptCommandDecorator = createCommandGroupDecorator({
 @UseGuards(DiscordUserRoleGuard)
 @ChatgptCommandDecorator()
 export class ChatgptCommandsService extends BaseCommandsService {
+  private readonly errorCodeMessageMap: Partial<Record<ErrorCode, string>> = {
+    [ErrorCode.DISCORD_SETTING_CHATGPT_PAYMENT_DATE_NOT_FOUND]:
+      'There was an error getting the payment date.',
+    [ErrorCode.DISCORD_SETTING_CHATGPT_PRICE_NOT_FOUND]:
+      'There was an error getting the price.',
+    [ErrorCode.DISCORD_SETTING_CHATGPT_CURRENCY_NOT_FOUND]:
+      'There was an error getting the currency.',
+    [ErrorCode.DISCORD_CHATGPT_USERS_NOT_FOUND]:
+      'There was an error getting the ChatGPT users.',
+  };
+
   constructor(
     private readonly discordUsersService: DiscordUsersService,
     private readonly discordSettingsService: DiscordSettingsService,
@@ -136,7 +146,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
         embeds: [
           EmbedBuilderService.simpleSuccess({
             title: ChatgptCommandsService.embedTitle,
-            message: 'User added to ChatGPT.',
+            description: 'User added to ChatGPT.',
             client: this.client,
           }),
         ],
@@ -169,7 +179,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'User added to ChatGPT.',
+          description: 'User added to ChatGPT.',
           client: this.client,
         }),
       ],
@@ -238,7 +248,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
         embeds: [
           EmbedBuilderService.simpleSuccess({
             title: ChatgptCommandsService.embedTitle,
-            message: 'User removed from ChatGPT.',
+            description: 'User removed from ChatGPT.',
             client: this.client,
           }),
         ],
@@ -251,7 +261,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'User removed from ChatGPT.',
+          description: 'User removed from ChatGPT.',
           client: this.client,
         }),
       ],
@@ -290,7 +300,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Price set.',
+          description: 'Price set.',
           client: this.client,
         }),
       ],
@@ -328,7 +338,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Currency set.',
+          description: 'Currency set.',
           client: this.client,
         }),
       ],
@@ -369,7 +379,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Reminder date set.',
+          description: 'Reminder date set.',
           client: this.client,
         }),
       ],
@@ -410,7 +420,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Payment date set.',
+          description: 'Payment date set.',
           client: this.client,
         }),
       ],
@@ -454,7 +464,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Reminder channel set.',
+          description: 'Reminder channel set.',
           client: this.client,
         }),
       ],
@@ -483,7 +493,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Transaction added to ChatGPT.',
+          description: 'Transaction added to ChatGPT.',
           client: this.client,
         }),
       ],
@@ -540,7 +550,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleInfo({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Select a transaction to remove from ChatGPT.',
+          description: 'Select a transaction to remove from ChatGPT.',
           client: this.client,
         }),
       ],
@@ -608,7 +618,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Transaction removed from ChatGPT.',
+          description: 'Transaction removed from ChatGPT.',
           client: this.client,
         }),
       ],
@@ -682,7 +692,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
       embeds: [
         EmbedBuilderService.simpleSuccess({
           title: ChatgptCommandsService.embedTitle,
-          message: 'Transactions history of your last 30 transactions.',
+          description: 'Transactions history of your last 30 transactions.',
           client: this.client,
         }).addFields(embedFields),
       ],
@@ -697,11 +707,45 @@ export class ChatgptCommandsService extends BaseCommandsService {
   public async onTransactionSummaryCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const { embed } = await this.generateTransactionCheckup();
+    const transactionSummaryData = await this.generateTransactionSummaryData();
+
+    if (transactionSummaryData.isErr()) {
+      return interaction.reply({
+        flags: [MessageFlags.Ephemeral],
+        embeds: [
+          EmbedBuilderService.simpleError({
+            title: ChatgptCommandsService.embedTitle,
+            message: this.errorCodeMessageMap[transactionSummaryData.error],
+            client: this.client,
+          }),
+        ],
+      });
+    }
+
+    const {
+      transactionSummaries,
+      fromDate,
+      toDate,
+      pricePerUser,
+      totalPrice,
+      currency,
+    } = transactionSummaryData.value;
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds: [
+        EmbedBuilderService.chatgptSummary({
+          title: ChatgptCommandsService.embedTitle,
+          description: 'Transactions summary for the last payment period.',
+          fromDate,
+          toDate,
+          pricePerUser,
+          totalPrice,
+          currency,
+          transactionSummaries,
+          client: this.client,
+        }),
+      ],
     });
   }
 
@@ -713,11 +757,33 @@ export class ChatgptCommandsService extends BaseCommandsService {
   public async onGenerateSummaryCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const { items, embed } = await this.generateTransactionCheckup();
+    const transactionSummaryData = await this.generateTransactionSummaryData();
+
+    if (transactionSummaryData.isErr()) {
+      return interaction.reply({
+        flags: [MessageFlags.Ephemeral],
+        embeds: [
+          EmbedBuilderService.simpleError({
+            title: ChatgptCommandsService.embedTitle,
+            message: this.errorCodeMessageMap[transactionSummaryData.error],
+            client: this.client,
+          }),
+        ],
+      });
+    }
+
+    const {
+      transactionSummaries,
+      fromDate,
+      toDate,
+      pricePerUser,
+      totalPrice,
+      currency,
+    } = transactionSummaryData.value;
 
     let creatingTransactionSummaryError: boolean = false;
 
-    for (const { transactionSummary } of items) {
+    for (const transactionSummary of transactionSummaries) {
       const newTransactionSummary =
         await this.discordChatgptTransactionSummariesService.create(
           new DiscordChatgptTransactionSummaryDto({
@@ -749,20 +815,35 @@ export class ChatgptCommandsService extends BaseCommandsService {
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
       embeds: [
-        embed.setDescription(
-          'New transaction summaries were created for the last payment period.',
-        ),
+        EmbedBuilderService.chatgptSummary({
+          title: ChatgptCommandsService.embedTitle,
+          description:
+            'New transaction summaries were created for the last payment period.',
+          fromDate,
+          toDate,
+          pricePerUser,
+          totalPrice,
+          currency,
+          transactionSummaries,
+          client: this.client,
+        }),
       ],
     });
   }
 
-  private async generateTransactionCheckup(): Promise<{
-    items: {
-      user: DiscordUserDto;
-      transactionSummary: DiscordChatgptTransactionSummaryDto;
-    }[];
-    embed: EmbedBuilder;
-  }> {
+  private async generateTransactionSummaryData(): Promise<
+    Result<
+      {
+        transactionSummaries: DiscordChatgptTransactionSummaryDto[];
+        fromDate: Date;
+        toDate: Date;
+        pricePerUser: number;
+        totalPrice: number;
+        currency: CurrencyCode;
+      },
+      ErrorCode
+    >
+  > {
     const today = new Date();
 
     const paymentDate = await this.discordSettingsService.getValueByKey<number>(
@@ -770,14 +851,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
     );
 
     if (paymentDate.isErr()) {
-      return {
-        items: [],
-        embed: EmbedBuilderService.simpleError({
-          title: ChatgptCommandsService.embedTitle,
-          message: 'There was an error getting the payment date.',
-          client: this.client,
-        }),
-      };
+      return err(ErrorCode.DISCORD_SETTING_CHATGPT_PAYMENT_DATE_NOT_FOUND);
     }
 
     const price = await this.discordSettingsService.getValueByKey<number>(
@@ -785,14 +859,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
     );
 
     if (price.isErr()) {
-      return {
-        items: [],
-        embed: EmbedBuilderService.simpleError({
-          title: ChatgptCommandsService.embedTitle,
-          message: 'There was an error getting the price.',
-          client: this.client,
-        }),
-      };
+      return err(ErrorCode.DISCORD_SETTING_CHATGPT_PRICE_NOT_FOUND);
     }
 
     const currency =
@@ -801,128 +868,84 @@ export class ChatgptCommandsService extends BaseCommandsService {
       );
 
     if (currency.isErr()) {
-      return {
-        items: [],
-        embed: EmbedBuilderService.simpleError({
-          title: ChatgptCommandsService.embedTitle,
-          message: 'There was an error getting the currency.',
-          client: this.client,
-        }),
-      };
+      return err(ErrorCode.DISCORD_SETTING_CHATGPT_CURRENCY_NOT_FOUND);
     }
-
-    const transactionSummaries = (
-      await this.discordChatgptTransactionSummariesService.findAll()
-    ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     const chatgptUsers = await this.discordUsersService.findAllByRoles([
       DiscordUserRole.CHATGPT,
     ]);
 
     if (chatgptUsers.isErr()) {
-      return {
-        items: [],
-        embed: EmbedBuilderService.simpleError({
-          title: ChatgptCommandsService.embedTitle,
-          message: 'There was an error getting the ChatGPT users.',
-          client: this.client,
-        }),
-      };
+      return err(ErrorCode.DISCORD_CHATGPT_USERS_NOT_FOUND);
     }
 
     const pricePerUser =
       Math.ceil((price.value * 100) / chatgptUsers.value.length) / 100;
 
-    const newTransactionSummaries: {
-      user: DiscordUserDto;
-      transactionSummary: DiscordChatgptTransactionSummaryDto;
-    }[] = [];
+    let fromDate: Date | null = null;
 
-    for (const chatgptUser of chatgptUsers.value) {
-      const userTransactionSummaries = transactionSummaries.filter(
-        (t) => t.discordUserId === chatgptUser.userId,
-      );
+    const newTransactionSummaries = chatgptUsers.value.map(
+      async (chatgptUser) => {
+        const userTransactionSummaries =
+          await this.discordChatgptTransactionSummariesService.findAllByUserId(
+            chatgptUser.userId,
+          );
 
-      const userTransactions =
-        await this.discordChatgptTransactionsService.findAllByUserId(
-          chatgptUser.userId,
+        const userTransactions =
+          await this.discordChatgptTransactionsService.findAllByUserId(
+            chatgptUser.userId,
+          );
+
+        const lastTransactionSummaryDate =
+          userTransactionSummaries.length > 0
+            ? userTransactionSummaries[0].createdAt
+            : DateHelper.subtract(today, { months: 1 });
+
+        fromDate = fromDate
+          ? lastTransactionSummaryDate > fromDate
+            ? lastTransactionSummaryDate
+            : fromDate
+          : lastTransactionSummaryDate;
+
+        const lastTransactionSummaryAmount =
+          userTransactionSummaries.length > 0
+            ? userTransactionSummaries[0].amount
+            : 0;
+
+        const userTransactionsLastPaymentPeriod = userTransactions.filter(
+          (t) => t.createdAt > lastTransactionSummaryDate,
         );
 
-      const lastTransactionSummaryDate =
-        userTransactionSummaries.length > 0
-          ? userTransactionSummaries[0].createdAt
-          : DateHelper.subtract(today, { months: 1 });
+        const transactionsSum = userTransactionsLastPaymentPeriod.reduce(
+          (acc, t) => acc + t.amount,
+          0,
+        );
 
-      const lastTransactionSummaryAmount =
-        userTransactionSummaries.length > 0
-          ? userTransactionSummaries[0].amount
-          : 0;
+        const sumOverall =
+          Math.ceil(
+            (transactionsSum + lastTransactionSummaryAmount - pricePerUser) *
+              100,
+          ) / 100;
 
-      const userTransactionsLastPaymentPeriod = userTransactions.filter(
-        (t) => t.createdAt > lastTransactionSummaryDate,
-      );
-
-      const transactionsSum = userTransactionsLastPaymentPeriod.reduce(
-        (acc, t) => acc + t.amount,
-        0,
-      );
-
-      const sumOverall =
-        Math.ceil(
-          (transactionsSum + lastTransactionSummaryAmount - pricePerUser) * 100,
-        ) / 100;
-
-      newTransactionSummaries.push({
-        user: DiscordUserDto.fromEntity(chatgptUser),
-        transactionSummary: new DiscordChatgptTransactionSummaryDto({
+        return new DiscordChatgptTransactionSummaryDto({
           discordUserId: chatgptUser.userId,
+          discordUser: DiscordUserDto.fromEntity(chatgptUser),
           amount: sumOverall,
           currency: currency.value,
-        }),
-      });
-    }
+          createdAt: today,
+          updatedAt: today,
+        });
+      },
+    );
 
-    const informationField: APIEmbedField = {
-      name: 'ℹ️  Information',
-      value: [
-        `- from: ` +
-          '`' +
-          DateHelper.formatDate(
-            DateHelper.subtract(today, { months: 1 }),
-            DateFormat.DATE_TIME,
-          ) +
-          '`',
-        `- to: ` +
-          '`' +
-          DateHelper.formatDate(today, DateFormat.DATE_TIME) +
-          '`',
-        `- users: ` + '`' + `${chatgptUsers.value.length}` + '`',
-        `- price per user: ` + '`' + pricePerUser + ' ' + currency.value + '`',
-        `- total price: ` + '`' + `${price.value} ${currency.value}` + '`',
-      ].join('\n'),
-    };
-
-    const summaryField: APIEmbedField = {
-      name: '📊  Summary',
-      value: newTransactionSummaries
-        .map(
-          ({ user, transactionSummary }) =>
-            '- `' +
-            `${user.username} | ${transactionSummary.amount} ${transactionSummary.currency}` +
-            '` ' +
-            (transactionSummary.amount >= 0 ? '✅' : '❌'),
-        )
-        .join('\n'),
-    };
-
-    return {
-      items: newTransactionSummaries,
-      embed: EmbedBuilderService.simpleSuccess({
-        title: ChatgptCommandsService.embedTitle,
-        message: 'Transactions summary for the last payment period.',
-        client: this.client,
-      }).addFields([informationField, summaryField]),
-    };
+    return ok({
+      transactionSummaries: await Promise.all(newTransactionSummaries),
+      fromDate: fromDate ?? today,
+      toDate: today,
+      pricePerUser: pricePerUser,
+      totalPrice: price.value,
+      currency: currency.value,
+    });
   }
 
   private async getChannel(
@@ -936,55 +959,91 @@ export class ChatgptCommandsService extends BaseCommandsService {
     }
   }
 
-  private async setPaymentReminder(): Promise<void> {
+  private async sendPaymentReminderMessage(): Promise<Result<void, ErrorCode>> {
     const paymentDate = await this.discordSettingsService.getValueByKey<number>(
       DiscordSettingKey.CHATGPT_PAYMENT_DATE,
     );
 
-    if (paymentDate.isErr()) {
-      return;
-    }
-
-    const reminderDate =
-      await this.discordSettingsService.getValueByKey<string>(
-        DiscordSettingKey.CHATGPT_REMINDER_DATE,
-      );
-
-    if (reminderDate.isErr()) {
-      return;
-    }
+    if (paymentDate.isErr()) return err(paymentDate.error);
 
     const reminderChannel = await this.discordSettingsService.getValueByKey<{
       channelId: string;
       guildId: string;
     }>(DiscordSettingKey.CHATGPT_REMINDER_CHANNEL);
 
-    if (reminderChannel.isErr()) {
-      return;
-    }
+    if (reminderChannel.isErr()) return err(reminderChannel.error);
 
     const channel = await this.getChannel(reminderChannel.value.channelId);
 
-    if (channel.isErr()) {
-      return;
-    }
+    if (channel.isErr()) return err(channel.error);
 
     const channelValue = channel.value;
 
-    if (!(channelValue instanceof TextChannel)) {
-      return;
-    }
+    if (!(channelValue instanceof TextChannel))
+      return err(ErrorCode.DISCORD_CHANNEL_WRONG_TYPE);
 
-    const { embed } = await this.generateTransactionCheckup();
+    const transactionSummaryData = await this.generateTransactionSummaryData();
+
+    if (transactionSummaryData.isErr())
+      return err(transactionSummaryData.error);
+
+    const {
+      transactionSummaries,
+      fromDate,
+      toDate,
+      pricePerUser,
+      totalPrice,
+      currency,
+    } = transactionSummaryData.value;
 
     await channelValue.sendTyping();
     await channelValue.send({
-      embeds: [embed],
+      embeds: [
+        EmbedBuilderService.chatgptReminder({
+          title: ChatgptCommandsService.embedTitle,
+          description:
+            'The payment deadline for ChatGPT is approaching. Below is a list of people who are behind on their payments.',
+          fromDate,
+          toDate,
+          pricePerUser,
+          totalPrice,
+          currency,
+          transactionSummaries,
+          client: this.client,
+        }),
+      ],
     });
+
+    return ok(undefined);
+  }
+
+  private async setPaymentReminder(): Promise<void> {
+    try {
+      const existingCronJob = this.schedulerRegistry.getCronJob(
+        CronjobName.DISCORD_CHATGPT_PAYMENT_REMINDER,
+      );
+
+      if (existingCronJob) {
+        await existingCronJob.stop();
+        this.schedulerRegistry.deleteCronJob(
+          CronjobName.DISCORD_CHATGPT_PAYMENT_REMINDER,
+        );
+      }
+    } catch {}
+
+    const reminderDate =
+      await this.discordSettingsService.getValueByKey<string>(
+        DiscordSettingKey.CHATGPT_REMINDER_DATE,
+      );
+
+    if (reminderDate.isErr()) return;
 
     const newJob = new CronJob(
       reminderDate.value,
-      async () => {},
+      async () => {
+        const result = await this.sendPaymentReminderMessage();
+        if (result.isErr()) console.error(result.error);
+      },
       null,
       true,
       this.configService.get<string>(EnvKey.APP_TIMEZONE),

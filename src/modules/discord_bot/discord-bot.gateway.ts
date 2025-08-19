@@ -1,3 +1,4 @@
+import { EnvKey } from '@Enums/env-key.enum';
 import { Content, GoogleGenAI, GoogleGenAIOptions, Part } from '@google/genai';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -65,7 +66,7 @@ export class BotGateway {
   private readonly gemini: GoogleGenAI;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const apiKey = this.configService.get<string>(EnvKey.GEMINI_API_KEY);
     if (!apiKey) {
       throw new Error(
         'GEMINI_API_KEY is not defined in the environment variables.',

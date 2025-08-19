@@ -18,6 +18,13 @@ export class DiscordChatgptTransactionSummariesService {
     return entities;
   }
 
+  async findAllByUserId(
+    discordUserId: string,
+  ): Promise<DiscordChatgptTransactionSummary[]> {
+    const entities = await this.repository.find({ where: { discordUserId } });
+    return entities;
+  }
+
   async findById(
     id: string,
   ): Promise<Result<DiscordChatgptTransactionSummary, ErrorCode>> {
