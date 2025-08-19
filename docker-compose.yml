@@ -11,6 +11,24 @@ services:
       - ${POSTGRES_PORT}:5432
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - pap-ai-network
+
+  app:
+    build: .
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - '${APP_PORT}:${APP_PORT}'
+    env_file:
+      - .env
+    networks:
+      - pap-ai-network
 
 volumes:
   db_data:
+
+networks:
+  pap-ai-network:
+    driver: bridge
