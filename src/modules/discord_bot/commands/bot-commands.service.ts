@@ -11,12 +11,10 @@ import {
 import {
   Context,
   createCommandGroupDecorator,
-  SlashCommand,
   Subcommand,
   type SlashCommandContext,
 } from 'necord';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
-import { RequiresDiscordUserRole } from '../decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '../guards/discord-user-role.guard';
 import { EmbedBuilderService } from '../services/embed-builder.service';
 import { BaseCommandsService } from './base-commands-service';
@@ -98,20 +96,6 @@ export class BotCommandsService extends BaseCommandsService {
           client: this.client,
         }),
       ],
-    });
-  }
-
-  @SlashCommand({
-    name: 'test',
-    description: 'Test',
-  })
-  @RequiresDiscordUserRole(DiscordUserRole.SUPER_ADMIN)
-  public async onTestCommand(
-    @Context() [interaction]: SlashCommandContext,
-  ): Promise<InteractionResponse<boolean>> {
-    return interaction.reply({
-      flags: [MessageFlags.Ephemeral],
-      content: 'Test',
     });
   }
 }

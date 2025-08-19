@@ -922,7 +922,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
         );
 
         const sumOverall =
-          Math.ceil(
+          Math.round(
             (transactionsSum + lastTransactionSummaryAmount - pricePerUser) *
               100,
           ) / 100;
