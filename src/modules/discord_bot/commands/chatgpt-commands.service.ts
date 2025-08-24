@@ -1038,7 +1038,7 @@ export class ChatgptCommandsService extends BaseCommandsService {
 
     if (reminderDate.isErr()) return;
 
-    const newJob = new CronJob(
+    const newJob: CronJob = new CronJob(
       reminderDate.value,
       async () => {
         const result = await this.sendPaymentReminderMessage();
