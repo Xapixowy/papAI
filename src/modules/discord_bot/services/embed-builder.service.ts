@@ -1,179 +1,74 @@
-import { CurrencyCode } from '@Enums/currency-code.enum';
-import { DateFormat } from '@Enums/date-format.enum';
 import { EnvKey } from '@Enums/env-key.enum';
 import { DISCORD_BOT_CONFIG } from '@Modules/discord_bot/discord-bot.config';
-import { DateHelper } from '@Utils/helpers/date.helper';
-import { APIEmbedField, Client, EmbedBuilder } from 'discord.js';
-import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
+import { Client, EmbedBuilder } from 'discord.js';
+import { EmbedVariant } from '../types/embed-variant.type';
 
 export class EmbedBuilderService {
-  static chatgptReminder({
-    title,
+  static simple({
     description,
-    fromDate,
-    toDate,
-    pricePerUser,
-    totalPrice,
-    currency,
-    transactionSummaries,
+    title,
+    thumbnail,
+    variant,
     client,
   }: {
-    title: string;
     description: string;
-    fromDate: Date;
-    toDate: Date;
-    pricePerUser: number;
-    totalPrice: number;
-    currency: CurrencyCode;
-    transactionSummaries: DiscordChatgptTransactionSummaryDto[];
+    title?: string;
+    thumbnail?: string;
+    variant: EmbedVariant;
     client: Client;
   }): EmbedBuilder {
-    const embed = EmbedBuilderService.chatgptSummary({
-      title,
-      description,
-      fromDate,
-      toDate,
-      pricePerUser,
-      totalPrice,
-      currency,
-      transactionSummaries,
-      client,
-    });
-
-    embed.setColor(DISCORD_BOT_CONFIG.colors.warning);
-    embed.setTitle(title);
-    embed.setDescription(description);
-
-    const debtorsTransactionSummaries = transactionSummaries.filter(
-      (t) => t.amount < 0,
-    );
-
-    if (debtorsTransactionSummaries.length === 0) {
-      embed.spliceFields(1, 1, {
-        name: '🙇 Debtors',
-        value:
-          'Congratulations! There are no debtors in the last payment period.',
-      });
-    } else {
-      embed.spliceFields(1, 1, {
-        name: '🙇 Debtors',
-        value: debtorsTransactionSummaries
-          .map(
-            (transactionSummary) =>
-              '- `' +
-              `${transactionSummary.discordUser?.username ?? 'Unknown'} | ${transactionSummary.amount} ${transactionSummary.currency}` +
-              '` ' +
-              (transactionSummary.amount >= 0 ? '✅' : '❌'),
-          )
-          .join('\n'),
-      });
+    switch (variant) {
+      case 'success':
+        return EmbedBuilderService.simpleSuccess({
+          description,
+          title,
+          thumbnail,
+          client,
+        });
+      case 'error':
+        return EmbedBuilderService.simpleError({
+          description,
+          title,
+          thumbnail,
+          client,
+        });
+      case 'warning':
+        return EmbedBuilderService.simpleWarning({
+          description,
+          title,
+          thumbnail,
+          client,
+        });
+      case 'info':
+      default:
+        return EmbedBuilderService.simpleInfo({
+          description,
+          title,
+          thumbnail,
+          client,
+        });
     }
-
-    return embed;
   }
 
-  static chatgptSummary({
+  static generateSection({
     title,
     description,
-    fromDate,
-    toDate,
-    pricePerUser,
-    totalPrice,
-    currency,
-    transactionSummaries,
-    client,
   }: {
     title: string;
-    description: string;
-    fromDate: Date;
-    toDate: Date;
-    pricePerUser: number;
-    totalPrice: number;
-    currency: CurrencyCode;
-    transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-    client: Client;
-  }): EmbedBuilder {
-    const fromDateString: string = DateHelper.formatDate(
-      fromDate,
-      DateFormat.DATE_TIME,
-    );
-    const toDateString: string = DateHelper.formatDate(
-      toDate,
-      DateFormat.DATE_TIME,
-    );
-
-    const informationField: APIEmbedField = {
-      name: 'ℹ️  Information',
-      value: [
-        `- from: ` + '`' + fromDateString + '`',
-        `- to: ` + '`' + toDateString + '`',
-        `- users: ` + '`' + `${transactionSummaries.length}` + '`',
-        `- price per user: ` + '`' + `${pricePerUser} ${currency}` + '`',
-        `- total price: ` + '`' + `${totalPrice} ${currency}` + '`',
-      ].join('\n'),
-    };
-
-    const summaryField: APIEmbedField = {
-      name: '📊  Summary',
-      value: transactionSummaries
-        .map(
-          (transactionSummary) =>
-            '- `' +
-            `${transactionSummary.discordUser?.username ?? 'Unknown'} | ${transactionSummary.amount} ${transactionSummary.currency}` +
-            '` ' +
-            (transactionSummary.amount >= 0 ? '✅' : '❌'),
-        )
-        .join('\n'),
-    };
-
-    return EmbedBuilderService.simpleSuccess({
-      title,
-      description,
-      client,
-    }).addFields([informationField, summaryField]);
+    description: string[];
+  }): string {
+    return `### ${title}\n${description.join('\n')}`;
   }
 
-  static simpleError({
-    message = 'Something went wrong.',
-    title = 'Error',
-    client,
-  }: {
-    message?: string;
-    title?: string;
-    client: Client;
-  }): EmbedBuilder {
-    return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.error)
-      .setTitle(title)
-      .setDescription(message)
-      .setTimestamp()
-      .setFooter(this.generateFooter(client));
-  }
-
-  static simpleSuccess({
-    description,
-    title = 'Success',
-    client,
-  }: {
-    description: string;
-    title?: string;
-    client: Client;
-  }): EmbedBuilder {
-    return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.success)
-      .setTitle(title)
-      .setDescription(description)
-      .setTimestamp()
-      .setFooter(this.generateFooter(client));
-  }
-
-  static simpleInfo({
+  private static simpleInfo({
     description,
     title = 'Info',
+    thumbnail,
     client,
   }: {
     description: string;
     title?: string;
+    thumbnail?: string;
     client: Client;
   }): EmbedBuilder {
     return new EmbedBuilder()
@@ -181,6 +76,67 @@ export class EmbedBuilderService {
       .setTitle(title)
       .setDescription(description)
       .setTimestamp()
+      .setThumbnail(thumbnail ?? null)
+      .setFooter(this.generateFooter(client));
+  }
+
+  private static simpleSuccess({
+    description,
+    title = 'Success',
+    thumbnail,
+    client,
+  }: {
+    description: string;
+    title?: string;
+    thumbnail?: string;
+    client: Client;
+  }): EmbedBuilder {
+    return new EmbedBuilder()
+      .setColor(DISCORD_BOT_CONFIG.colors.success)
+      .setTitle(title)
+      .setDescription(description)
+      .setTimestamp()
+      .setThumbnail(thumbnail ?? null)
+      .setFooter(this.generateFooter(client));
+  }
+
+  private static simpleError({
+    description = 'Something went wrong.',
+    title = 'Error',
+    thumbnail,
+    client,
+  }: {
+    description?: string;
+    title?: string;
+    thumbnail?: string;
+    client: Client;
+  }): EmbedBuilder {
+    return new EmbedBuilder()
+      .setColor(DISCORD_BOT_CONFIG.colors.error)
+      .setTitle(title)
+      .setDescription(description)
+      .setTimestamp()
+      .setThumbnail(thumbnail ?? null)
+      .setFooter(this.generateFooter(client));
+  }
+
+  private static simpleWarning({
+    description = 'Something went wrong.',
+    title = 'Warning',
+    thumbnail,
+    client,
+  }: {
+    description?: string;
+    title?: string;
+    thumbnail?: string;
+    client: Client;
+  }): EmbedBuilder {
+    return new EmbedBuilder()
+      .setColor(DISCORD_BOT_CONFIG.colors.warning)
+      .setTitle(title)
+      .setDescription(description)
+      .setTimestamp()
+      .setThumbnail(thumbnail ?? null)
       .setFooter(this.generateFooter(client));
   }
 

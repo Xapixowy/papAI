@@ -1,18 +1,35 @@
-import { DiscordChatgptTransactionSummariesModule } from '@Modules/discord-chatgpt-transaction-summaries.module';
-import { DiscordChatgptTransactionsModule } from '@Modules/discord-chatgpt-transactions.module';
-import { DiscordSettingsModule } from '@Modules/discord-settings.module';
-import { DiscordUsersModule } from '@Modules/discord-users.module';
+import { EnvKey } from '@Enums/env-key.enum';
 import { Module } from '@nestjs/common';
-import { BotCommandsService } from './commands/bot-commands.service';
-import { ChatgptCommandsService } from './commands/chatgpt-commands.service';
+import { ConfigService } from '@nestjs/config';
+import { GatewayIntentBits } from 'discord.js';
+import { NecordModule } from 'necord';
+import { BaseCommandsModule } from './modules/base-commands.module';
+import { BotCommandsModule } from './modules/bot-commands.module';
+import { ChatgptCommandsModule } from './modules/chatgpt-commands.module';
 
 @Module({
   imports: [
-    DiscordUsersModule,
-    DiscordSettingsModule,
-    DiscordChatgptTransactionsModule,
-    DiscordChatgptTransactionSummariesModule,
+    NecordModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
+        intents: DiscordBotModule.botIntents,
+        development: [
+          configService.get<string | undefined>(
+            EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID,
+          )!,
+        ],
+      }),
+      inject: [ConfigService],
+    }),
+    BotCommandsModule,
+    ChatgptCommandsModule,
   ],
-  providers: [BotCommandsService, ChatgptCommandsService],
 })
-export class DiscordBotModule {}
+export class DiscordBotModule extends BaseCommandsModule {
+  static get botIntents(): GatewayIntentBits[] {
+    return [
+      ...BotCommandsModule.botIntents,
+      ...ChatgptCommandsModule.botIntents,
+    ];
+  }
+}

@@ -13,6 +13,8 @@ const envSchema = z.object({
   [EnvKey.POSTGRES_DB]: z.string(),
   [EnvKey.POSTGRES_USER]: z.string(),
   [EnvKey.POSTGRES_PASSWORD]: z.string(),
+  [EnvKey.REDIS_HOST]: z.string(),
+  [EnvKey.REDIS_PORT]: z.coerce.number().int().positive(),
 });
 
 export type Env = z.infer<typeof envSchema>;

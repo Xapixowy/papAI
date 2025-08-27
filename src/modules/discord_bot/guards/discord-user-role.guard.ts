@@ -9,6 +9,7 @@ import {
   StringSelectMenuInteraction,
 } from 'discord.js';
 import { SlashCommandContext, StringSelectContext } from 'necord';
+import { BOT_COMMANDS_CONFIG } from '../configs/bot-commands.config';
 import { REQUIRES_DISCORD_USER_ROLE } from '../decorators/requires-discord-user-role.decorator';
 import { EmbedBuilderService } from '../services/embed-builder.service';
 
@@ -97,17 +98,19 @@ export class DiscordUserRoleGuard implements CanActivate {
   }
 
   private async forbidWithMessage(
-    message: string,
+    description: string,
     interaction: ChatInputCommandInteraction | StringSelectMenuInteraction,
     client: Client,
   ): Promise<false> {
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
       embeds: [
-        EmbedBuilderService.simpleError({
-          message,
+        EmbedBuilderService.simple({
+          description,
           title: DiscordUserRoleGuard.embedTitle,
           client,
+          variant: 'error',
+          thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
         }),
       ],
     });

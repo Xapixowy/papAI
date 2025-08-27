@@ -14,6 +14,11 @@ services:
     networks:
       - pap-ai-network
 
+  redis:
+    image: redis:latest
+    ports:
+      - ${REDIS_PORT}:6379
+
   app:
     build: .
     restart: always
