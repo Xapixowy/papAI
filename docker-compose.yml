@@ -28,6 +28,8 @@ services:
       - db
     ports:
       - '${APP_PORT}:${APP_PORT}'
+    environment:
+      - TZ=${APP_TIMEZONE}
     env_file:
       - .env
     networks:
