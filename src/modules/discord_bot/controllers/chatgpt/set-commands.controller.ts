@@ -24,7 +24,6 @@ const SET_COMMANDS_CONFIG = CHATGPT_COMMANDS_CONFIG.commands.set;
 @ChatgptCommandDecorator({
   name: SET_COMMANDS_CONFIG.name,
   description: SET_COMMANDS_CONFIG.description,
-  options: [],
 })
 export class SetCommandsController extends BaseCommandsController {
   constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {

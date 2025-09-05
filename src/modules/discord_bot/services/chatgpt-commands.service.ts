@@ -737,8 +737,8 @@ export class ChatgptCommandsService {
 
     let fromDate: Date | null = null;
 
-    const newTransactionSummaries = chatgptUsers.value.map(
-      async (chatgptUser) => {
+    const newTransactionSummaries = await Promise.all(
+      chatgptUsers.value.map(async (chatgptUser) => {
         const userTransactionSummaries =
           await this.discordChatgptTransactionSummariesService.findAllByUserId(
             chatgptUser.userId,
@@ -788,7 +788,7 @@ export class ChatgptCommandsService {
           createdAt: today,
           updatedAt: today,
         });
-      },
+      }),
     );
 
     const nextPaymentDate = DateHelper.set(
@@ -801,7 +801,7 @@ export class ChatgptCommandsService {
     );
 
     return ok({
-      transactionSummaries: await Promise.all(newTransactionSummaries),
+      transactionSummaries: newTransactionSummaries,
       nextPaymentDate: nextPaymentDate ?? today,
       fromDate: fromDate ?? today,
       toDate: today,

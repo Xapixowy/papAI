@@ -20,7 +20,6 @@ const USER_COMMANDS_CONFIG = CHATGPT_COMMANDS_CONFIG.commands.user;
 @ChatgptCommandDecorator({
   name: USER_COMMANDS_CONFIG.name,
   description: USER_COMMANDS_CONFIG.description,
-  options: [],
 })
 export class UserCommandsController extends BaseCommandsController {
   constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {

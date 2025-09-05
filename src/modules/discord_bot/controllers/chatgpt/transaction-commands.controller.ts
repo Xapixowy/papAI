@@ -33,7 +33,6 @@ const TRANSACTION_COMMANDS_CONFIG =
 @ChatgptCommandDecorator({
   name: TRANSACTION_COMMANDS_CONFIG.name,
   description: TRANSACTION_COMMANDS_CONFIG.description,
-  options: [],
 })
 export class TransactionCommandsController extends BaseCommandsController {
   constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
