@@ -10,15 +10,17 @@ import { ChatgptCommandsModule } from './modules/chatgpt-commands.module';
 @Module({
   imports: [
     NecordModule.forRootAsync({
-      useFactory: (configService: ConfigService) => ({
-        token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
-        intents: DiscordBotModule.botIntents,
-        development: [
-          configService.get<string | undefined>(
-            EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID,
-          )!,
-        ],
-      }),
+      useFactory: (configService: ConfigService) => {
+        const developmentGuildId = configService.get<string | undefined>(
+          EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID,
+        );
+
+        return {
+          token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
+          intents: DiscordBotModule.botIntents,
+          development: developmentGuildId ? [developmentGuildId] : false,
+        };
+      },
       inject: [ConfigService],
     }),
     BotCommandsModule,
