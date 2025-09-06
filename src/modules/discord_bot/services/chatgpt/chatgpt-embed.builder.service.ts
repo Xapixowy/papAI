@@ -209,17 +209,21 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     transactionSummary: DiscordChatgptTransactionSummaryDto;
     longestUsernameLength: number;
   }): string {
-    const icon = transactionSummary.amount >= 0 ? '✅' : '❌';
-    const username = transactionSummary.discordUser?.username ?? '';
-    const usernameSpaces = ' '.repeat(longestUsernameLength - username.length);
-    const amount = transactionSummary.amount.toFixed(2);
-    const amountSpace = transactionSummary.amount >= 0 ? ' ' : '';
-    const currency = transactionSummary.currency;
+    const icon: string = transactionSummary.amount >= 0 ? '✅' : '❌';
+    const username: string = transactionSummary.discordUser?.username ?? '';
+    const userMention: string = `<@!${transactionSummary.discordUser?.userId ?? ''}>`;
+    const usernameSpaces: string = ' '.repeat(
+      longestUsernameLength - username.length,
+    );
+    const amount: string = transactionSummary.amount.toFixed(2);
+    const amountSpace: string = transactionSummary.amount >= 0 ? ' ' : '';
+    const currency: string = transactionSummary.currency;
 
     return (
       '- `' +
-      `${icon} ${username}${usernameSpaces} | ${amountSpace}${amount} ${currency}` +
-      '` '
+      `${icon} ${username}${usernameSpaces ?? ''} | ${amountSpace}${amount} ${currency}` +
+      ' | `' +
+      userMention
     );
   }
 
