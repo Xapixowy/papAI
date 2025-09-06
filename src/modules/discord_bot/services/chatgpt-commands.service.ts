@@ -224,7 +224,7 @@ export class ChatgptCommandsService {
   }): Promise<EmbedBuilder> {
     const newDate = await this.discordSettingsService.set(
       DiscordSettingKey.CHATGPT_REMINDER_DATE,
-      `* * ${time} ${day} * *`,
+      `0 0 ${time} ${day} * *`,
     );
 
     if (newDate.isErr()) {
@@ -632,6 +632,8 @@ export class ChatgptCommandsService {
       const existingCronJob = this.schedulerRegistry.getCronJob(
         CronjobName.DISCORD_CHATGPT_PAYMENT_REMINDER,
       );
+
+      console.log(existingCronJob);
 
       if (existingCronJob) {
         await existingCronJob.stop();
