@@ -32,7 +32,7 @@ import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { CHATGPT_COMMANDS_CONFIG } from '../configs/chatgpt-commands.config';
 import { DiscordSelectId } from '../enums/discord-select-id.enum';
 import { EmbedVariant } from '../types/embed-variant.type';
-import { ChatgptEmbedBuilderService as EmbedBuilderService } from './chatgpt/chatgpt-embed.builder.service';
+import { ChatgptEmbedBuilderService as EmbedBuilderService } from './chatgpt/chatgpt-embed-builder.service';
 
 @Injectable()
 export class ChatgptCommandsService {
@@ -850,8 +850,6 @@ export class ChatgptCommandsService {
   }): EmbedBuilder {
     return EmbedBuilderService.chatgptSummary({
       description,
-      title: CHATGPT_COMMANDS_CONFIG.embed.title,
-      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       nextPaymentDate,
       fromDate,
       toDate,
@@ -884,8 +882,6 @@ export class ChatgptCommandsService {
   }): EmbedBuilder {
     return EmbedBuilderService.chatgptReminder({
       description,
-      title: CHATGPT_COMMANDS_CONFIG.embed.title,
-      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       nextPaymentDate,
       fromDate,
       toDate,

@@ -1,5 +1,6 @@
 import { CurrencyCode } from '@Enums/currency-code.enum';
 import { DateFormat } from '@Enums/date-format.enum';
+import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
 import { DateHelper } from '@Utils/helpers/date.helper';
 import { Client, EmbedBuilder } from 'discord.js';
 import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
@@ -7,7 +8,6 @@ import { EmbedBuilderService } from '../embed-builder.service';
 
 export class ChatgptEmbedBuilderService extends EmbedBuilderService {
   static chatgptSummary({
-    title,
     description,
     nextPaymentDate,
     fromDate,
@@ -16,10 +16,8 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice,
     currency,
     transactionSummaries,
-    thumbnail,
     client,
   }: {
-    title: string;
     description: string;
     nextPaymentDate: Date;
     fromDate: Date;
@@ -28,7 +26,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-    thumbnail?: string;
     client: Client;
   }): EmbedBuilder {
     const { information, summary } = this.generateChatgptSummarySections({
@@ -43,15 +40,14 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
 
     return EmbedBuilderService.simple({
       description: `${description}\n${information}\n${summary}`,
-      title,
-      thumbnail,
+      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
+      title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'success',
       client,
     });
   }
 
   static chatgptReminder({
-    title,
     description,
     nextPaymentDate,
     fromDate,
@@ -60,10 +56,8 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice,
     currency,
     transactionSummaries,
-    thumbnail,
     client,
   }: {
-    title: string;
     description: string;
     nextPaymentDate: Date;
     fromDate: Date;
@@ -72,7 +66,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-    thumbnail?: string;
     client: Client;
   }): EmbedBuilder {
     const { information, debtors } = this.generateChatgptSummarySections({
@@ -85,10 +78,10 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       transactionSummaries,
     });
 
-    return EmbedBuilderService.simple({
+    return ChatgptEmbedBuilderService.simple({
       description: `${description}\n${information}\n${debtors}`,
-      title,
-      thumbnail,
+      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
+      title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'warning',
       client,
     });
