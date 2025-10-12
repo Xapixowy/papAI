@@ -1,6 +1,8 @@
 import { RADARR_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/radarr-commands.config';
 import { DiskSpace } from '@Types/radarr';
 import { QueueResponse } from '@Types/responses/radarr/queue-response.type';
+import { TrackedDownloadStateDecorator } from '@Utils/decorators/tracked-download-state.decorator';
+import { DateHelper } from '@Utils/helpers/date.helper';
 import { Client, EmbedBuilder } from 'discord.js';
 import { filesize } from 'filesize';
 import { EmbedBuilderService } from '../embed-builder.service';
@@ -61,15 +63,21 @@ export class RadarrEmbedBuilderService extends EmbedBuilderService {
     currentDownloads: QueueResponse;
     client: Client;
   }): EmbedBuilder {
-    console.log(currentDownloads);
-
     const description = 'Current downloads queue for Radarr server.';
     const currentDownloadsSectionDescription = !currentDownloads.records?.length
       ? ['There are no current downloads.']
       : currentDownloads.records.map((record) => {
           const title = record.title;
           const status = record.trackedDownloadState;
-          return 'dupa';
+          const estimatedCompletionTime = record.estimatedCompletionTime;
+          return (
+            '- `' +
+            `${TrackedDownloadStateDecorator.decorateIcon(status)} ${title}` +
+            '`' +
+            (estimatedCompletionTime
+              ? ` **(${DateHelper.formatDistance(new Date(estimatedCompletionTime))})**`
+              : '')
+          );
         });
 
     const currentDownloadsSection = this.generateSection({
