@@ -633,8 +633,6 @@ export class ChatgptCommandsService {
         CronjobName.DISCORD_CHATGPT_PAYMENT_REMINDER,
       );
 
-      console.log(existingCronJob);
-
       if (existingCronJob) {
         await existingCronJob.stop();
         this.schedulerRegistry.deleteCronJob(
@@ -741,10 +739,11 @@ export class ChatgptCommandsService {
 
     const newTransactionSummaries = await Promise.all(
       chatgptUsers.value.map(async (chatgptUser) => {
-        const userTransactionSummaries =
+        const userTransactionSummaries = (
           await this.discordChatgptTransactionSummariesService.findAllByUserId(
             chatgptUser.userId,
-          );
+          )
+        ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         const userTransactions =
           await this.discordChatgptTransactionsService.findAllByUserId(

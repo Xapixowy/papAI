@@ -24,12 +24,14 @@
     "paths": {
       "@Configs/*": ["src/configs/*"],
       "@Database/*": ["src/database/*"],
+      "@DTOs/*": ["src/dtos/*"],
       "@Entities/*": ["src/database/entities/*"],
       "@Enums/*": ["src/enums/*"],
       "@Models/*": ["src/models/*"],
       "@Modules/*": ["src/modules/*"],
       "@DiscordBot/*": ["src/modules/discord_bot/*"],
       "@Services/*": ["src/services/*"],
+      "@Types/*": ["src/types/*"],
       "@Utils/*": ["src/utils/*"]
     }
   }
