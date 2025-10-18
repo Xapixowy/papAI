@@ -246,7 +246,7 @@ export class ChatgptCommandsService {
     }
 
     return ChatgptEmbedBuilderService.chatgptConfigList({
-      description: 'Config list.',
+      description: 'List of ChatGPT settings.',
       chatgptCurrency: chatgptCurrency.value,
       chatgptPrice: chatgptPrice.value,
       chatgptPaymentDate: chatgptPaymentDate.value,
