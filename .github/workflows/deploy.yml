@@ -1,0 +1,24 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    name: Deploy to takumi-vps
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect, Pull and Restart Docker
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+
+          script: |
+            cd ${{ secrets.SSH_PROJECT_PATH }} && \
+            git pull && \
+            docker compose up -d --build --force-recreate app
