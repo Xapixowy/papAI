@@ -208,6 +208,7 @@ export class TransactionCommandsController extends BaseCommandsController {
       }
 
       return interaction.reply({
+        flags: [MessageFlags.Ephemeral],
         embeds: [embed],
       });
     }
