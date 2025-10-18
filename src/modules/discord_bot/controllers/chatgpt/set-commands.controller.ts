@@ -1,7 +1,6 @@
 import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
 import { RequiresDiscordUserRole } from '@Modules/discord_bot/decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-role.guard';
-import { ChannelOption } from '@Modules/discord_bot/options/channel.option';
 import { DayTimeOption } from '@Modules/discord_bot/options/chatgpt/day-time.option';
 import { CurrencyOption } from '@Modules/discord_bot/options/currency.option';
 import { DayOfMonthOption } from '@Modules/discord_bot/options/day-of-month.option';
@@ -103,27 +102,6 @@ export class SetCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const embed = await this.chatgptCommandsService.setPaymentDateHandler({
       day,
-    });
-
-    return interaction.reply({
-      flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
-    });
-  }
-
-  @Subcommand({
-    name: SET_COMMANDS_CONFIG.commands.reminderChannel.name,
-    description: SET_COMMANDS_CONFIG.commands.reminderChannel.description,
-  })
-  @RequiresDiscordUserRole(
-    ...SET_COMMANDS_CONFIG.commands.reminderChannel.userRoles,
-  )
-  public async onSetReminderChannelCommand(
-    @Context() [interaction]: SlashCommandContext,
-    @Options() { channel }: ChannelOption,
-  ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.setReminderChannelHandler({
-      channel,
     });
 
     return interaction.reply({

@@ -31,6 +31,17 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
         },
       },
     },
+    config: {
+      name: 'config',
+      description: 'Config commands',
+      commands: {
+        list: {
+          name: 'list',
+          description: 'Lists the config of the ChatGPT',
+          userRoles: [DiscordUserRole.CHATGPT],
+        },
+      },
+    },
     set: {
       name: 'set',
       description: 'Set setting commands',
@@ -55,10 +66,26 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
           description: 'Sets the payment date of ChatGPT',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
-        reminderChannel: {
-          name: 'reminder-channel',
-          description: 'Sets the reminder channel of ChatGPT',
+      },
+    },
+    reminderChannel: {
+      name: 'reminder-channel',
+      description: 'Reminder channel commands',
+      commands: {
+        add: {
+          name: 'add',
+          description: 'Adds a reminder channel to the ChatGPT',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
+        },
+        remove: {
+          name: 'remove',
+          description: 'Removes a reminder channel from the ChatGPT',
+          userRoles: [DiscordUserRole.SUPER_ADMIN],
+        },
+        list: {
+          name: 'list',
+          description: 'Lists the reminder channels of the ChatGPT',
+          userRoles: [DiscordUserRole.CHATGPT],
         },
       },
     },

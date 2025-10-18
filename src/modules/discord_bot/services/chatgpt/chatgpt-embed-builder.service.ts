@@ -1,6 +1,8 @@
+import { DiscordUserDto } from '@DTOs/discord-user.dto';
 import { CurrencyCode } from '@Enums/currency-code.enum';
 import { DateFormat } from '@Enums/date-format.enum';
 import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
+import { DiscordChatgptReminderChannel } from '@Types/discord/chatgpt';
 import { DateHelper } from '@Utils/helpers/date.helper';
 import { Client, EmbedBuilder } from 'discord.js';
 import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
@@ -87,6 +89,140 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     });
   }
 
+  static chatgptReminderChannels({
+    description,
+    chatgptReminderChannels,
+    client,
+  }: {
+    description: string;
+    chatgptReminderChannels: DiscordChatgptReminderChannel[];
+    client: Client;
+  }): EmbedBuilder {
+    const reminderChannelsSection = this.generateReminderChannelSection({
+      chatgptReminderChannels,
+    });
+
+    return EmbedBuilderService.simple({
+      description: `${description}\n${reminderChannelsSection}`,
+      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
+      title: CHATGPT_COMMANDS_CONFIG.embed.title,
+      variant: 'info',
+      client,
+    });
+  }
+
+  static chatgptConfigList({
+    description,
+    chatgptCurrency,
+    chatgptPrice,
+    chatgptPaymentDate,
+    chatgptReminderDate,
+    chatgptReminderChannels,
+    chatgptUsers,
+    client,
+  }: {
+    description: string;
+    chatgptCurrency: CurrencyCode;
+    chatgptPrice: number;
+    chatgptPaymentDate: number;
+    chatgptReminderDate: string;
+    chatgptReminderChannels: DiscordChatgptReminderChannel[];
+    chatgptUsers: DiscordUserDto[];
+    client: Client;
+  }): EmbedBuilder {
+    const settingsSection = this.generateSettingsSection({
+      chatgptCurrency,
+      chatgptPrice,
+      chatgptPaymentDate,
+      chatgptReminderDate,
+    });
+
+    const usersSection = this.generateUsersSection({
+      chatgptUsers,
+    });
+
+    const reminderChannelsSection = this.generateReminderChannelSection({
+      chatgptReminderChannels,
+    });
+
+    return EmbedBuilderService.simple({
+      description: `${description}\n${settingsSection}\n${reminderChannelsSection}\n${usersSection}`,
+      thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
+      title: CHATGPT_COMMANDS_CONFIG.embed.title,
+      variant: 'info',
+      client,
+    });
+  }
+
+  private static generateSettingsSection({
+    chatgptCurrency,
+    chatgptPrice,
+    chatgptPaymentDate,
+    chatgptReminderDate,
+  }: {
+    chatgptCurrency: CurrencyCode;
+    chatgptPrice: number;
+    chatgptPaymentDate: number;
+    chatgptReminderDate: string;
+  }): string {
+    const [, , reminderHour, reminderDay] = chatgptReminderDate.split(' ');
+
+    return EmbedBuilderService.generateSection({
+      title: '`🔧` Settings',
+      description: [
+        `- Currency: ` + '`' + chatgptCurrency + '`',
+        `- Price: ` + '`' + chatgptPrice.toFixed(2) + '`',
+        `- Payment date: ` +
+          '`' +
+          `Every ${chatgptPaymentDate} day of month` +
+          '`',
+        `- Reminder date: ` +
+          '`' +
+          `Every ${reminderDay} day of month at ${reminderHour}:00` +
+          '`',
+      ],
+    });
+  }
+
+  private static generateReminderChannelSection({
+    chatgptReminderChannels,
+  }: {
+    chatgptReminderChannels: DiscordChatgptReminderChannel[];
+  }): string {
+    return EmbedBuilderService.generateSection({
+      title: '`🔔` Reminder Channels',
+      description: chatgptReminderChannels.length
+        ? chatgptReminderChannels.map(
+            (c) => '- `' + `🌐 ${c.guildName} | 🐀 ${c.channelName}` + '`',
+          )
+        : ['There are no reminder channels.'],
+    });
+  }
+
+  private static generateUsersSection({
+    chatgptUsers,
+  }: {
+    chatgptUsers: DiscordUserDto[];
+  }): string {
+    const longestUsernameLength = this.getLongestUsernameLength({
+      users: chatgptUsers,
+    });
+
+    const userListItems = chatgptUsers.map((u) => {
+      const usernameSpaces: string = ' '.repeat(
+        longestUsernameLength - u.username.length,
+      );
+      return `- \`${u.username} ${usernameSpaces}| \`<@!${u.userId}>`;
+    });
+
+    return EmbedBuilderService.generateSection({
+      title: '`👤` Users',
+      description: userListItems.length
+        ? userListItems
+        : ['There are no users.'],
+    });
+  }
+
   private static generateChatgptSummarySections({
     nextPaymentDate,
     fromDate,
@@ -139,8 +275,12 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       summaryDescription = `At the moment, **${numberOfDebtors} people** have not yet made their payments, totaling **${debtorsTotalAmount.toFixed(2)} ${currency}**.`;
     }
 
+    const transactionSummariesUsers = transactionSummaries
+      .map((t) => t.discordUser)
+      .filter((u) => u !== undefined);
+
     const longestUsernameLength = this.getLongestUsernameLength({
-      transactionSummaries,
+      users: transactionSummariesUsers,
     });
 
     const informationSection = EmbedBuilderService.generateSection({
@@ -221,14 +361,14 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
   }
 
   private static getLongestUsernameLength({
-    transactionSummaries,
+    users,
   }: {
-    transactionSummaries: DiscordChatgptTransactionSummaryDto[];
+    users: DiscordUserDto[];
   }): number {
     let longestUsernameLength: number = 0;
-    transactionSummaries.forEach((t) => {
-      if (t.discordUser?.username?.length ?? 0 > longestUsernameLength) {
-        longestUsernameLength = t.discordUser?.username?.length ?? 0;
+    users.forEach((u) => {
+      if (u.username?.length ?? 0 > longestUsernameLength) {
+        longestUsernameLength = u.username?.length ?? 0;
       }
     });
     return longestUsernameLength;

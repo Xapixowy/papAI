@@ -5,6 +5,8 @@ import { DiscordUsersModule } from '@Modules/discord-users.module';
 import { Module } from '@nestjs/common';
 import { GatewayIntentBits } from 'discord.js';
 import { ChatgptCommandsController } from '../controllers/chatgpt-commands.controller';
+import { ConfigCommandsController } from '../controllers/chatgpt/config-commands.controller';
+import { ReminderChannelCommandsController } from '../controllers/chatgpt/reminder-channel-commands.controller';
 import { SetCommandsController } from '../controllers/chatgpt/set-commands.controller';
 import { TransactionCommandsController } from '../controllers/chatgpt/transaction-commands.controller';
 import { UserCommandsController } from '../controllers/chatgpt/user-commands.controller';
@@ -21,18 +23,22 @@ import { BaseCommandsModule } from './base-commands.module';
   providers: [
     ChatgptCommandsService,
     ChatgptCommandsController,
-    UserCommandsController,
+    ConfigCommandsController,
+    ReminderChannelCommandsController,
     SetCommandsController,
     TransactionCommandsController,
+    UserCommandsController,
   ],
 })
 export class ChatgptCommandsModule extends BaseCommandsModule {
   static get botIntents(): GatewayIntentBits[] {
     return [
+      ...ConfigCommandsController.botIntents,
       ...ChatgptCommandsController.botIntents,
-      ...UserCommandsController.botIntents,
+      ...ReminderChannelCommandsController.botIntents,
       ...SetCommandsController.botIntents,
       ...TransactionCommandsController.botIntents,
+      ...UserCommandsController.botIntents,
     ];
   }
 }
