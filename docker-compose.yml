@@ -22,7 +22,10 @@ services:
       - pap-ai-network
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION_ARG: ${APP_VERSION}
     restart: always
     depends_on:
       - db

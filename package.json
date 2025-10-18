@@ -23,7 +23,8 @@
     "migration:create": "npm run typeorm -- migration:create src/database/migrations/$npm_config_name",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "migration:show": "npm run typeorm -- migration:show"
+    "migration:show": "npm run typeorm -- migration:show",
+    "docker:up": "cross-env APP_VERSION=$(node -p \"require('./package.json').version\") docker compose up -d --build --force-recreate app"
   },
   "dependencies": {
     "@google/genai": "^1.12.0",

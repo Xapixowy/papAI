@@ -10,6 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Get package version
+        run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
       - name: Connect, Pull and Restart Docker
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -21,4 +32,4 @@ jobs:
           script: |
             cd ${{ secrets.SSH_PROJECT_PATH }} && \
             git pull && \
-            docker compose up -d --build --force-recreate app
+            APP_VERSION=${{ env.PACKAGE_VERSION }} docker compose up -d --build --force-recreate app

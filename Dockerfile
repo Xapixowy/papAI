@@ -7,6 +7,12 @@ RUN npm install -g pnpm
 # Set the working directory inside the container
 WORKDIR /usr/src/app
 
+# Set the application version argument
+ARG APP_VERSION_ARG="0.0.0-docker"
+
+# Set the application version environment variable
+ENV APP_VERSION=$APP_VERSION_ARG
+
 # Copy package.json and package-lock.json to the working directory
 COPY package*.json ./pnpm-lock.yaml ./
 
