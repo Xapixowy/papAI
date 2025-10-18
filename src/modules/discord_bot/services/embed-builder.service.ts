@@ -1,56 +1,58 @@
-import { EnvKey } from '@Enums/env-key.enum';
+import appConfig from '@Configs/app.config';
 import { DISCORD_BOT_CONFIG } from '@Modules/discord_bot/discord-bot.config';
+import { Inject } from '@nestjs/common';
+import { type ConfigType } from '@nestjs/config';
 import { Client, EmbedBuilder } from 'discord.js';
 import { EmbedVariant } from '../types/embed-variant.type';
 
 export class EmbedBuilderService {
-  static simple({
+  constructor(
+    private readonly client: Client,
+    @Inject(appConfig.KEY)
+    private readonly config: ConfigType<typeof appConfig>,
+  ) {}
+
+  simple({
     description,
     title,
     thumbnail,
     variant,
-    client,
   }: {
     description: string;
     title?: string;
     thumbnail?: string;
     variant: EmbedVariant;
-    client: Client;
   }): EmbedBuilder {
     switch (variant) {
       case 'success':
-        return EmbedBuilderService.simpleSuccess({
+        return this.simpleSuccess({
           description,
           title,
           thumbnail,
-          client,
         });
       case 'error':
-        return EmbedBuilderService.simpleError({
+        return this.simpleError({
           description,
           title,
           thumbnail,
-          client,
         });
       case 'warning':
-        return EmbedBuilderService.simpleWarning({
+        return this.simpleWarning({
           description,
           title,
           thumbnail,
-          client,
         });
       case 'info':
       default:
-        return EmbedBuilderService.simpleInfo({
+        return this.simpleInfo({
           description,
           title,
           thumbnail,
-          client,
         });
     }
   }
 
-  static generateSection({
+  generateSection({
     title,
     description,
   }: {
@@ -60,16 +62,14 @@ export class EmbedBuilderService {
     return `### ${title}\n${description.join('\n')}`;
   }
 
-  private static simpleInfo({
+  private simpleInfo({
     description,
     title = 'Info',
     thumbnail,
-    client,
   }: {
     description: string;
     title?: string;
     thumbnail?: string;
-    client: Client;
   }): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(DISCORD_BOT_CONFIG.colors.info)
@@ -77,19 +77,17 @@ export class EmbedBuilderService {
       .setDescription(description)
       .setTimestamp()
       .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter(client));
+      .setFooter(this.generateFooter());
   }
 
-  private static simpleSuccess({
+  private simpleSuccess({
     description,
     title = 'Success',
     thumbnail,
-    client,
   }: {
     description: string;
     title?: string;
     thumbnail?: string;
-    client: Client;
   }): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(DISCORD_BOT_CONFIG.colors.success)
@@ -97,19 +95,17 @@ export class EmbedBuilderService {
       .setDescription(description)
       .setTimestamp()
       .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter(client));
+      .setFooter(this.generateFooter());
   }
 
-  private static simpleError({
+  private simpleError({
     description = 'Something went wrong.',
     title = 'Error',
     thumbnail,
-    client,
   }: {
     description?: string;
     title?: string;
     thumbnail?: string;
-    client: Client;
   }): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(DISCORD_BOT_CONFIG.colors.error)
@@ -117,19 +113,17 @@ export class EmbedBuilderService {
       .setDescription(description)
       .setTimestamp()
       .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter(client));
+      .setFooter(this.generateFooter());
   }
 
-  private static simpleWarning({
+  private simpleWarning({
     description = 'Something went wrong.',
     title = 'Warning',
     thumbnail,
-    client,
   }: {
     description?: string;
     title?: string;
     thumbnail?: string;
-    client: Client;
   }): EmbedBuilder {
     return new EmbedBuilder()
       .setColor(DISCORD_BOT_CONFIG.colors.warning)
@@ -137,15 +131,15 @@ export class EmbedBuilderService {
       .setDescription(description)
       .setTimestamp()
       .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter(client));
+      .setFooter(this.generateFooter());
   }
 
-  private static generateFooter(client: Client): {
+  private generateFooter(): {
     text: string;
     iconURL: string | undefined;
   } {
-    const { user } = client;
-    const version = process.env[EnvKey.APP_VERSION];
+    const { user } = this.client;
+    const version = this.config.version;
 
     return {
       text:

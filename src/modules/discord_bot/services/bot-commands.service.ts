@@ -2,7 +2,7 @@ import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { DiscordUsersService } from '@Services/discord-users.service';
-import { Client, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { BOT_COMMANDS_CONFIG } from '../configs/bot-commands.config';
 import { EmbedVariant } from '../types/embed-variant.type';
@@ -11,8 +11,8 @@ import { EmbedBuilderService } from './embed-builder.service';
 @Injectable()
 export class BotCommandsService {
   constructor(
-    private readonly client: Client,
     private readonly discordUsersService: DiscordUsersService,
+    private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
   public async initializeCommandHandler({
@@ -65,12 +65,11 @@ export class BotCommandsService {
     description: string;
     variant: EmbedVariant;
   }): EmbedBuilder {
-    return EmbedBuilderService.simple({
+    return this.embedBuilderService.simple({
       description: description,
       title: BOT_COMMANDS_CONFIG.embed.title,
       thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
       variant: variant,
-      client: this.client,
     });
   }
 }

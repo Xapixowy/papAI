@@ -4,7 +4,6 @@ import { z } from 'zod';
 const envSchema = z.object({
   [EnvKey.APP_PORT]: z.coerce.number().int().positive(),
   [EnvKey.APP_TIMEZONE]: z.string(),
-  [EnvKey.APP_VERSION]: z.string(),
   [EnvKey.DISCORD_BOT_TOKEN]: z.string(),
   [EnvKey.DISCORD_BOT_DEVELOPMENT_GUILD_ID]: z.string().optional(),
   [EnvKey.GEMINI_API_KEY]: z.string(),
@@ -15,12 +14,6 @@ const envSchema = z.object({
   [EnvKey.POSTGRES_PASSWORD]: z.string(),
   [EnvKey.REDIS_HOST]: z.string(),
   [EnvKey.REDIS_PORT]: z.coerce.number().int().positive(),
-  [EnvKey.RADARR_HOST]: z.string().optional(),
-  [EnvKey.RADARR_PORT]: z.coerce.number().int().positive().optional(),
-  [EnvKey.RADARR_API_KEY]: z.string().optional(),
-  [EnvKey.SONARR_HOST]: z.string().optional(),
-  [EnvKey.SONARR_PORT]: z.coerce.number().int().positive().optional(),
-  [EnvKey.SONARR_API_KEY]: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

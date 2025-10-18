@@ -11,6 +11,8 @@ import { SetCommandsController } from '../controllers/chatgpt/set-commands.contr
 import { TransactionCommandsController } from '../controllers/chatgpt/transaction-commands.controller';
 import { UserCommandsController } from '../controllers/chatgpt/user-commands.controller';
 import { ChatgptCommandsService } from '../services/chatgpt-commands.service';
+import { ChatgptEmbedBuilderService } from '../services/chatgpt/chatgpt-embed-builder.service';
+import { EmbedBuilderService } from '../services/embed-builder.service';
 import { BaseCommandsModule } from './base-commands.module';
 
 @Module({
@@ -21,6 +23,8 @@ import { BaseCommandsModule } from './base-commands.module';
     DiscordChatgptTransactionSummariesModule,
   ],
   providers: [
+    EmbedBuilderService,
+    ChatgptEmbedBuilderService,
     ChatgptCommandsService,
     ChatgptCommandsController,
     ConfigCommandsController,

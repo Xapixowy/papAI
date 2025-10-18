@@ -6,10 +6,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { configs } from './configs';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
+      load: configs,
       isGlobal: true,
       validate: (config) => validateEnv(config),
     }),

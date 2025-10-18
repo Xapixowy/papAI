@@ -4,12 +4,12 @@ import { DateFormat } from '@Enums/date-format.enum';
 import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
 import { DiscordChatgptReminderChannel } from '@Types/discord/chatgpt';
 import { DateHelper } from '@Utils/helpers/date.helper';
-import { Client, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
 import { EmbedBuilderService } from '../embed-builder.service';
 
 export class ChatgptEmbedBuilderService extends EmbedBuilderService {
-  static chatgptSummary({
+  chatgptSummary({
     description,
     nextPaymentDate,
     fromDate,
@@ -18,7 +18,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice,
     currency,
     transactionSummaries,
-    client,
   }: {
     description: string;
     nextPaymentDate: Date;
@@ -28,7 +27,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-    client: Client;
   }): EmbedBuilder {
     const { information, summary } = this.generateChatgptSummarySections({
       nextPaymentDate,
@@ -40,16 +38,15 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       transactionSummaries,
     });
 
-    return EmbedBuilderService.simple({
+    return this.simple({
       description: `${description}\n${information}\n${summary}`,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'success',
-      client,
     });
   }
 
-  static chatgptReminder({
+  chatgptReminder({
     description,
     nextPaymentDate,
     fromDate,
@@ -58,7 +55,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice,
     currency,
     transactionSummaries,
-    client,
   }: {
     description: string;
     nextPaymentDate: Date;
@@ -68,7 +64,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-    client: Client;
   }): EmbedBuilder {
     const { information, debtors } = this.generateChatgptSummarySections({
       nextPaymentDate,
@@ -80,38 +75,34 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       transactionSummaries,
     });
 
-    return ChatgptEmbedBuilderService.simple({
+    return this.simple({
       description: `${description}\n${information}\n${debtors}`,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'warning',
-      client,
     });
   }
 
-  static chatgptReminderChannels({
+  chatgptReminderChannels({
     description,
     chatgptReminderChannels,
-    client,
   }: {
     description: string;
     chatgptReminderChannels: DiscordChatgptReminderChannel[];
-    client: Client;
   }): EmbedBuilder {
     const reminderChannelsSection = this.generateReminderChannelSection({
       chatgptReminderChannels,
     });
 
-    return EmbedBuilderService.simple({
+    return this.simple({
       description: `${description}\n${reminderChannelsSection}`,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'info',
-      client,
     });
   }
 
-  static chatgptConfigList({
+  chatgptConfigList({
     description,
     chatgptCurrency,
     chatgptPrice,
@@ -119,7 +110,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     chatgptReminderDate,
     chatgptReminderChannels,
     chatgptUsers,
-    client,
   }: {
     description: string;
     chatgptCurrency: CurrencyCode;
@@ -128,7 +118,6 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     chatgptReminderDate: string;
     chatgptReminderChannels: DiscordChatgptReminderChannel[];
     chatgptUsers: DiscordUserDto[];
-    client: Client;
   }): EmbedBuilder {
     const settingsSection = this.generateSettingsSection({
       chatgptCurrency,
@@ -145,16 +134,15 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       chatgptReminderChannels,
     });
 
-    return EmbedBuilderService.simple({
+    return this.simple({
       description: `${description}\n${settingsSection}\n${reminderChannelsSection}\n${usersSection}`,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       variant: 'info',
-      client,
     });
   }
 
-  private static generateSettingsSection({
+  private generateSettingsSection({
     chatgptCurrency,
     chatgptPrice,
     chatgptPaymentDate,
@@ -167,7 +155,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
   }): string {
     const [, , reminderHour, reminderDay] = chatgptReminderDate.split(' ');
 
-    return EmbedBuilderService.generateSection({
+    return this.generateSection({
       title: '`🔧` Settings',
       description: [
         `- Currency: ` + '`' + chatgptCurrency + '`',
@@ -184,12 +172,12 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     });
   }
 
-  private static generateReminderChannelSection({
+  private generateReminderChannelSection({
     chatgptReminderChannels,
   }: {
     chatgptReminderChannels: DiscordChatgptReminderChannel[];
   }): string {
-    return EmbedBuilderService.generateSection({
+    return this.generateSection({
       title: '`🔔` Reminder Channels',
       description: chatgptReminderChannels.length
         ? chatgptReminderChannels.map(
@@ -199,7 +187,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     });
   }
 
-  private static generateUsersSection({
+  private generateUsersSection({
     chatgptUsers,
   }: {
     chatgptUsers: DiscordUserDto[];
@@ -215,7 +203,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       return `- \`${u.username} ${usernameSpaces}| \`<@!${u.userId}>`;
     });
 
-    return EmbedBuilderService.generateSection({
+    return this.generateSection({
       title: '`👤` Users',
       description: userListItems.length
         ? userListItems
@@ -223,7 +211,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     });
   }
 
-  private static generateChatgptSummarySections({
+  private generateChatgptSummarySections({
     nextPaymentDate,
     fromDate,
     toDate,
@@ -283,7 +271,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       users: transactionSummariesUsers,
     });
 
-    const informationSection = EmbedBuilderService.generateSection({
+    const informationSection = this.generateSection({
       title: '`ℹ️` Information',
       description: [
         `Next ChatGPT payment will be **${nextPaymentDistanceString}**.`,
@@ -300,7 +288,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       ],
     });
 
-    const summarySection = EmbedBuilderService.generateSection({
+    const summarySection = this.generateSection({
       title: '`📈` Summary',
       description: [
         `${summaryDescription}`,
@@ -335,7 +323,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     };
   }
 
-  private static generateChatgptUserSummary({
+  private generateChatgptUserSummary({
     transactionSummary,
     longestUsernameLength,
   }: {
@@ -360,7 +348,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     );
   }
 
-  private static getLongestUsernameLength({
+  private getLongestUsernameLength({
     users,
   }: {
     users: DiscordUserDto[];

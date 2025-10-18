@@ -4,7 +4,6 @@ import { Reflector } from '@nestjs/core';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import {
   ChatInputCommandInteraction,
-  Client,
   MessageFlags,
   StringSelectMenuInteraction,
 } from 'discord.js';
@@ -18,7 +17,7 @@ export class DiscordUserRoleGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly discordUsersService: DiscordUsersService,
-    private readonly client: Client,
+    private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
   static get embedTitle(): string {
@@ -46,11 +45,7 @@ export class DiscordUserRoleGuard implements CanActivate {
     );
 
     if (discordUser.isErr()) {
-      return this.forbidWithMessage(
-        'User not found.',
-        discordInteraction,
-        this.client,
-      );
+      return this.forbidWithMessage('User not found.', discordInteraction);
     }
 
     const discordUserRoles = discordUser.value.roles;
@@ -73,7 +68,6 @@ export class DiscordUserRoleGuard implements CanActivate {
       : await this.forbidWithMessage(
           'You do not have permission to do this.',
           discordInteraction,
-          this.client,
         );
   }
 
@@ -100,15 +94,13 @@ export class DiscordUserRoleGuard implements CanActivate {
   private async forbidWithMessage(
     description: string,
     interaction: ChatInputCommandInteraction | StringSelectMenuInteraction,
-    client: Client,
   ): Promise<false> {
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
       embeds: [
-        EmbedBuilderService.simple({
+        this.embedBuilderService.simple({
           description,
           title: DiscordUserRoleGuard.embedTitle,
-          client,
           variant: 'error',
           thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
         }),

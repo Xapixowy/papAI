@@ -33,10 +33,7 @@ import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { CHATGPT_COMMANDS_CONFIG } from '../configs/chatgpt-commands.config';
 import { DiscordSelectId } from '../enums/discord-select-id.enum';
 import { EmbedVariant } from '../types/embed-variant.type';
-import {
-  ChatgptEmbedBuilderService,
-  ChatgptEmbedBuilderService as EmbedBuilderService,
-} from './chatgpt/chatgpt-embed-builder.service';
+import { ChatgptEmbedBuilderService as EmbedBuilderService } from './chatgpt/chatgpt-embed-builder.service';
 
 @Injectable()
 export class ChatgptCommandsService {
@@ -59,6 +56,7 @@ export class ChatgptCommandsService {
     private readonly discordChatgptTransactionSummariesService: DiscordChatgptTransactionSummariesService,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
   public async userAddHandler({
@@ -245,7 +243,7 @@ export class ChatgptCommandsService {
       });
     }
 
-    return ChatgptEmbedBuilderService.chatgptConfigList({
+    return this.embedBuilderService.chatgptConfigList({
       description: 'List of ChatGPT settings.',
       chatgptCurrency: chatgptCurrency.value,
       chatgptPrice: chatgptPrice.value,
@@ -253,7 +251,6 @@ export class ChatgptCommandsService {
       chatgptReminderDate: chatgptReminderDate.value,
       chatgptReminderChannels: chatgptReminderChannels.value,
       chatgptUsers: chatgptUsers.value.map((u) => DiscordUserDto.fromEntity(u)),
-      client: this.client,
     });
   }
 
@@ -532,10 +529,9 @@ export class ChatgptCommandsService {
 
     const reminderChannelsValue = reminderChannels.value;
 
-    return ChatgptEmbedBuilderService.chatgptReminderChannels({
+    return this.embedBuilderService.chatgptReminderChannels({
       description: 'Reminder channels list.',
       chatgptReminderChannels: reminderChannelsValue,
-      client: this.client,
     });
   }
   public async transactionAddHandler({
@@ -1142,12 +1138,11 @@ export class ChatgptCommandsService {
     description: string;
     variant: EmbedVariant;
   }): EmbedBuilder {
-    return EmbedBuilderService.simple({
+    return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       variant,
-      client: this.client,
     });
   }
 
@@ -1170,7 +1165,7 @@ export class ChatgptCommandsService {
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
   }): EmbedBuilder {
-    return EmbedBuilderService.chatgptSummary({
+    return this.embedBuilderService.chatgptSummary({
       description,
       nextPaymentDate,
       fromDate,
@@ -1179,7 +1174,6 @@ export class ChatgptCommandsService {
       totalPrice,
       currency,
       transactionSummaries,
-      client: this.client,
     });
   }
 
@@ -1202,7 +1196,7 @@ export class ChatgptCommandsService {
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
   }): EmbedBuilder {
-    return EmbedBuilderService.chatgptReminder({
+    return this.embedBuilderService.chatgptReminder({
       description,
       nextPaymentDate,
       fromDate,
@@ -1211,7 +1205,6 @@ export class ChatgptCommandsService {
       totalPrice,
       currency,
       transactionSummaries,
-      client: this.client,
     });
   }
 
