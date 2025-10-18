@@ -2,6 +2,7 @@ import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-co
 import { RequiresDiscordUserRole } from '@Modules/discord_bot/decorators/requires-discord-user-role.decorator';
 import { DiscordSelectId } from '@Modules/discord_bot/enums/discord-select-id.enum';
 import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-role.guard';
+import { SendToAllReminderChannelsOption } from '@Modules/discord_bot/options/chatgpt/send-to-all-reminder-channels.option';
 import { EphemeralOption } from '@Modules/discord_bot/options/ephemeral.option';
 import { PriceOption } from '@Modules/discord_bot/options/price.option';
 import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
@@ -193,11 +194,25 @@ export class TransactionCommandsController extends BaseCommandsController {
   )
   public async onRemindTransactionSummaryCommand(
     @Context() [interaction]: SlashCommandContext,
+    @Options() { sendToAllReminderChannels }: SendToAllReminderChannelsOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.transactionRemindHandler();
+    const { embed, remindEmbed, channels } =
+      await this.chatgptCommandsService.transactionRemindHandler({
+        sendToAllReminderChannels: sendToAllReminderChannels ?? false,
+      });
+
+    if (remindEmbed && channels) {
+      for (const channel of channels) {
+        await channel.sendTyping();
+        await channel.send({ embeds: [remindEmbed] });
+      }
+
+      return interaction.reply({
+        embeds: [embed],
+      });
+    }
 
     return interaction.reply({
-      flags: [MessageFlags.Ephemeral],
       embeds: [embed],
     });
   }

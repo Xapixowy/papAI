@@ -830,48 +830,67 @@ export class ChatgptCommandsService {
     });
   }
 
-  public async transactionRemindHandler(): Promise<EmbedBuilder> {
-    const paymentDate = await this.discordSettingsService.getValueByKey<number>(
-      DiscordSettingKey.CHATGPT_PAYMENT_DATE,
+  public async transactionRemindHandler({
+    sendToAllReminderChannels,
+  }: {
+    sendToAllReminderChannels: boolean;
+  }): Promise<{
+    embed: EmbedBuilder;
+    remindEmbed?: EmbedBuilder;
+    channels?: TextChannel[];
+  }> {
+    const remindEmbed = await this.generateTransactionRemindEmbed();
+
+    if (!sendToAllReminderChannels) {
+      return {
+        embed: remindEmbed,
+      };
+    }
+
+    const reminderChannels = await this.discordSettingsService.getValueByKey<
+      DiscordChatgptReminderChannel[]
+    >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
+
+    if (reminderChannels.isErr()) {
+      return {
+        embed: this.generateSimpleEmbed({
+          description: 'There was an error getting the reminder channels.',
+          variant: 'error',
+        }),
+      };
+    }
+
+    const reminderChannelsValue = reminderChannels.value;
+
+    const channels = await Promise.all(
+      reminderChannelsValue.map((channel) =>
+        this.getChannel(channel.channelId),
+      ),
     );
 
-    if (paymentDate.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the payment date.',
-        variant: 'error',
-      });
+    const isChannelsError = channels.some((channel) => channel.isErr());
+
+    if (isChannelsError) {
+      return {
+        embed: this.generateSimpleEmbed({
+          description: 'There was an error getting the reminder channels.',
+          variant: 'error',
+        }),
+      };
     }
 
-    const transactionSummaryData = await this.generateTransactionSummaryData();
+    const channelsValue = channels
+      .map((channel) => (channel as Ok<Channel, ErrorCode>).value)
+      .filter((c) => c instanceof TextChannel);
 
-    if (transactionSummaryData.isErr()) {
-      return this.generateSimpleEmbed({
-        description: this.errorCodeMessageMap[transactionSummaryData.error]!,
-        variant: 'error',
-      });
-    }
-
-    const {
-      transactionSummaries,
-      nextPaymentDate,
-      fromDate,
-      toDate,
-      pricePerUser,
-      totalPrice,
-      currency,
-    } = transactionSummaryData.value;
-
-    return this.generateChatgptReminderEmbed({
-      description:
-        'The payment deadline for ChatGPT is approaching. Below is a list of people who are behind on their payments.',
-      nextPaymentDate,
-      fromDate,
-      toDate,
-      pricePerUser,
-      totalPrice,
-      currency,
-      transactionSummaries,
-    });
+    return {
+      embed: this.generateSimpleEmbed({
+        description: 'Remind message was sent to all reminder channels.',
+        variant: 'success',
+      }),
+      remindEmbed,
+      channels: channelsValue,
+    };
   }
 
   public async transactionRemindCronjobHandler(): Promise<void> {
@@ -926,7 +945,7 @@ export class ChatgptCommandsService {
     const newJob: CronJob = new CronJob(
       reminderDate.value,
       async () => {
-        const embed = await this.transactionRemindHandler();
+        const embed = await this.generateTransactionRemindEmbed();
         for (const channel of channelsValue) {
           await channel.sendTyping();
           await channel.send({ embeds: [embed] });
@@ -941,6 +960,50 @@ export class ChatgptCommandsService {
       CronjobName.DISCORD_CHATGPT_PAYMENT_REMINDER,
       newJob,
     );
+  }
+
+  private async generateTransactionRemindEmbed(): Promise<EmbedBuilder> {
+    const paymentDate = await this.discordSettingsService.getValueByKey<number>(
+      DiscordSettingKey.CHATGPT_PAYMENT_DATE,
+    );
+
+    if (paymentDate.isErr()) {
+      return this.generateSimpleEmbed({
+        description: 'There was an error getting the payment date.',
+        variant: 'error',
+      });
+    }
+
+    const transactionSummaryData = await this.generateTransactionSummaryData();
+
+    if (transactionSummaryData.isErr()) {
+      return this.generateSimpleEmbed({
+        description: this.errorCodeMessageMap[transactionSummaryData.error]!,
+        variant: 'error',
+      });
+    }
+
+    const {
+      transactionSummaries,
+      nextPaymentDate,
+      fromDate,
+      toDate,
+      pricePerUser,
+      totalPrice,
+      currency,
+    } = transactionSummaryData.value;
+
+    return this.generateChatgptReminderEmbed({
+      description:
+        'The payment deadline for ChatGPT is approaching. Below is a list of people who are behind on their payments.',
+      nextPaymentDate,
+      fromDate,
+      toDate,
+      pricePerUser,
+      totalPrice,
+      currency,
+      transactionSummaries,
+    });
   }
 
   private async generateTransactionSummaryData(): Promise<
