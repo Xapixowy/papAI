@@ -6,6 +6,7 @@ import { NecordModule } from 'necord';
 import { BaseCommandsModule } from './modules/base-commands.module';
 import { BotCommandsModule } from './modules/bot-commands.module';
 import { ChatgptCommandsModule } from './modules/chatgpt-commands.module';
+import { HumanCommandsModule } from './modules/human-commands.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ChatgptCommandsModule } from './modules/chatgpt-commands.module';
     }),
     BotCommandsModule,
     ChatgptCommandsModule,
+    HumanCommandsModule,
   ],
 })
 export class DiscordBotModule extends BaseCommandsModule {
@@ -32,6 +34,7 @@ export class DiscordBotModule extends BaseCommandsModule {
     return [
       ...BotCommandsModule.botIntents,
       ...ChatgptCommandsModule.botIntents,
+      ...HumanCommandsModule.botIntents,
     ];
   }
 }
