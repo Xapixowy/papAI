@@ -65,4 +65,44 @@ export class ConfigCommandsController extends BaseCommandsController {
       embeds: [embed],
     });
   }
+
+  @Subcommand({
+    name: CONFIG_COMMANDS_CONFIG.commands.getSystemPrompt.name,
+    description: CONFIG_COMMANDS_CONFIG.commands.getSystemPrompt.description,
+  })
+  @RequiresDiscordUserRole(
+    ...CONFIG_COMMANDS_CONFIG.commands.getSystemPrompt.userRoles,
+  )
+  public async onConfigGetSystemPromptCommand(
+    @Context() [interaction]: SlashCommandContext,
+  ): Promise<InteractionResponse<boolean>> {
+    const embed =
+      await this.humanCommandsService.configGetSystemPromptHandler();
+
+    return interaction.reply({
+      flags: [MessageFlags.Ephemeral],
+      embeds: [embed],
+    });
+  }
+
+  @Subcommand({
+    name: CONFIG_COMMANDS_CONFIG.commands.setSystemPrompt.name,
+    description: CONFIG_COMMANDS_CONFIG.commands.setSystemPrompt.description,
+  })
+  @RequiresDiscordUserRole(
+    ...CONFIG_COMMANDS_CONFIG.commands.setSystemPrompt.userRoles,
+  )
+  public async onConfigSetSystemPromptCommand(
+    @Context() [interaction]: SlashCommandContext,
+    @Options() { query }: QueryOption,
+  ): Promise<InteractionResponse<boolean>> {
+    const embed = await this.humanCommandsService.configSetSystemPromptHandler({
+      systemPrompt: query,
+    });
+
+    return interaction.reply({
+      flags: [MessageFlags.Ephemeral],
+      embeds: [embed],
+    });
+  }
 }
