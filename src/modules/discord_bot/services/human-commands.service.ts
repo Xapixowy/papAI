@@ -3,7 +3,9 @@ import { Part } from '@google/generative-ai';
 import { Injectable } from '@nestjs/common';
 import { GeminiService } from '@Services/api/gemini.service';
 import { TenorService } from '@Services/api/tenor.service';
+import { DiscordHumanConversationHistoryService } from '@Services/discord-human-conversation-history.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
+import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
 import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
 import { EmbedBuilder } from 'discord.js';
 import { HUMAN_COMMANDS_CONFIG } from '../configs/human-commands.config';
@@ -17,6 +19,7 @@ export class HumanCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
     private readonly tenorService: TenorService,
     private readonly geminiService: GeminiService,
+    private readonly discordHumanConversationHistoryService: DiscordHumanConversationHistoryService,
   ) {}
 
   public async configGetGMGIFQueryHandler(): Promise<EmbedBuilder> {
@@ -156,9 +159,11 @@ export class HumanCommandsService {
 
   public async mentionMessageHandler({
     message,
+    channelId,
     attachments,
   }: {
     message: string;
+    channelId: string;
     attachments?: unknown[];
   }): Promise<string[] | EmbedBuilder> {
     const systemPrompt =
@@ -177,9 +182,27 @@ export class HumanCommandsService {
 
     const systemPromptParts: Part[] = [{ text: message }];
 
+    const conversationHistory =
+      await this.discordHumanConversationHistoryService.getChannelHistory(
+        channelId,
+      );
+
+    await this.discordHumanConversationHistoryService.addChannelHistory(
+      channelId,
+      {
+        role: 'user',
+        text: message,
+      },
+    );
+
+    const conversationHistoryContents = conversationHistory.map((message) =>
+      DiscordHumanConversationHistoryMessageConverter.toGeminiContent(message),
+    );
+
     const generationResult = await this.geminiService.generateContent({
       systemPrompt: systemPromptValue,
       queryParts: systemPromptParts,
+      conversationHistory: conversationHistoryContents,
     });
 
     if (generationResult.isErr()) {
@@ -194,6 +217,14 @@ export class HumanCommandsService {
     if (generationResultValue.length === 0) {
       return ['🤷‍♂️'];
     }
+
+    await this.discordHumanConversationHistoryService.addChannelHistory(
+      channelId,
+      {
+        role: 'model',
+        text: generationResultValue,
+      },
+    );
 
     return MarkdownHelper.splitMessageWithCodeAndPagination({
       text: generationResultValue,

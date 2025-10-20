@@ -21,9 +21,11 @@ export class GeminiService {
   async generateContent({
     systemPrompt,
     queryParts,
+    conversationHistory = [],
   }: {
     systemPrompt: string;
     queryParts: Part[];
+    conversationHistory?: Content[];
   }): Promise<Result<string, ErrorCode>> {
     if (!this.gemini) {
       return err(ErrorCode.GEMINI_INITIALIZATION_ERROR);
@@ -43,7 +45,11 @@ export class GeminiService {
         systemInstruction: systemPrompt,
       });
 
-      const contents: Content[] = [{ role: 'user', parts: queryParts }];
+      const contents: Content[] = [
+        ...conversationHistory,
+        { role: 'user', parts: queryParts },
+      ];
+
       const request: GenerateContentRequest = { contents };
 
       this.logger.log('Generating content from Gemini...');

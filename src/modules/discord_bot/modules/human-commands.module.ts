@@ -3,6 +3,7 @@ import { TenorModule } from '@Modules/api/tenor.module';
 import { DiscordSettingsModule } from '@Modules/discord-settings.module';
 import { DiscordUsersModule } from '@Modules/discord-users.module';
 import { Module } from '@nestjs/common';
+import { DiscordHumanConversationHistoryService } from '@Services/discord-human-conversation-history.service';
 import { GatewayIntentBits } from 'discord.js';
 import { HumanCommandsController } from '../controllers/human-commands.controller';
 import { ConfigCommandsController } from '../controllers/human/config-commands.controller';
@@ -20,6 +21,7 @@ import { BaseCommandsModule } from './base-commands.module';
   providers: [
     EmbedBuilderService,
     HumanCommandsService,
+    DiscordHumanConversationHistoryService,
     ConfigCommandsController,
     HumanCommandsController,
   ],
