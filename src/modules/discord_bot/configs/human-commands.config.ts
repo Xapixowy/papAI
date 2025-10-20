@@ -1,3 +1,4 @@
+import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import {
   CommandConfigCommand,
   CommandConfigGroup,
@@ -12,7 +13,7 @@ export const HUMAN_COMMANDS_CONFIG: CommandConfigParentGroup<
   embed: {
     title: 'Human',
     thumbnail:
-      'https://cdn.discordapp.com/avatars/1402731157384069161/38e74af3fc1ca26500e9a2885d6eaa99?size=256',
+      'https://static.wikia.nocookie.net/fortnite/images/c/cd/MrBeast_%28v28.01%29_-_Outfit_-_Fortnite.png/revision/latest?cb=20231208014631',
   },
   commands: {
     config: {
@@ -21,13 +22,23 @@ export const HUMAN_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         getGMGIFQuery: {
           name: 'get-gm-gif-query',
-          description: 'Gets the GM GIF query',
+          description: 'Gets the Good Morning GIF query',
           userRoles: [],
         },
         setGMGIFQuery: {
           name: 'set-gm-gif-query',
-          description: 'Sets a GIF query for the GM command',
+          description: 'Sets the Good Morning GIF query',
           userRoles: [],
+        },
+        getSystemPrompt: {
+          name: 'get-system-prompt',
+          description: 'Gets the system prompt for mention replies',
+          userRoles: [DiscordUserRole.SUPER_ADMIN],
+        },
+        setSystemPrompt: {
+          name: 'set-system-prompt',
+          description: 'Sets the system prompt for mention replies',
+          userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
       },
     },

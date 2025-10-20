@@ -1,7 +1,12 @@
 import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
+import { Part } from '@google/generative-ai';
 import { Injectable } from '@nestjs/common';
+import { GeminiService } from '@Services/api/gemini.service';
 import { TenorService } from '@Services/api/tenor.service';
+import { DiscordHumanConversationHistoryService } from '@Services/discord-human-conversation-history.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
+import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
+import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
 import { EmbedBuilder } from 'discord.js';
 import { HUMAN_COMMANDS_CONFIG } from '../configs/human-commands.config';
 import { EmbedVariant } from '../types/embed-variant.type';
@@ -13,6 +18,8 @@ export class HumanCommandsService {
     private readonly discordSettingsService: DiscordSettingsService,
     private readonly embedBuilderService: EmbedBuilderService,
     private readonly tenorService: TenorService,
+    private readonly geminiService: GeminiService,
+    private readonly discordHumanConversationHistoryService: DiscordHumanConversationHistoryService,
   ) {}
 
   public async configGetGMGIFQueryHandler(): Promise<EmbedBuilder> {
@@ -104,6 +111,125 @@ export class HumanCommandsService {
     }
 
     return gifUrl;
+  }
+
+  public async configGetSystemPromptHandler(): Promise<EmbedBuilder> {
+    const systemPrompt =
+      await this.discordSettingsService.getValueByKey<string>(
+        DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
+      );
+
+    if (systemPrompt.isErr()) {
+      return this.generateSimpleEmbed({
+        description: 'There was an error getting the system prompt.',
+        variant: 'error',
+      });
+    }
+
+    const systemPromptValue = systemPrompt.value;
+
+    return this.generateSimpleEmbed({
+      description: `System prompt is set to \`${systemPromptValue}\`.`,
+      variant: 'success',
+    });
+  }
+
+  public async configSetSystemPromptHandler({
+    systemPrompt,
+  }: {
+    systemPrompt: string;
+  }): Promise<EmbedBuilder> {
+    const systemPromptSetting = await this.discordSettingsService.set(
+      DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
+      systemPrompt,
+    );
+
+    if (systemPromptSetting.isErr()) {
+      return this.generateSimpleEmbed({
+        description: 'There was an error setting the system prompt.',
+        variant: 'error',
+      });
+    }
+
+    return this.generateSimpleEmbed({
+      description: `System prompt set to \`${systemPrompt}\`.`,
+      variant: 'success',
+    });
+  }
+
+  public async mentionMessageHandler({
+    message,
+    channelId,
+    attachments,
+  }: {
+    message: string;
+    channelId: string;
+    attachments?: unknown[];
+  }): Promise<string[] | EmbedBuilder> {
+    const systemPrompt =
+      await this.discordSettingsService.getValueByKey<string>(
+        DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
+      );
+
+    if (systemPrompt.isErr()) {
+      return this.generateSimpleEmbed({
+        description: 'There was an error getting the system prompt.',
+        variant: 'error',
+      });
+    }
+
+    const systemPromptValue = systemPrompt.value;
+
+    const systemPromptParts: Part[] = [{ text: message }];
+
+    const conversationHistory =
+      await this.discordHumanConversationHistoryService.getChannelHistory(
+        channelId,
+      );
+
+    await this.discordHumanConversationHistoryService.addChannelHistory(
+      channelId,
+      {
+        role: 'user',
+        text: message,
+      },
+    );
+
+    const conversationHistoryContents = conversationHistory.map((message) =>
+      DiscordHumanConversationHistoryMessageConverter.toGeminiContent(message),
+    );
+
+    const generationResult = await this.geminiService.generateContent({
+      systemPrompt: systemPromptValue,
+      queryParts: systemPromptParts,
+      conversationHistory: conversationHistoryContents,
+    });
+
+    if (generationResult.isErr()) {
+      return this.generateSimpleEmbed({
+        description: 'There was an error generating the message.',
+        variant: 'error',
+      });
+    }
+
+    const generationResultValue = generationResult.value;
+
+    if (generationResultValue.length === 0) {
+      return ['🤷‍♂️'];
+    }
+
+    await this.discordHumanConversationHistoryService.addChannelHistory(
+      channelId,
+      {
+        role: 'model',
+        text: generationResultValue,
+      },
+    );
+
+    return MarkdownHelper.splitMessageWithCodeAndPagination({
+      text: generationResultValue,
+      maxPageLength: 1800,
+    });
   }
 
   private generateSimpleEmbed({

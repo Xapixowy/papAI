@@ -1,6 +1,7 @@
 import { validateEnv } from '@Configs/env.config';
 import { EnvKey } from '@Enums/env-key.enum';
 import { DiscordBotModule } from '@Modules/discord_bot/discord-bot.module';
+import { RedisModule } from '@Modules/redis.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -34,6 +35,7 @@ import { configs } from './configs';
       inject: [ConfigService],
     }),
     ScheduleModule.forRoot(),
+    RedisModule,
     DiscordBotModule,
   ],
   controllers: [],
