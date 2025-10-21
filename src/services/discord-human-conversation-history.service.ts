@@ -38,6 +38,8 @@ export class DiscordHumanConversationHistoryService {
           return {
             role: message.role,
             text: message.text,
+            messageId: message.messageId,
+            createdAt: message.createdAt,
           };
         });
 

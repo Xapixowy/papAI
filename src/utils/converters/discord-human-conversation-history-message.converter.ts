@@ -8,6 +8,7 @@ export class DiscordHumanConversationHistoryMessageConverter {
     return {
       role: content.role === 'user' ? 'user' : 'model',
       text: content.parts.find((part) => 'text' in part)?.text ?? '',
+      createdAt: new Date().toISOString(),
     };
   }
 
