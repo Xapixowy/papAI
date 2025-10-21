@@ -234,10 +234,6 @@ export class HumanCommandsService {
         ),
     );
 
-    allConversationHistoryMessages.forEach((content) => {
-      console.log(content);
-    });
-
     const generationResult = await this.geminiService.generateContent({
       systemPrompt: systemPromptValue,
       queryParts: systemPromptParts,
