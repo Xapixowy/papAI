@@ -77,6 +77,7 @@ export class HumanCommandsController extends BaseCommandsController {
       await this.humanCommandsService.mentionMessageHandler({
         message: message.content,
         channelId: message.channel.id,
+        messageId: message.id,
       });
 
     if (stopTyping) stopTyping();

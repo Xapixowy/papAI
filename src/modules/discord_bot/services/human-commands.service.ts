@@ -1,13 +1,16 @@
 import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
+import { ErrorCode } from '@Enums/error-code.enum';
 import { Part } from '@google/generative-ai';
 import { Injectable } from '@nestjs/common';
 import { GeminiService } from '@Services/api/gemini.service';
 import { TenorService } from '@Services/api/tenor.service';
 import { DiscordHumanConversationHistoryService } from '@Services/discord-human-conversation-history.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
+import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
 import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
 import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
-import { EmbedBuilder } from 'discord.js';
+import { Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { err, ok, Result } from 'neverthrow';
 import { HUMAN_COMMANDS_CONFIG } from '../configs/human-commands.config';
 import { EmbedVariant } from '../types/embed-variant.type';
 import { EmbedBuilderService } from './embed-builder.service';
@@ -20,6 +23,7 @@ export class HumanCommandsService {
     private readonly tenorService: TenorService,
     private readonly geminiService: GeminiService,
     private readonly discordHumanConversationHistoryService: DiscordHumanConversationHistoryService,
+    private readonly client: Client,
   ) {}
 
   public async configGetGMGIFQueryHandler(): Promise<EmbedBuilder> {
@@ -159,10 +163,12 @@ export class HumanCommandsService {
 
   public async mentionMessageHandler({
     message,
+    messageId,
     channelId,
     attachments,
   }: {
     message: string;
+    messageId: string;
     channelId: string;
     attachments?: unknown[];
   }): Promise<string[] | EmbedBuilder> {
@@ -191,18 +197,51 @@ export class HumanCommandsService {
       channelId,
       {
         role: 'user',
-        text: message,
+        text: message.trim(),
+        messageId: messageId,
+        createdAt: new Date().toISOString(),
       },
     );
 
-    const conversationHistoryContents = conversationHistory.map((message) =>
-      DiscordHumanConversationHistoryMessageConverter.toGeminiContent(message),
+    const channelMessages = await this.getChannelMessages(channelId, messageId);
+    const channelMessagesContents = channelMessages.match(
+      (messages) => messages,
+      () => [] as DiscordHumanConversationHistoryMessage[],
     );
+
+    const convertsationHistoryMessageIds = conversationHistory
+      .map((message) => message.messageId)
+      .filter((messageId) => messageId !== undefined);
+
+    const allConversationHistoryMessages = [
+      ...conversationHistory,
+      ...channelMessagesContents.filter((channelMessage) =>
+        channelMessage.messageId !== undefined
+          ? !convertsationHistoryMessageIds.includes(channelMessage.messageId)
+          : true,
+      ),
+    ].sort((a, b) => {
+      const aDate = new Date(a.createdAt);
+      const bDate = new Date(b.createdAt);
+
+      return aDate.getTime() - bDate.getTime();
+    });
+
+    const allConversationHistoryContents = allConversationHistoryMessages.map(
+      (message) =>
+        DiscordHumanConversationHistoryMessageConverter.toGeminiContent(
+          message,
+        ),
+    );
+
+    allConversationHistoryMessages.forEach((content) => {
+      console.log(content);
+    });
 
     const generationResult = await this.geminiService.generateContent({
       systemPrompt: systemPromptValue,
       queryParts: systemPromptParts,
-      conversationHistory: conversationHistoryContents,
+      conversationHistory: allConversationHistoryContents,
     });
 
     if (generationResult.isErr()) {
@@ -223,6 +262,7 @@ export class HumanCommandsService {
       {
         role: 'model',
         text: generationResultValue,
+        createdAt: new Date().toISOString(),
       },
     );
 
@@ -230,6 +270,35 @@ export class HumanCommandsService {
       text: generationResultValue,
       maxPageLength: 1800,
     });
+  }
+
+  private async getChannelMessages(
+    channelId: string,
+    messageId: string,
+  ): Promise<Result<DiscordHumanConversationHistoryMessage[], ErrorCode>> {
+    try {
+      const channel = await this.client.channels.fetch(channelId);
+
+      if (!(channel instanceof TextChannel)) {
+        return err(ErrorCode.DISCORD_CHANNEL_WRONG_TYPE);
+      }
+
+      const messages = await channel.messages.fetch({
+        limit: 10,
+        before: messageId,
+      });
+
+      return ok(
+        messages.map((message) => ({
+          role: message.author.id === this.client.user?.id ? 'model' : 'user',
+          text: message.content,
+          createdAt: message.createdAt.toISOString(),
+          messageId: message.id,
+        })),
+      );
+    } catch {
+      return err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+    }
   }
 
   private generateSimpleEmbed({
