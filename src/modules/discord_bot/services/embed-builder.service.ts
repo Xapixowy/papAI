@@ -1,11 +1,13 @@
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client, ColorResolvable, EmbedBuilder } from 'discord.js';
 import { EmbedVariant } from '../types/embed-variant.type';
 
+@Injectable()
 export class EmbedBuilderService {
   constructor(
-    private readonly client: Client,
-    private readonly configService: ConfigService,
+    protected readonly client: Client,
+    protected readonly configService: ConfigService,
   ) {}
 
   simple({
