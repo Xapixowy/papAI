@@ -38,6 +38,7 @@ export class DiscordHumanConversationHistoryService {
           return {
             role: message.role,
             text: message.text,
+            attachments: message.attachments,
             messageId: message.messageId,
             createdAt: message.createdAt,
           };

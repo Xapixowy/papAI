@@ -9,10 +9,11 @@ import { DiscordSettingsService } from '@Services/discord-settings.service';
 import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
 import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
 import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
-import { Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { Attachment, Client, EmbedBuilder, TextChannel } from 'discord.js';
 import { err, ok, Result } from 'neverthrow';
 import { HUMAN_COMMANDS_CONFIG } from '../configs/human-commands.config';
 import { EmbedVariant } from '../types/embed-variant.type';
+import { DiscordAttachmentsHelper } from '../utils/helpers/discord-attachments.helper';
 import { EmbedBuilderService } from './embed-builder.service';
 
 @Injectable()
@@ -170,7 +171,7 @@ export class HumanCommandsService {
     message: string;
     messageId: string;
     channelId: string;
-    attachments?: unknown[];
+    attachments?: Attachment[];
   }): Promise<string[] | EmbedBuilder> {
     const systemPrompt =
       await this.discordSettingsService.getValueByKey<string>(
@@ -184,14 +185,22 @@ export class HumanCommandsService {
       });
     }
 
-    const systemPromptValue = systemPrompt.value;
+    const imagesAttachmentsParts =
+      await DiscordAttachmentsHelper.convertImagesToGeminiParts(
+        attachments ?? [],
+      );
 
-    const systemPromptParts: Part[] = [{ text: message }];
+    const systemPromptValue = systemPrompt.value;
+    const queryParts: Part[] = [{ text: message }, ...imagesAttachmentsParts];
 
     const conversationHistory =
       await this.discordHumanConversationHistoryService.getChannelHistory(
         channelId,
       );
+
+    const convertsationHistoryMessageIds = conversationHistory
+      .map((message) => message.messageId)
+      .filter((messageId) => messageId !== undefined);
 
     await this.discordHumanConversationHistoryService.addChannelHistory(
       channelId,
@@ -199,6 +208,10 @@ export class HumanCommandsService {
         role: 'user',
         text: message.trim(),
         messageId: messageId,
+        attachments: imagesAttachmentsParts.map((part) => ({
+          contentType: part.inlineData!.mimeType,
+          data: part.inlineData!.data,
+        })),
         createdAt: new Date().toISOString(),
       },
     );
@@ -208,10 +221,6 @@ export class HumanCommandsService {
       (messages) => messages,
       () => [] as DiscordHumanConversationHistoryMessage[],
     );
-
-    const convertsationHistoryMessageIds = conversationHistory
-      .map((message) => message.messageId)
-      .filter((messageId) => messageId !== undefined);
 
     const allConversationHistoryMessages = [
       ...conversationHistory,
@@ -236,7 +245,7 @@ export class HumanCommandsService {
 
     const generationResult = await this.geminiService.generateContent({
       systemPrompt: systemPromptValue,
-      queryParts: systemPromptParts,
+      queryParts: queryParts,
       conversationHistory: allConversationHistoryContents,
     });
 
@@ -284,14 +293,32 @@ export class HumanCommandsService {
         before: messageId,
       });
 
-      return ok(
-        messages.map((message) => ({
+      const convertedMessages: DiscordHumanConversationHistoryMessage[] = [];
+
+      for (const message of Array.from(messages.values())) {
+        const attachments = message.attachments.map((attachment) => attachment);
+
+        const imageAttachments =
+          DiscordAttachmentsHelper.filterImages(attachments);
+
+        const imagesAttachmentsParts =
+          await DiscordAttachmentsHelper.convertImagesToGeminiParts(
+            imageAttachments,
+          );
+
+        convertedMessages.push({
           role: message.author.id === this.client.user?.id ? 'model' : 'user',
           text: message.content,
+          attachments: imagesAttachmentsParts.map((part) => ({
+            contentType: part.inlineData!.mimeType,
+            data: part.inlineData!.data,
+          })),
           createdAt: message.createdAt.toISOString(),
           messageId: message.id,
-        })),
-      );
+        });
+      }
+
+      return ok(convertedMessages);
     } catch {
       return err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
     }
