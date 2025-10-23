@@ -1,15 +1,13 @@
-import appConfig from '@Configs/app.config';
-import { DISCORD_BOT_CONFIG } from '@Modules/discord_bot/discord-bot.config';
-import { Inject } from '@nestjs/common';
-import { type ConfigType } from '@nestjs/config';
-import { Client, EmbedBuilder } from 'discord.js';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Client, ColorResolvable, EmbedBuilder } from 'discord.js';
 import { EmbedVariant } from '../types/embed-variant.type';
 
+@Injectable()
 export class EmbedBuilderService {
   constructor(
-    private readonly client: Client,
-    @Inject(appConfig.KEY)
-    private readonly config: ConfigType<typeof appConfig>,
+    protected readonly client: Client,
+    protected readonly configService: ConfigService,
   ) {}
 
   simple({
@@ -71,8 +69,12 @@ export class EmbedBuilderService {
     title?: string;
     thumbnail?: string;
   }): EmbedBuilder {
+    const color = this.configService.get<ColorResolvable>(
+      'discord.colors.info',
+    )!;
+
     return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.info)
+      .setColor(color)
       .setTitle(title)
       .setDescription(description)
       .setTimestamp()
@@ -89,8 +91,12 @@ export class EmbedBuilderService {
     title?: string;
     thumbnail?: string;
   }): EmbedBuilder {
+    const color = this.configService.get<ColorResolvable>(
+      'discord.colors.success',
+    )!;
+
     return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.success)
+      .setColor(color)
       .setTitle(title)
       .setDescription(description)
       .setTimestamp()
@@ -107,8 +113,12 @@ export class EmbedBuilderService {
     title?: string;
     thumbnail?: string;
   }): EmbedBuilder {
+    const color = this.configService.get<ColorResolvable>(
+      'discord.colors.error',
+    )!;
+
     return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.error)
+      .setColor(color)
       .setTitle(title)
       .setDescription(description)
       .setTimestamp()
@@ -125,8 +135,12 @@ export class EmbedBuilderService {
     title?: string;
     thumbnail?: string;
   }): EmbedBuilder {
+    const color = this.configService.get<ColorResolvable>(
+      'discord.colors.warning',
+    )!;
+
     return new EmbedBuilder()
-      .setColor(DISCORD_BOT_CONFIG.colors.warning)
+      .setColor(color)
       .setTitle(title)
       .setDescription(description)
       .setTimestamp()
@@ -139,12 +153,11 @@ export class EmbedBuilderService {
     iconURL: string | undefined;
   } {
     const { user } = this.client;
-    const version = this.config.version;
+    const version = this.configService.get<string>('app.version')!;
+    const botName = this.configService.get<string>('discord.botName')!;
 
     return {
-      text:
-        `${user?.displayName ?? DISCORD_BOT_CONFIG.botName}` +
-        (version ? ` v${version}` : ''),
+      text: `${user?.displayName ?? botName}` + (version ? ` v${version}` : ''),
       iconURL: user?.displayAvatarURL() ?? undefined,
     };
   }

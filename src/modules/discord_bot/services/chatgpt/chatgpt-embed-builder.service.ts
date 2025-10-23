@@ -2,13 +2,23 @@ import { DiscordUserDto } from '@DTOs/discord-user.dto';
 import { CurrencyCode } from '@Enums/currency-code.enum';
 import { DateFormat } from '@Enums/date-format.enum';
 import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DiscordChatgptReminderChannel } from '@Types/discord/chatgpt';
 import { DateHelper } from '@Utils/helpers/date.helper';
-import { EmbedBuilder } from 'discord.js';
+import { Client, EmbedBuilder } from 'discord.js';
 import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
 import { EmbedBuilderService } from '../embed-builder.service';
 
+@Injectable()
 export class ChatgptEmbedBuilderService extends EmbedBuilderService {
+  constructor(
+    protected readonly client: Client,
+    protected readonly configService: ConfigService,
+  ) {
+    super(client, configService);
+  }
+
   chatgptSummary({
     description,
     nextPaymentDate,

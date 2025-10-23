@@ -73,11 +73,14 @@ export class HumanCommandsController extends BaseCommandsController {
 
     const stopTyping = startTypingInterval(message.channel);
 
+    const attachments = message.attachments.map((attachment) => attachment);
+
     const generatedMessage =
       await this.humanCommandsService.mentionMessageHandler({
         message: message.content,
         channelId: message.channel.id,
         messageId: message.id,
+        attachments,
       });
 
     if (stopTyping) stopTyping();
