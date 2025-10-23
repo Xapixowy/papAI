@@ -1,7 +1,7 @@
 import appConfig from './app.config';
+import discordConfig from './discord.config';
 import geminiConfig from './gemini.config';
 
-export * from './app.config';
 export * from './env.config';
 
-export const configs = [appConfig, geminiConfig];
+export const configs = [appConfig, discordConfig, geminiConfig];
