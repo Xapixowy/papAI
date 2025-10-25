@@ -4,7 +4,6 @@ import { Part } from '@google/generative-ai';
 import { Injectable } from '@nestjs/common';
 import { GeminiService } from '@Services/api/gemini.service';
 import { TenorService } from '@Services/api/tenor.service';
-import { DiscordHumanConversationHistoryService } from '@Services/discord-human-conversation-history.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
 import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
 import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
@@ -23,7 +22,6 @@ export class HumanCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
     private readonly tenorService: TenorService,
     private readonly geminiService: GeminiService,
-    private readonly discordHumanConversationHistoryService: DiscordHumanConversationHistoryService,
     private readonly client: Client,
   ) {}
 
@@ -193,50 +191,30 @@ export class HumanCommandsService {
     const systemPromptValue = systemPrompt.value;
     const queryParts: Part[] = [{ text: message }, ...imagesAttachmentsParts];
 
-    const conversationHistory =
-      await this.discordHumanConversationHistoryService.getChannelHistory(
-        channelId,
-      );
-
-    const convertsationHistoryMessageIds = conversationHistory
-      .map((message) => message.messageId)
-      .filter((messageId) => messageId !== undefined);
-
-    await this.discordHumanConversationHistoryService.addChannelHistory(
+    const channelMessageHistory = await this.getChannelMessages(
       channelId,
-      {
-        role: 'user',
-        text: message.trim(),
-        messageId: messageId,
-        attachments: imagesAttachmentsParts.map((part) => ({
-          contentType: part.inlineData!.mimeType,
-          data: part.inlineData!.data,
-        })),
-        createdAt: new Date().toISOString(),
-      },
+      messageId,
     );
+    const channelMessageHistoryOk = channelMessageHistory
+      .match(
+        (messages) => messages,
+        () => [] as DiscordHumanConversationHistoryMessage[],
+      )
+      .filter((message) => {
+        if (message.messageId === undefined) {
+          return true;
+        }
 
-    const channelMessages = await this.getChannelMessages(channelId, messageId);
-    const channelMessagesContents = channelMessages.match(
-      (messages) => messages,
-      () => [] as DiscordHumanConversationHistoryMessage[],
-    );
+        return message.messageId !== messageId;
+      })
+      .sort((a, b) => {
+        const aDate = new Date(a.createdAt);
+        const bDate = new Date(b.createdAt);
 
-    const allConversationHistoryMessages = [
-      ...conversationHistory,
-      ...channelMessagesContents.filter((channelMessage) =>
-        channelMessage.messageId !== undefined
-          ? !convertsationHistoryMessageIds.includes(channelMessage.messageId)
-          : true,
-      ),
-    ].sort((a, b) => {
-      const aDate = new Date(a.createdAt);
-      const bDate = new Date(b.createdAt);
+        return aDate.getTime() - bDate.getTime();
+      });
 
-      return aDate.getTime() - bDate.getTime();
-    });
-
-    const allConversationHistoryContents = allConversationHistoryMessages.map(
+    const channelMessageHistoryContent = channelMessageHistoryOk.map(
       (message) =>
         DiscordHumanConversationHistoryMessageConverter.toGeminiContent(
           message,
@@ -246,7 +224,7 @@ export class HumanCommandsService {
     const generationResult = await this.geminiService.generateContent({
       systemPrompt: systemPromptValue,
       queryParts: queryParts,
-      conversationHistory: allConversationHistoryContents,
+      conversationHistory: channelMessageHistoryContent,
     });
 
     if (generationResult.isErr()) {
@@ -261,15 +239,6 @@ export class HumanCommandsService {
     if (generationResultValue.length === 0) {
       return ['🤷‍♂️'];
     }
-
-    await this.discordHumanConversationHistoryService.addChannelHistory(
-      channelId,
-      {
-        role: 'model',
-        text: generationResultValue,
-        createdAt: new Date().toISOString(),
-      },
-    );
 
     return MarkdownHelper.splitMessageWithCodeAndPagination({
       text: generationResultValue,
@@ -289,7 +258,7 @@ export class HumanCommandsService {
       }
 
       const messages = await channel.messages.fetch({
-        limit: 10,
+        limit: 20,
         before: messageId,
       });
 
