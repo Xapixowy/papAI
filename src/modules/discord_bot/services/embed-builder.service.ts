@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client, ColorResolvable, EmbedBuilder } from 'discord.js';
 import { EmbedVariant } from '../types/embed-variant.type';
@@ -15,11 +15,13 @@ export class EmbedBuilderService {
     title,
     thumbnail,
     variant,
+    logger,
   }: {
     description: string;
     title?: string;
     thumbnail?: string;
     variant: EmbedVariant;
+    logger?: Logger;
   }): EmbedBuilder {
     switch (variant) {
       case 'success':
@@ -33,6 +35,7 @@ export class EmbedBuilderService {
           description,
           title,
           thumbnail,
+          logger,
         });
       case 'warning':
         return this.simpleWarning({
@@ -108,11 +111,15 @@ export class EmbedBuilderService {
     description = 'Something went wrong.',
     title = 'Error',
     thumbnail,
+    logger,
   }: {
     description?: string;
     title?: string;
     thumbnail?: string;
+    logger?: Logger;
   }): EmbedBuilder {
+    logger?.error(description);
+
     const color = this.configService.get<ColorResolvable>(
       'discord.colors.error',
     )!;

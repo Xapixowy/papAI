@@ -23,6 +23,7 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@Configs/*": ["src/configs/*"],
+      "@Constants/*": ["src/constants/*"],
       "@Database/*": ["src/database/*"],
       "@DTOs/*": ["src/dtos/*"],
       "@Entities/*": ["src/database/entities/*"],

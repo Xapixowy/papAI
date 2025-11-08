@@ -6,7 +6,7 @@ import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { EnvKey } from '@Enums/env-key.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { DiscordChatgptTransactionSummariesService } from '@Services/discord-chatgpt-transaction-summaries.service';
@@ -37,6 +37,8 @@ import { ChatgptEmbedBuilderService as EmbedBuilderService } from './chatgpt/cha
 
 @Injectable()
 export class ChatgptCommandsService {
+  private readonly logger = new Logger(this.constructor.name);
+
   private readonly errorCodeMessageMap: Partial<Record<ErrorCode, string>> = {
     [ErrorCode.DISCORD_SETTING_CHATGPT_PAYMENT_DATE_NOT_FOUND]:
       'There was an error getting the payment date.',
@@ -83,7 +85,6 @@ export class ChatgptCommandsService {
       await this.discordUsersService.update(
         new DiscordUserDto({
           id: existingUser.value.id,
-          userId,
           username,
           roles: [...existingUser.value.roles, DiscordUserRole.CHATGPT],
         }),
@@ -97,7 +98,6 @@ export class ChatgptCommandsService {
 
     const newUser = await this.discordUsersService.create(
       new DiscordUserDto({
-        userId,
         username,
         roles: [DiscordUserRole.CHATGPT],
       }),
@@ -149,7 +149,6 @@ export class ChatgptCommandsService {
       await this.discordUsersService.update(
         new DiscordUserDto({
           id: existingUser.value.id,
-          userId,
           username,
           roles: existingUser.value.roles.filter(
             (role) => role !== DiscordUserRole.CHATGPT,
@@ -1060,13 +1059,13 @@ export class ChatgptCommandsService {
       chatgptUsers.value.map(async (chatgptUser) => {
         const userTransactionSummaries = (
           await this.discordChatgptTransactionSummariesService.findAllByUserId(
-            chatgptUser.userId,
+            chatgptUser.id,
           )
         ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         const userTransactions =
           await this.discordChatgptTransactionsService.findAllByUserId(
-            chatgptUser.userId,
+            chatgptUser.id,
           );
 
         const lastTransactionSummaryDate =
@@ -1101,7 +1100,7 @@ export class ChatgptCommandsService {
           ) / 100;
 
         return new DiscordChatgptTransactionSummaryDto({
-          discordUserId: chatgptUser.userId,
+          discordUserId: chatgptUser.id,
           discordUser: DiscordUserDto.fromEntity(chatgptUser),
           amount: sumOverall,
           currency: currency.value,
@@ -1143,6 +1142,7 @@ export class ChatgptCommandsService {
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
       thumbnail: CHATGPT_COMMANDS_CONFIG.embed.thumbnail,
       variant,
+      logger: this.logger,
     });
   }
 

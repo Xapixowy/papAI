@@ -210,7 +210,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       const usernameSpaces: string = ' '.repeat(
         longestUsernameLength - u.username.length,
       );
-      return `- \`${u.username} ${usernameSpaces}| \`<@!${u.userId}>`;
+      return `- \`${u.username} ${usernameSpaces}| \`<@!${u.id}>`;
     });
 
     return this.generateSection({
@@ -342,7 +342,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
   }): string {
     const icon: string = transactionSummary.amount >= 0 ? '✅' : '❌';
     const username: string = transactionSummary.discordUser?.username ?? '';
-    const userMention: string = `<@!${transactionSummary.discordUser?.userId ?? ''}>`;
+    const userMention: string = `<@!${transactionSummary.discordUser?.id ?? ''}>`;
     const usernameSpaces: string = ' '.repeat(
       longestUsernameLength - username.length,
     );

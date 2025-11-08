@@ -1,4 +1,3 @@
-import { validateEnv } from '@Configs/env.config';
 import { EnvKey } from '@Enums/env-key.enum';
 import { DiscordBotModule } from '@Modules/discord_bot/discord-bot.module';
 import { RedisModule } from '@Modules/redis.module';
@@ -7,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { validateEnv } from 'src/env-validation';
 import { configs } from './configs';
 
 @Module({

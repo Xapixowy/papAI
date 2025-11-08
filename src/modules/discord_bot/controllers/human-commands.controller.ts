@@ -38,33 +38,9 @@ export class HumanCommandsController extends BaseCommandsController {
   }
 
   @On('messageCreate')
-  public async onGoodMorningMessage(
+  public async onMentionMessage(
     @Context() [message]: [Message],
   ): Promise<void> {
-    if (message.author.bot) return;
-
-    const messageContentLower = message.content.toLowerCase();
-
-    if (!messageContentLower.includes('gm')) {
-      return;
-    }
-
-    const gmMessage = await this.humanCommandsService.gmMessageHandler();
-
-    if (gmMessage instanceof EmbedBuilder) {
-      await message.reply({
-        embeds: [gmMessage],
-      });
-      return;
-    }
-
-    await message.reply({
-      content: gmMessage,
-    });
-  }
-
-  @On('messageCreate')
-  public async onMessage(@Context() [message]: [Message]): Promise<void> {
     const isBotMessage = message.author.bot;
     const isBotMention = message.mentions.users.has(this.client.user!.id);
     const isMessageTextChannel = message.channel instanceof TextChannel;
@@ -95,5 +71,47 @@ export class HumanCommandsController extends BaseCommandsController {
     for (const page of generatedMessage) {
       await message.reply({ content: page });
     }
+  }
+
+  @On('messageCreate')
+  public async onMessageRandomReply(
+    @Context() [message]: [Message],
+  ): Promise<void> {
+    const isBotMessage = message.author.bot;
+    const isBotMention = message.mentions.users.has(this.client.user!.id);
+    const isMessageTextChannel = message.channel instanceof TextChannel;
+    const isMessageInGuild = message.guild;
+
+    if (
+      isBotMessage ||
+      isBotMention ||
+      !isMessageTextChannel ||
+      !isMessageInGuild
+    )
+      return;
+
+    // TODO: Temporarily disabled
+    return;
+
+    // const attachments = message.attachments.map((attachment) => attachment);
+
+    // const replyMessage =
+    //   await this.humanCommandsService.messageRandomReplyHandler({
+    //     message: message.content,
+    //     attachments: attachments.length ? attachments : undefined,
+    //     messageId: message.id,
+    //     userId: message.author.id,
+    //     channelId: message.channel.id,
+    //     serverId: message.guild.id,
+    //     percentChance: 5,
+    //   });
+
+    // if (!replyMessage) {
+    //   return;
+    // }
+
+    // await message.reply({
+    //   content: replyMessage,
+    // });
   }
 }

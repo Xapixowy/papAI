@@ -14,15 +14,13 @@ export class DiscordChatgptTransactionsService {
   ) {}
 
   async findAll(): Promise<DiscordChatgptTransaction[]> {
-    const entities = await this.repository.find();
-    return entities;
+    return await this.repository.find();
   }
 
   async findAllByUserId(
     discordUserId: string,
   ): Promise<DiscordChatgptTransaction[]> {
-    const entities = await this.repository.find({ where: { discordUserId } });
-    return entities;
+    return await this.repository.find({ where: { discordUserId } });
   }
 
   async findById(

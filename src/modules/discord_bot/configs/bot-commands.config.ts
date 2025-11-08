@@ -16,7 +16,7 @@ export const BOT_COMMANDS_CONFIG: CommandConfigParentGroup<CommandConfigCommand>
       initialize: {
         name: 'initialize',
         description:
-          'Initialize the bot (the user who executes this command will become the SuperAdmin)',
+          'Initialize the bot (the user who executes this command will become the SuperAdmin).',
         userRoles: [],
       },
     },

@@ -21,12 +21,12 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         add: {
           name: 'add',
-          description: 'Adds a new user to the ChatGPT',
+          description: 'Adds a new user to the ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         remove: {
           name: 'remove',
-          description: 'Removes a user from the ChatGPT',
+          description: 'Removes a user from the ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
       },
@@ -37,7 +37,7 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         list: {
           name: 'list',
-          description: 'Lists the config of the ChatGPT',
+          description: 'Lists the config of the ChatGPT.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
       },
@@ -48,22 +48,22 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         price: {
           name: 'price',
-          description: 'Sets the price of ChatGPT',
+          description: 'Sets the price of ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         currency: {
           name: 'currency',
-          description: 'Sets the currency of ChatGPT',
+          description: 'Sets the currency of ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         reminder: {
           name: 'reminder',
-          description: 'Sets the reminder date of ChatGPT',
+          description: 'Sets the reminder date of ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         payment: {
           name: 'payment',
-          description: 'Sets the payment date of ChatGPT',
+          description: 'Sets the payment date of ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
       },
@@ -74,17 +74,17 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         add: {
           name: 'add',
-          description: 'Adds a reminder channel to the ChatGPT',
+          description: 'Adds a reminder channel to the ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         remove: {
           name: 'remove',
-          description: 'Removes a reminder channel from the ChatGPT',
+          description: 'Removes a reminder channel from the ChatGPT.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         list: {
           name: 'list',
-          description: 'Lists the reminder channels of the ChatGPT',
+          description: 'Lists the reminder channels of the ChatGPT.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
       },
@@ -95,34 +95,34 @@ export const CHATGPT_COMMANDS_CONFIG: CommandConfigParentGroup<
       commands: {
         add: {
           name: 'add',
-          description: 'Adds a transaction to the ChatGPT',
+          description: 'Adds a transaction to the ChatGPT.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
         remove: {
           name: 'remove',
-          description: 'Removes a transaction from the ChatGPT',
+          description: 'Removes a transaction from the ChatGPT.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
         history: {
           name: 'history',
-          description: 'Shows the transaction history of the user',
+          description: 'Shows the transaction history of the user.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
         summary: {
           name: 'summary',
           description:
-            'Shows the transaction summary for the last payment period',
+            'Shows the transaction summary for the last payment period.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
         generateSummary: {
           name: 'generate-summary',
           description:
-            'Generates a transaction summary for the last payment period',
+            'Generates a transaction summary for the last payment period.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
         remind: {
           name: 'remind',
-          description: 'Sends a reminder message in the current channel',
+          description: 'Sends a reminder message in the current channel.',
           userRoles: [DiscordUserRole.CHATGPT],
         },
       },

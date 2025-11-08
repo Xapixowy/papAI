@@ -21,7 +21,7 @@ export class DiscordChatgptTransactionSummary {
   @ManyToOne(() => DiscordUser, { onDelete: 'CASCADE' })
   @JoinColumn({
     name: 'discord_user_id',
-    referencedColumnName: 'userId',
+    referencedColumnName: 'id',
   })
   discordUser: DiscordUser;
 

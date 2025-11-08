@@ -16,29 +16,30 @@ export const HUMAN_COMMANDS_CONFIG: CommandConfigParentGroup<
       'https://static.wikia.nocookie.net/fortnite/images/c/cd/MrBeast_%28v28.01%29_-_Outfit_-_Fortnite.png/revision/latest?cb=20231208014631',
   },
   commands: {
-    config: {
-      name: 'config',
-      description: 'Config commands',
+    systemPrompt: {
+      name: 'system-prompt',
+      description: 'System prompt commands',
       commands: {
-        getGMGIFQuery: {
-          name: 'get-gm-gif-query',
-          description: 'Gets the Good Morning GIF query',
-          userRoles: [],
-        },
-        setGMGIFQuery: {
-          name: 'set-gm-gif-query',
-          description: 'Sets the Good Morning GIF query',
-          userRoles: [],
-        },
-        getSystemPrompt: {
-          name: 'get-system-prompt',
-          description: 'Gets the system prompt for mention replies',
+        get: {
+          name: 'get',
+          description: 'Gets the system prompt for mention replies.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
         },
-        setSystemPrompt: {
-          name: 'set-system-prompt',
-          description: 'Sets the system prompt for mention replies',
+        set: {
+          name: 'set',
+          description: 'Sets the system prompt for mention replies.',
           userRoles: [DiscordUserRole.SUPER_ADMIN],
+        },
+      },
+    },
+    message: {
+      name: 'message',
+      description: 'Message commands',
+      commands: {
+        remove: {
+          name: 'remove',
+          description: 'Removes a message from random replies messages.',
+          userRoles: [],
         },
       },
     },

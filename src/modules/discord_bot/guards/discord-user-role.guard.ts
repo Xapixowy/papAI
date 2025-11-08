@@ -1,5 +1,10 @@
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import {
@@ -14,6 +19,8 @@ import { EmbedBuilderService } from '../services/embed-builder.service';
 
 @Injectable()
 export class DiscordUserRoleGuard implements CanActivate {
+  private readonly logger = new Logger(this.constructor.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly discordUsersService: DiscordUsersService,
@@ -103,6 +110,7 @@ export class DiscordUserRoleGuard implements CanActivate {
           title: DiscordUserRoleGuard.embedTitle,
           variant: 'error',
           thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
+          logger: this.logger,
         }),
       ],
     });

@@ -4,6 +4,6 @@ export enum DiscordSettingKey {
   CHATGPT_REMINDER_DATE = 'chatgpt_reminder_date',
   CHATGPT_REMINDER_CHANNELS = 'chatgpt_reminder_channels',
   CHATGPT_PAYMENT_DATE = 'chatgpt_payment_date',
-  HUMAN_GM_GIF_QUERY = 'human_gm_gif_query',
+  GOOD_MORNING_QUERY = 'good_morning_query',
   HUMAN_SYSTEM_PROMPT = 'human_system_prompt',
 }

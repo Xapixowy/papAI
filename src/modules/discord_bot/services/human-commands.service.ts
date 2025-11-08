@@ -1,9 +1,9 @@
 import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Part } from '@google/generative-ai';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { GeminiService } from '@Services/api/gemini.service';
-import { TenorService } from '@Services/api/tenor.service';
+import { DiscordMessageService } from '@Services/discord-message.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
 import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
 import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
@@ -17,147 +17,84 @@ import { EmbedBuilderService } from './embed-builder.service';
 
 @Injectable()
 export class HumanCommandsService {
+  private readonly logger = new Logger(this.constructor.name);
+
   constructor(
     private readonly discordSettingsService: DiscordSettingsService,
     private readonly embedBuilderService: EmbedBuilderService,
-    private readonly tenorService: TenorService,
     private readonly geminiService: GeminiService,
     private readonly client: Client,
+    private readonly discordMessageService: DiscordMessageService,
   ) {}
 
-  public async configGetGMGIFQueryHandler(): Promise<EmbedBuilder> {
-    const gmGifQuery = await this.discordSettingsService.getValueByKey<string>(
-      DiscordSettingKey.HUMAN_GM_GIF_QUERY,
-    );
-
-    if (gmGifQuery.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the GM GIF query.',
-        variant: 'error',
-      });
-    }
-
-    const gmGifQueryValue = gmGifQuery.value;
-
-    return this.generateSimpleEmbed({
-      description: `GM GIF query is set to \`${gmGifQueryValue}\`.`,
-      variant: 'success',
-    });
-  }
-
-  public async configSetGMGIFQueryHandler({
-    gmGifQuery,
+  public async messageRandomReplyHandler({
+    message,
+    attachments,
+    messageId,
+    userId,
+    channelId,
+    serverId,
+    percentChance,
   }: {
-    gmGifQuery: string;
-  }): Promise<EmbedBuilder> {
-    const gmGifQuerySetting = await this.discordSettingsService.set(
-      DiscordSettingKey.HUMAN_GM_GIF_QUERY,
-      gmGifQuery,
+    message: string;
+    attachments?: Attachment[];
+    messageId: string;
+    userId: string;
+    channelId: string;
+    serverId: string;
+    percentChance: number;
+  }): Promise<null | string> {
+    const attachmentUrls: string[] | undefined = attachments?.map(
+      (attachment) => attachment.url,
     );
 
-    if (gmGifQuerySetting.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the GM GIF query.',
-        variant: 'error',
-      });
-    }
+    // TODO: Implement this
+    // const channelConfig = await this.discordGuildConfigService.findById({
+    //   id: serverId,
+    // });
 
-    return this.generateSimpleEmbed({
-      description: `GM GIF query set to \`${gmGifQuery}\`.`,
-      variant: 'success',
-    });
-  }
+    // if (channelConfig.isErr()) {
+    //   return null;
+    // }
 
-  public async gmMessageHandler(): Promise<string | EmbedBuilder> {
-    const gmGifQuery = await this.discordSettingsService.getValueByKey<string>(
-      DiscordSettingKey.HUMAN_GM_GIF_QUERY,
-    );
+    // const { humanRandomReply, humanSaveMessages } = channelConfig.value;
 
-    if (gmGifQuery.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the GM GIF query.',
-        variant: 'error',
-      });
-    }
-
-    const gmGifQueryValue = gmGifQuery.value;
-
-    const gifResult = await this.tenorService.searchGifs({
-      query: gmGifQueryValue,
-      limit: 1,
-      random: true,
+    await this.discordMessageService.create({
+      id: messageId,
+      message,
+      attachments: attachmentUrls,
+      discordUserId: userId,
+      discordChannelId: channelId,
+      discordServerId: serverId,
+      createdAt: new Date(),
     });
 
-    if (gifResult.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error searching for a GIF.',
-        variant: 'error',
-      });
+    const randomChance = Math.random() * 100;
+
+    if (randomChance > percentChance) {
+      return null;
     }
 
-    const gifResultValue = gifResult.value;
+    const randomMessageResult =
+      await this.discordMessageService.findRandomMessageByServerId(serverId);
 
-    if (gifResultValue.results?.length === 0) {
-      return this.generateSimpleEmbed({
-        description: 'No GIF found.',
-        variant: 'error',
-      });
+    if (randomMessageResult.isErr() || randomMessageResult.value.length === 0) {
+      return null;
     }
 
-    const gifUrl = gifResultValue.results[0]?.media_formats?.gif?.url;
+    const randomMessage = randomMessageResult.value[0];
 
-    if (!gifUrl) {
-      return this.generateSimpleEmbed({
-        description: 'No GIF URL found.',
-        variant: 'error',
-      });
+    let finalMessage: string = '';
+
+    if (randomMessage.message) {
+      finalMessage += randomMessage.message;
     }
 
-    return gifUrl;
-  }
-
-  public async configGetSystemPromptHandler(): Promise<EmbedBuilder> {
-    const systemPrompt =
-      await this.discordSettingsService.getValueByKey<string>(
-        DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
-      );
-
-    if (systemPrompt.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the system prompt.',
-        variant: 'error',
-      });
+    if (randomMessage.attachments?.length) {
+      finalMessage += randomMessage.attachments?.join(' ');
     }
 
-    const systemPromptValue = systemPrompt.value;
-
-    return this.generateSimpleEmbed({
-      description: `System prompt is set to \`${systemPromptValue}\`.`,
-      variant: 'success',
-    });
-  }
-
-  public async configSetSystemPromptHandler({
-    systemPrompt,
-  }: {
-    systemPrompt: string;
-  }): Promise<EmbedBuilder> {
-    const systemPromptSetting = await this.discordSettingsService.set(
-      DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
-      systemPrompt,
-    );
-
-    if (systemPromptSetting.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the system prompt.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: `System prompt set to \`${systemPrompt}\`.`,
-      variant: 'success',
-    });
+    return finalMessage;
   }
 
   public async mentionMessageHandler({
@@ -305,6 +242,7 @@ export class HumanCommandsService {
       title: HUMAN_COMMANDS_CONFIG.embed.title,
       thumbnail: HUMAN_COMMANDS_CONFIG.embed.thumbnail,
       variant: variant,
+      logger: this.logger,
     });
   }
 }

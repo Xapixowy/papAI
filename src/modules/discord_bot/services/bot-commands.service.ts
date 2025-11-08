@@ -1,6 +1,6 @@
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import { EmbedBuilder } from 'discord.js';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
@@ -10,6 +10,8 @@ import { EmbedBuilderService } from './embed-builder.service';
 
 @Injectable()
 export class BotCommandsService {
+  private readonly logger = new Logger(this.constructor.name);
+
   constructor(
     private readonly discordUsersService: DiscordUsersService,
     private readonly embedBuilderService: EmbedBuilderService,
@@ -34,7 +36,7 @@ export class BotCommandsService {
     }
 
     const newSuperAdminUser = await this.discordUsersService.create({
-      userId,
+      id: userId,
       username,
       roles: [DiscordUserRole.SUPER_ADMIN],
     });
@@ -44,7 +46,7 @@ export class BotCommandsService {
       newSuperAdminUser.error === ErrorCode.DISCORD_USER_EXISTS
     ) {
       const newSuperAdminUserDto = new DiscordUserDto({
-        userId,
+        id: userId,
         username,
         roles: [DiscordUserRole.SUPER_ADMIN],
       });
@@ -70,6 +72,7 @@ export class BotCommandsService {
       title: BOT_COMMANDS_CONFIG.embed.title,
       thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
       variant: variant,
+      logger: this.logger,
     });
   }
 }
