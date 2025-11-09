@@ -1,3 +1,4 @@
+import { ErrorCodeMessageMap } from '@Constants/error-messages.constant';
 import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { HUMAN_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/human-commands.config';
 import { EmbedVariant } from '@Modules/discord_bot/types/embed-variant.type';
@@ -23,7 +24,7 @@ export class SystemPromptCommandsService {
 
     if (systemPrompt.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'There was an error getting the system prompt.',
+        description: ErrorCodeMessageMap[systemPrompt.error],
         variant: 'error',
       });
     }
@@ -48,7 +49,7 @@ export class SystemPromptCommandsService {
 
     if (systemPromptSetting.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'There was an error setting the system prompt.',
+        description: ErrorCodeMessageMap[systemPromptSetting.error],
         variant: 'error',
       });
     }

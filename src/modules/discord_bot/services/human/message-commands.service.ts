@@ -1,3 +1,4 @@
+import { ErrorCodeMessageMap } from '@Constants/error-messages.constant';
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { HUMAN_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/human-commands.config';
 import { EmbedVariant } from '@Modules/discord_bot/types/embed-variant.type';
@@ -29,7 +30,7 @@ export class MessageCommandsService {
 
     if (messageToDelete.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'Message not found.',
+        description: ErrorCodeMessageMap[messageToDelete.error],
         variant: 'error',
       });
     }
@@ -48,7 +49,7 @@ export class MessageCommandsService {
 
       if (superAdminUsers.isErr()) {
         return this.generateSimpleEmbed({
-          description: 'Error getting super admin users.',
+          description: ErrorCodeMessageMap[superAdminUsers.error],
           variant: 'error',
         });
       }
@@ -72,7 +73,7 @@ export class MessageCommandsService {
 
     if (deleteMessageResult.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'Error deleting message.',
+        description: ErrorCodeMessageMap[deleteMessageResult.error],
         variant: 'error',
       });
     }

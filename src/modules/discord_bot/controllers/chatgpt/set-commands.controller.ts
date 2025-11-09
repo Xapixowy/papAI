@@ -5,7 +5,7 @@ import { DayTimeOption } from '@Modules/discord_bot/options/chatgpt/day-time.opt
 import { CurrencyOption } from '@Modules/discord_bot/options/currency.option';
 import { DayOfMonthOption } from '@Modules/discord_bot/options/day-of-month.option';
 import { PriceOption } from '@Modules/discord_bot/options/price.option';
-import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
+import { SetCommandsService } from '@Modules/discord_bot/services/chatgpt/set-commands.service';
 import { Injectable, UseGuards } from '@nestjs/common';
 import {
   GatewayIntentBits,
@@ -25,7 +25,7 @@ const SET_COMMANDS_CONFIG = CHATGPT_COMMANDS_CONFIG.commands.set;
   description: SET_COMMANDS_CONFIG.description,
 })
 export class SetCommandsController extends BaseCommandsController {
-  constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
+  constructor(private readonly setCommandsService: SetCommandsService) {
     super();
   }
 
@@ -42,7 +42,7 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { price }: PriceOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.setPriceHandler({
+    const embed = await this.setCommandsService.setPriceHandler({
       price,
     });
 
@@ -61,7 +61,7 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { currency }: CurrencyOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.setCurrencyHandler({
+    const embed = await this.setCommandsService.setCurrencyHandler({
       currency,
     });
 
@@ -80,7 +80,7 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { day, time }: DayTimeOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.setReminderHandler({
+    const embed = await this.setCommandsService.setReminderHandler({
       day,
       time,
     });
@@ -100,7 +100,7 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { day }: DayOfMonthOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.setPaymentDateHandler({
+    const embed = await this.setCommandsService.setPaymentDateHandler({
       day,
     });
 

@@ -2,9 +2,6 @@ import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { TenorService } from '@Services/api/tenor.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
-import { EmbedBuilder } from 'discord.js';
-import { HUMAN_COMMANDS_CONFIG } from '../configs/human-commands.config';
-import { EmbedVariant } from '../types/embed-variant.type';
 import { EmbedBuilderService } from './embed-builder.service';
 
 @Injectable()
@@ -62,21 +59,5 @@ export class GoodMorningCommandsService {
     }
 
     return gifUrl;
-  }
-
-  private generateSimpleEmbed({
-    description,
-    variant,
-  }: {
-    description: string;
-    variant: EmbedVariant;
-  }): EmbedBuilder {
-    return this.embedBuilderService.simple({
-      description: description,
-      title: HUMAN_COMMANDS_CONFIG.embed.title,
-      thumbnail: HUMAN_COMMANDS_CONFIG.embed.thumbnail,
-      variant: variant,
-      logger: this.logger,
-    });
   }
 }

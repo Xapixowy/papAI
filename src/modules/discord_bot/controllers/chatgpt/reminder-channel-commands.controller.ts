@@ -3,7 +3,7 @@ import { RequiresDiscordUserRole } from '@Modules/discord_bot/decorators/require
 import { DiscordSelectId } from '@Modules/discord_bot/enums/discord-select-id.enum';
 import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-role.guard';
 import { ChannelOption } from '@Modules/discord_bot/options/channel.option';
-import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
+import { ReminderChannelCommandsService } from '@Modules/discord_bot/services/chatgpt/reminder-channel-commands.service';
 import { Injectable, UseGuards } from '@nestjs/common';
 import {
   GatewayIntentBits,
@@ -32,7 +32,9 @@ const REMINDER_CHANNEL_COMMANDS_CONFIG =
   description: REMINDER_CHANNEL_COMMANDS_CONFIG.description,
 })
 export class ReminderChannelCommandsController extends BaseCommandsController {
-  constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
+  constructor(
+    private readonly reminderChannelCommandsService: ReminderChannelCommandsService,
+  ) {
     super();
   }
 
@@ -51,9 +53,10 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { channel }: ChannelOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.reminderChannelAddHandler({
-      channel,
-    });
+    const embed =
+      await this.reminderChannelCommandsService.reminderChannelAddHandler({
+        channel,
+      });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -72,7 +75,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
     const { embed, component } =
-      await this.chatgptCommandsService.reminderChannelRemoveHandler();
+      await this.reminderChannelCommandsService.reminderChannelRemoveHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -90,9 +93,11 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @SelectedStrings() [channelId]: string[],
   ): Promise<InteractionResponse<boolean>> {
     const embed =
-      await this.chatgptCommandsService.reminderChannelRemoveSelectHandler({
-        channelId,
-      });
+      await this.reminderChannelCommandsService.reminderChannelRemoveSelectHandler(
+        {
+          channelId,
+        },
+      );
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -111,7 +116,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
     const embed =
-      await this.chatgptCommandsService.reminderChannelListHandler();
+      await this.reminderChannelCommandsService.reminderChannelListHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],

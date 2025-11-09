@@ -5,7 +5,7 @@ import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-r
 import { SendToAllReminderChannelsOption } from '@Modules/discord_bot/options/chatgpt/send-to-all-reminder-channels.option';
 import { EphemeralOption } from '@Modules/discord_bot/options/ephemeral.option';
 import { PriceOption } from '@Modules/discord_bot/options/price.option';
-import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
+import { TransactionCommandsService } from '@Modules/discord_bot/services/chatgpt/transaction-commands.service';
 import { Injectable, UseGuards } from '@nestjs/common';
 import {
   Events,
@@ -36,7 +36,9 @@ const TRANSACTION_COMMANDS_CONFIG =
   description: TRANSACTION_COMMANDS_CONFIG.description,
 })
 export class TransactionCommandsController extends BaseCommandsController {
-  constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
+  constructor(
+    private readonly transactionCommandsService: TransactionCommandsService,
+  ) {
     super();
   }
 
@@ -46,7 +48,7 @@ export class TransactionCommandsController extends BaseCommandsController {
 
   @Once(Events.ClientReady)
   async onClientReady(): Promise<void> {
-    await this.chatgptCommandsService.transactionRemindCronjobHandler();
+    await this.transactionCommandsService.transactionRemindCronjobHandler();
   }
 
   @Subcommand({
@@ -62,7 +64,7 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const embed = await this.chatgptCommandsService.transactionAddHandler({
+    const embed = await this.transactionCommandsService.transactionAddHandler({
       userId: id,
       price,
     });
@@ -86,7 +88,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     const { id } = interaction.user;
 
     const { embed, component } =
-      await this.chatgptCommandsService.transactionRemoveHandler({
+      await this.transactionCommandsService.transactionRemoveHandler({
         userId: id,
       });
 
@@ -108,7 +110,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     const { id } = interaction.user;
 
     const embed =
-      await this.chatgptCommandsService.transactionRemoveSelectHandler({
+      await this.transactionCommandsService.transactionRemoveSelectHandler({
         userId: id,
         transactionId,
       });
@@ -131,9 +133,10 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const embed = await this.chatgptCommandsService.transactionHistoryHandler({
-      userId: id,
-    });
+    const embed =
+      await this.transactionCommandsService.transactionHistoryHandler({
+        userId: id,
+      });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -152,7 +155,8 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { ephemeral }: EphemeralOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.transactionSummaryHandler();
+    const embed =
+      await this.transactionCommandsService.transactionSummaryHandler();
 
     const isEphemeral = ephemeral === null ? true : ephemeral;
 
@@ -175,7 +179,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Options() { ephemeral }: EphemeralOption,
   ): Promise<InteractionResponse<boolean>> {
     const embed =
-      await this.chatgptCommandsService.transactionGenerateSummaryHandler();
+      await this.transactionCommandsService.transactionGenerateSummaryHandler();
 
     const isEphemeral = ephemeral === null ? true : ephemeral;
 
@@ -197,7 +201,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Options() { sendToAllReminderChannels }: SendToAllReminderChannelsOption,
   ): Promise<InteractionResponse<boolean>> {
     const { embed, remindEmbed, channels } =
-      await this.chatgptCommandsService.transactionRemindHandler({
+      await this.transactionCommandsService.transactionRemindHandler({
         sendToAllReminderChannels: sendToAllReminderChannels ?? false,
       });
 

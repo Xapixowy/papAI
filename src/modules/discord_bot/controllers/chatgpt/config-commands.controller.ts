@@ -1,7 +1,7 @@
 import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
 import { RequiresDiscordUserRole } from '@Modules/discord_bot/decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-role.guard';
-import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
+import { ConfigCommandsService } from '@Modules/discord_bot/services/chatgpt/config-commands.service';
 import { Injectable, UseGuards } from '@nestjs/common';
 import {
   GatewayIntentBits,
@@ -21,7 +21,7 @@ const CONFIG_COMMANDS_CONFIG = CHATGPT_COMMANDS_CONFIG.commands.config;
   description: CONFIG_COMMANDS_CONFIG.description,
 })
 export class ConfigCommandsController extends BaseCommandsController {
-  constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
+  constructor(private readonly configCommandsService: ConfigCommandsService) {
     super();
   }
 
@@ -37,7 +37,7 @@ export class ConfigCommandsController extends BaseCommandsController {
   public async onConfigListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.chatgptCommandsService.configListHandler();
+    const embed = await this.configCommandsService.configListHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],

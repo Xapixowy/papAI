@@ -1,3 +1,4 @@
+import { ErrorCodeMessageMap } from '@Constants/error-messages.constant';
 import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { GOOD_MORNING_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/good-morning-commands.config';
 import { EmbedVariant } from '@Modules/discord_bot/types/embed-variant.type';
@@ -23,7 +24,7 @@ export class QueryCommandsService {
 
     if (goodMorningQuery.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'There was an error getting the Good Morning query.',
+        description: ErrorCodeMessageMap[goodMorningQuery.error],
         variant: 'error',
       });
     }
@@ -48,7 +49,7 @@ export class QueryCommandsService {
 
     if (goodMorningQuerySetting.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'There was an error setting the Good Morning query.',
+        description: ErrorCodeMessageMap[goodMorningQuerySetting.error],
         variant: 'error',
       });
     }

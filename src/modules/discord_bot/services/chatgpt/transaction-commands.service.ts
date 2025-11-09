@@ -1,3 +1,4 @@
+import { ErrorCodeMessageMap } from '@Constants/error-messages.constant';
 import { DiscordChatgptTransaction } from '@Database/entities/discord-chatgpt-transaction.entity';
 import { CronjobName } from '@Enums/cronjob-name.enum';
 import { CurrencyCode } from '@Enums/currency-code.enum';
@@ -6,6 +7,9 @@ import { DiscordSettingKey } from '@Enums/discord-setting-key.enum';
 import { DiscordUserRole } from '@Enums/discord-user-role.enum';
 import { EnvKey } from '@Enums/env-key.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
+import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-commands.config';
+import { DiscordSelectId } from '@Modules/discord_bot/enums/discord-select-id.enum';
+import { EmbedVariant } from '@Modules/discord_bot/types/embed-variant.type';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -22,7 +26,6 @@ import {
   Channel,
   Client,
   EmbedBuilder,
-  GuildChannel,
   StringSelectMenuBuilder,
   TextChannel,
 } from 'discord.js';
@@ -30,25 +33,11 @@ import { err, Ok, ok, Result } from 'neverthrow';
 import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
 import { DiscordChatgptTransactionDto } from 'src/dtos/discord-chatgpt-transaction.dto';
 import { DiscordUserDto } from 'src/dtos/discord-user.dto';
-import { CHATGPT_COMMANDS_CONFIG } from '../configs/chatgpt-commands.config';
-import { DiscordSelectId } from '../enums/discord-select-id.enum';
-import { EmbedVariant } from '../types/embed-variant.type';
-import { ChatgptEmbedBuilderService as EmbedBuilderService } from './chatgpt/chatgpt-embed-builder.service';
+import { ChatgptEmbedBuilderService } from './chatgpt-embed-builder.service';
 
 @Injectable()
-export class ChatgptCommandsService {
+export class TransactionCommandsService {
   private readonly logger = new Logger(this.constructor.name);
-
-  private readonly errorCodeMessageMap: Partial<Record<ErrorCode, string>> = {
-    [ErrorCode.DISCORD_SETTING_CHATGPT_PAYMENT_DATE_NOT_FOUND]:
-      'There was an error getting the payment date.',
-    [ErrorCode.DISCORD_SETTING_CHATGPT_PRICE_NOT_FOUND]:
-      'There was an error getting the price.',
-    [ErrorCode.DISCORD_SETTING_CHATGPT_CURRENCY_NOT_FOUND]:
-      'There was an error getting the currency.',
-    [ErrorCode.DISCORD_CHATGPT_USERS_NOT_FOUND]:
-      'There was an error getting the ChatGPT users.',
-  };
 
   constructor(
     private readonly client: Client,
@@ -58,481 +47,9 @@ export class ChatgptCommandsService {
     private readonly discordChatgptTransactionSummariesService: DiscordChatgptTransactionSummariesService,
     private readonly configService: ConfigService,
     private readonly schedulerRegistry: SchedulerRegistry,
-    private readonly embedBuilderService: EmbedBuilderService,
+    private readonly embedBuilderService: ChatgptEmbedBuilderService,
   ) {}
 
-  public async userAddHandler({
-    userId,
-    username,
-  }: {
-    userId: string;
-    username: string;
-  }): Promise<EmbedBuilder> {
-    const existingUser = await this.discordUsersService.findByUserId(userId);
-
-    if (existingUser.isOk()) {
-      const hasExistingUserChatgptRole = existingUser.value.roles.includes(
-        DiscordUserRole.CHATGPT,
-      );
-
-      if (hasExistingUserChatgptRole) {
-        return this.generateSimpleEmbed({
-          description: 'User is already in ChatGPT.',
-          variant: 'error',
-        });
-      }
-
-      await this.discordUsersService.update(
-        new DiscordUserDto({
-          id: existingUser.value.id,
-          username,
-          roles: [...existingUser.value.roles, DiscordUserRole.CHATGPT],
-        }),
-      );
-
-      return this.generateSimpleEmbed({
-        description: 'User added to ChatGPT.',
-        variant: 'success',
-      });
-    }
-
-    const newUser = await this.discordUsersService.create(
-      new DiscordUserDto({
-        username,
-        roles: [DiscordUserRole.CHATGPT],
-      }),
-    );
-
-    if (newUser.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'Error adding user to ChatGPT.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'User added to ChatGPT.',
-      variant: 'success',
-    });
-  }
-
-  public async userRemoveHandler({
-    userId,
-    username,
-  }: {
-    userId: string;
-    username: string;
-  }): Promise<EmbedBuilder> {
-    const existingUser = await this.discordUsersService.findByUserId(userId);
-
-    if (existingUser.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'User not found in ChatGPT.',
-        variant: 'error',
-      });
-    }
-
-    const hasExistingUserChatgptRole = existingUser.value.roles.includes(
-      DiscordUserRole.CHATGPT,
-    );
-
-    if (!hasExistingUserChatgptRole) {
-      return this.generateSimpleEmbed({
-        description: 'User is not in ChatGPT.',
-        variant: 'error',
-      });
-    }
-
-    const hasExistingUserOtherRoles = existingUser.value.roles.length > 1;
-
-    if (hasExistingUserOtherRoles) {
-      await this.discordUsersService.update(
-        new DiscordUserDto({
-          id: existingUser.value.id,
-          username,
-          roles: existingUser.value.roles.filter(
-            (role) => role !== DiscordUserRole.CHATGPT,
-          ),
-        }),
-      );
-
-      return this.generateSimpleEmbed({
-        description: 'User removed from ChatGPT.',
-        variant: 'success',
-      });
-    }
-
-    await this.discordUsersService.deleteByUserId(userId);
-
-    return this.generateSimpleEmbed({
-      description: 'User removed from ChatGPT.',
-      variant: 'success',
-    });
-  }
-
-  public async configListHandler(): Promise<EmbedBuilder> {
-    const chatgptCurrency =
-      await this.discordSettingsService.getValueByKey<CurrencyCode>(
-        DiscordSettingKey.CHATGPT_CURRENCY,
-      );
-
-    if (chatgptCurrency.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the currency.',
-        variant: 'error',
-      });
-    }
-
-    const chatgptPrice =
-      await this.discordSettingsService.getValueByKey<number>(
-        DiscordSettingKey.CHATGPT_PRICE,
-      );
-
-    if (chatgptPrice.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the price.',
-        variant: 'error',
-      });
-    }
-
-    const chatgptPaymentDate =
-      await this.discordSettingsService.getValueByKey<number>(
-        DiscordSettingKey.CHATGPT_PAYMENT_DATE,
-      );
-
-    if (chatgptPaymentDate.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the payment date.',
-        variant: 'error',
-      });
-    }
-
-    const chatgptReminderDate =
-      await this.discordSettingsService.getValueByKey<string>(
-        DiscordSettingKey.CHATGPT_REMINDER_DATE,
-      );
-
-    if (chatgptReminderDate.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the reminder date.',
-        variant: 'error',
-      });
-    }
-
-    const chatgptReminderChannels =
-      await this.discordSettingsService.getValueByKey<
-        DiscordChatgptReminderChannel[]
-      >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
-
-    if (chatgptReminderChannels.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the reminder channels.',
-        variant: 'error',
-      });
-    }
-
-    const chatgptUsers = await this.discordUsersService.findAllByRoles([
-      DiscordUserRole.CHATGPT,
-    ]);
-
-    if (chatgptUsers.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the ChatGPT users.',
-        variant: 'error',
-      });
-    }
-
-    return this.embedBuilderService.chatgptConfigList({
-      description: 'List of ChatGPT settings.',
-      chatgptCurrency: chatgptCurrency.value,
-      chatgptPrice: chatgptPrice.value,
-      chatgptPaymentDate: chatgptPaymentDate.value,
-      chatgptReminderDate: chatgptReminderDate.value,
-      chatgptReminderChannels: chatgptReminderChannels.value,
-      chatgptUsers: chatgptUsers.value.map((u) => DiscordUserDto.fromEntity(u)),
-    });
-  }
-
-  public async setPriceHandler({
-    price,
-  }: {
-    price: number;
-  }): Promise<EmbedBuilder> {
-    const newPrice = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_PRICE,
-      price,
-    );
-
-    if (newPrice.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the price.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'Price set.',
-      variant: 'success',
-    });
-  }
-
-  public async setCurrencyHandler({
-    currency,
-  }: {
-    currency: CurrencyCode;
-  }): Promise<EmbedBuilder> {
-    const newCurrency = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_CURRENCY,
-      currency,
-    );
-
-    if (newCurrency.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the currency.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'Currency set.',
-      variant: 'success',
-    });
-  }
-
-  public async setReminderHandler({
-    day,
-    time,
-  }: {
-    day: number;
-    time: string;
-  }): Promise<EmbedBuilder> {
-    const newDate = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_REMINDER_DATE,
-      `0 0 ${time} ${day} * *`,
-    );
-
-    if (newDate.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the reminder date.',
-        variant: 'error',
-      });
-    }
-
-    await this.transactionRemindCronjobHandler();
-
-    return this.generateSimpleEmbed({
-      description: 'Reminder date set.',
-      variant: 'success',
-    });
-  }
-
-  public async setPaymentDateHandler({
-    day,
-  }: {
-    day: number;
-  }): Promise<EmbedBuilder> {
-    const newDate = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_PAYMENT_DATE,
-      day,
-    );
-
-    if (newDate.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the payment date.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'Payment date set.',
-      variant: 'success',
-    });
-  }
-
-  public async reminderChannelAddHandler({
-    channel,
-  }: {
-    channel: GuildChannel;
-  }): Promise<EmbedBuilder> {
-    let existingReminderChannels =
-      await this.discordSettingsService.getValueByKey<
-        DiscordChatgptReminderChannel[]
-      >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
-
-    if (
-      existingReminderChannels.isErr() &&
-      existingReminderChannels.error === ErrorCode.DISCORD_SETTING_NOT_FOUND
-    ) {
-      const newReminderChannelsSetting = await this.discordSettingsService.set(
-        DiscordSettingKey.CHATGPT_REMINDER_CHANNELS,
-        [],
-      );
-
-      if (newReminderChannelsSetting.isErr()) {
-        return this.generateSimpleEmbed({
-          description: 'There was an error setting the reminder channels.',
-          variant: 'error',
-        });
-      }
-
-      const newReminderChannelsSettingValue = newReminderChannelsSetting.value;
-
-      existingReminderChannels = ok<DiscordChatgptReminderChannel[]>(
-        newReminderChannelsSettingValue.value as DiscordChatgptReminderChannel[],
-      );
-    }
-
-    if (existingReminderChannels.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the reminder channels.',
-        variant: 'error',
-      });
-    }
-
-    const existingReminderChannelsValue = existingReminderChannels.value;
-    const newReminderChannels = [
-      ...existingReminderChannelsValue.filter(
-        (reminderChannel) => reminderChannel.channelId !== channel.id,
-      ),
-      {
-        channelId: channel.id,
-        channelName: channel.name,
-        guildId: channel.guild.id,
-        guildName: channel.guild.name,
-      },
-    ];
-
-    const newChannel = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_REMINDER_CHANNELS,
-      newReminderChannels,
-    );
-
-    if (newChannel.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the reminder channel.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'Reminder channels set.',
-      variant: 'success',
-    });
-  }
-
-  public async reminderChannelRemoveHandler(): Promise<{
-    embed: EmbedBuilder;
-    component?: ActionRowBuilder<StringSelectMenuBuilder>;
-  }> {
-    const reminderChannels = await this.discordSettingsService.getValueByKey<
-      DiscordChatgptReminderChannel[]
-    >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
-
-    if (reminderChannels.isErr()) {
-      return {
-        embed: this.generateSimpleEmbed({
-          description: 'There was an error getting the reminder channels.',
-          variant: 'error',
-        }),
-      };
-    }
-
-    const reminderChannelsValue = reminderChannels.value;
-
-    if (reminderChannelsValue.length === 0) {
-      return {
-        embed: this.generateSimpleEmbed({
-          description: 'There are no reminder channels.',
-          variant: 'error',
-        }),
-      };
-    }
-
-    const reminderChannelsOptions = reminderChannelsValue.map((c, i) => ({
-      label: `Reminder Channel #${reminderChannelsValue.length - i}`,
-      value: c.channelId,
-      description: `🌐 ${c.guildName} | 🐀 ${c.channelName}`,
-    }));
-
-    const reminderChannelsSelectMenu = new StringSelectMenuBuilder()
-      .setCustomId(DiscordSelectId.REMINDER_CHANNELS_TO_REMOVE)
-      .setPlaceholder('Select a reminder channel to remove')
-      .setMinValues(1)
-      .setMaxValues(1)
-      .addOptions(reminderChannelsOptions);
-
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-      reminderChannelsSelectMenu,
-    );
-
-    return {
-      embed: this.generateSimpleEmbed({
-        description: 'Select a reminder channel to remove.',
-        variant: 'info',
-      }),
-      component: row,
-    };
-  }
-
-  public async reminderChannelRemoveSelectHandler({
-    channelId,
-  }: {
-    channelId: string;
-  }): Promise<EmbedBuilder> {
-    const reminderChannels = await this.discordSettingsService.getValueByKey<
-      DiscordChatgptReminderChannel[]
-    >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
-
-    if (reminderChannels.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the reminder channels.',
-        variant: 'error',
-      });
-    }
-
-    const reminderChannelsValue = reminderChannels.value;
-
-    const newReminderChannels = reminderChannelsValue.filter(
-      (reminderChannel) => reminderChannel.channelId !== channelId,
-    );
-
-    const newReminderChannelsSetting = await this.discordSettingsService.set(
-      DiscordSettingKey.CHATGPT_REMINDER_CHANNELS,
-      newReminderChannels,
-    );
-
-    if (newReminderChannelsSetting.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error setting the reminder channels.',
-        variant: 'error',
-      });
-    }
-
-    return this.generateSimpleEmbed({
-      description: 'Reminder channels removed.',
-      variant: 'success',
-    });
-  }
-
-  public async reminderChannelListHandler(): Promise<EmbedBuilder> {
-    const reminderChannels = await this.discordSettingsService.getValueByKey<
-      DiscordChatgptReminderChannel[]
-    >(DiscordSettingKey.CHATGPT_REMINDER_CHANNELS);
-
-    if (reminderChannels.isErr()) {
-      return this.generateSimpleEmbed({
-        description: 'There was an error getting the reminder channels.',
-        variant: 'error',
-      });
-    }
-
-    const reminderChannelsValue = reminderChannels.value;
-
-    return this.embedBuilderService.chatgptReminderChannels({
-      description: 'Reminder channels list.',
-      chatgptReminderChannels: reminderChannelsValue,
-    });
-  }
   public async transactionAddHandler({
     userId,
     price,
@@ -547,7 +64,7 @@ export class ChatgptCommandsService {
 
     if (currency.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'There was an error getting the currency.',
+        description: ErrorCodeMessageMap[currency.error],
         variant: 'error',
       });
     }
@@ -562,7 +79,7 @@ export class ChatgptCommandsService {
 
     if (newTransaction.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'Error adding transaction to ChatGPT.',
+        description: ErrorCodeMessageMap[newTransaction.error],
         variant: 'error',
       });
     }
@@ -633,7 +150,7 @@ export class ChatgptCommandsService {
 
     if (transaction.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'Transaction not found in ChatGPT.',
+        description: ErrorCodeMessageMap[transaction.error],
         variant: 'error',
       });
     }
@@ -654,7 +171,7 @@ export class ChatgptCommandsService {
 
     if (removedTransaction.isErr()) {
       return this.generateSimpleEmbed({
-        description: 'Error removing transaction from ChatGPT.',
+        description: ErrorCodeMessageMap[removedTransaction.error],
         variant: 'error',
       });
     }
@@ -727,7 +244,7 @@ export class ChatgptCommandsService {
 
     if (transactionSummaryData.isErr()) {
       return this.generateSimpleEmbed({
-        description: this.errorCodeMessageMap[transactionSummaryData.error]!,
+        description: ErrorCodeMessageMap[transactionSummaryData.error],
         variant: 'error',
       });
     }
@@ -759,14 +276,14 @@ export class ChatgptCommandsService {
 
     if (transactionSummaryData.isErr()) {
       return this.generateSimpleEmbed({
-        description: this.errorCodeMessageMap[transactionSummaryData.error]!,
+        description: ErrorCodeMessageMap[transactionSummaryData.error],
         variant: 'error',
       });
     }
 
     const { transactionSummaries } = transactionSummaryData.value;
 
-    let creatingTransactionSummaryError: boolean = false;
+    let creatingTransactionSummaryError: ErrorCode | null = null;
 
     for (const transactionSummary of transactionSummaries) {
       const newTransactionSummary =
@@ -779,14 +296,14 @@ export class ChatgptCommandsService {
         );
 
       if (newTransactionSummary.isErr()) {
-        creatingTransactionSummaryError = true;
+        creatingTransactionSummaryError = newTransactionSummary.error;
         continue;
       }
     }
 
     if (creatingTransactionSummaryError) {
       return this.generateSimpleEmbed({
-        description: 'Error creating transaction summaries.',
+        description: ErrorCodeMessageMap[creatingTransactionSummaryError],
         variant: 'error',
       });
     }
@@ -796,8 +313,7 @@ export class ChatgptCommandsService {
 
     if (newTransactionSummariesData.isErr()) {
       return this.generateSimpleEmbed({
-        description:
-          this.errorCodeMessageMap[newTransactionSummariesData.error]!,
+        description: ErrorCodeMessageMap[newTransactionSummariesData.error],
         variant: 'error',
       });
     }
@@ -849,7 +365,7 @@ export class ChatgptCommandsService {
     if (reminderChannels.isErr()) {
       return {
         embed: this.generateSimpleEmbed({
-          description: 'There was an error getting the reminder channels.',
+          description: ErrorCodeMessageMap[reminderChannels.error],
           variant: 'error',
         }),
       };
@@ -973,7 +489,7 @@ export class ChatgptCommandsService {
 
     if (transactionSummaryData.isErr()) {
       return this.generateSimpleEmbed({
-        description: this.errorCodeMessageMap[transactionSummaryData.error]!,
+        description: ErrorCodeMessageMap[transactionSummaryData.error],
         variant: 'error',
       });
     }

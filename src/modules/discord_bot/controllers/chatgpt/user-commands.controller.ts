@@ -2,7 +2,7 @@ import { CHATGPT_COMMANDS_CONFIG } from '@Modules/discord_bot/configs/chatgpt-co
 import { RequiresDiscordUserRole } from '@Modules/discord_bot/decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Modules/discord_bot/guards/discord-user-role.guard';
 import { UserOption } from '@Modules/discord_bot/options/user.option';
-import { ChatgptCommandsService } from '@Modules/discord_bot/services/chatgpt-commands.service';
+import { UserCommandsService } from '@Modules/discord_bot/services/chatgpt/user-commands.service';
 import { Injectable, UseGuards } from '@nestjs/common';
 import {
   GatewayIntentBits,
@@ -22,7 +22,7 @@ const USER_COMMANDS_CONFIG = CHATGPT_COMMANDS_CONFIG.commands.user;
   description: USER_COMMANDS_CONFIG.description,
 })
 export class UserCommandsController extends BaseCommandsController {
-  constructor(private readonly chatgptCommandsService: ChatgptCommandsService) {
+  constructor(private readonly userCommandsService: UserCommandsService) {
     super();
   }
 
@@ -41,7 +41,7 @@ export class UserCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id, username } = user.user;
 
-    const embed = await this.chatgptCommandsService.userAddHandler({
+    const embed = await this.userCommandsService.userAddHandler({
       userId: id,
       username,
     });
@@ -63,7 +63,7 @@ export class UserCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id, username } = user.user;
 
-    const embed = await this.chatgptCommandsService.userRemoveHandler({
+    const embed = await this.userCommandsService.userRemoveHandler({
       userId: id,
       username,
     });
