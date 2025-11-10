@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import * as dotenv from 'dotenv';
-import { validateEnv } from 'src/env-validation';
 import { AppModule } from './app.module';
+import { validateEnv } from './env-validation';
 
 dotenv.config();
 const validatedEnv = validateEnv(process.env);

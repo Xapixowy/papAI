@@ -1,4 +1,4 @@
-import { DiscordAttachment } from '@Modules/discord_bot/types/discord-attachment.type';
+import { DiscordAttachment } from '@Types/discord/discord-attachment.type';
 
 export type DiscordHumanConversationHistoryMessage = {
   role: 'user' | 'model';

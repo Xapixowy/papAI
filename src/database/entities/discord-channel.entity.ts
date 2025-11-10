@@ -1,3 +1,4 @@
+import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import {
   Column,
   CreateDateColumn,
@@ -10,17 +11,16 @@ import { DiscordMessage } from './discord-message.entity';
 
 @Entity('discord_channels')
 export class DiscordChannel {
-  @PrimaryColumn('text')
+  @PrimaryColumn({
+    type: 'text',
+  })
   id: string;
 
-  @Column('text', { name: 'discord_server_id' })
-  discordServerId: string;
+  @Column({ type: 'text', name: 'discord_guild_id' })
+  discordGuildId: string;
 
-  @Column('boolean', { name: 'human_save_messages', default: false })
-  humanSaveMessages: boolean;
-
-  @Column('boolean', { name: 'human_random_reply', default: false })
-  humanRandomReply: boolean;
+  @Column({ type: 'json' })
+  features: Record<DiscordChannelFeature, boolean>;
 
   @OneToMany(() => DiscordMessage, (m) => m.discordChannel)
   messages: DiscordMessage[];

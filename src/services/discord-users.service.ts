@@ -1,10 +1,10 @@
 import { DiscordUser } from '@Database/entities/discord-user.entity';
-import { DiscordUserRole } from '@Enums/discord-user-role.enum';
+import { DiscordUserDto } from '@DTOs/discord-user.dto';
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { err, ok, Result } from 'neverthrow';
-import { DiscordUserDto } from 'src/dtos/discord-user.dto';
 import { Repository } from 'typeorm';
 
 @Injectable()

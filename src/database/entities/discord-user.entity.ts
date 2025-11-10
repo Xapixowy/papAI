@@ -1,4 +1,4 @@
-import { DiscordUserRole } from '@Enums/discord-user-role.enum';
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import {
   Column,
   CreateDateColumn,

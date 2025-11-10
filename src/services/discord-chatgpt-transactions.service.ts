@@ -1,9 +1,9 @@
 import { DiscordChatgptTransaction } from '@Database/entities/discord-chatgpt-transaction.entity';
+import { DiscordChatgptTransactionDto } from '@DTOs/discord-chatgpt-transaction.dto';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { err, ok, Result } from 'neverthrow';
-import { DiscordChatgptTransactionDto } from 'src/dtos/discord-chatgpt-transaction.dto';
 import { Repository } from 'typeorm';
 
 @Injectable()

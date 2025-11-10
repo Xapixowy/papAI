@@ -1,5 +1,5 @@
 import { DiscordUser } from '@Database/entities/discord-user.entity';
-import { DiscordUserRole } from '@Enums/discord-user-role.enum';
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { DiscordChatgptTransactionSummaryDto } from './discord-chatgpt-transaction-summary.dto';
 import { DiscordChatgptTransactionDto } from './discord-chatgpt-transaction.dto';
 

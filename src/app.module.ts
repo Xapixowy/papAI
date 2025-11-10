@@ -1,13 +1,13 @@
 import { EnvKey } from '@Enums/env-key.enum';
-import { DiscordBotModule } from '@Modules/discord_bot/discord-bot.module';
+import { DiscordModule } from '@Modules/discord.module';
 import { RedisModule } from '@Modules/redis.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
-import { validateEnv } from 'src/env-validation';
 import { configs } from './configs';
+import { validateEnv } from './env-validation';
 
 @Module({
   imports: [
@@ -36,7 +36,7 @@ import { configs } from './configs';
     }),
     ScheduleModule.forRoot(),
     RedisModule,
-    DiscordBotModule,
+    DiscordModule,
   ],
   controllers: [],
   providers: [],

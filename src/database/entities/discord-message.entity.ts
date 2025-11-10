@@ -32,8 +32,8 @@ export class DiscordMessage {
   })
   discordChannel: DiscordChannel;
 
-  @Column('text', { name: 'discord_server_id' })
-  discordServerId: string;
+  @Column('text', { name: 'discord_guild_id' })
+  discordGuildId: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

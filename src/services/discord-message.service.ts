@@ -17,11 +17,11 @@ export class DiscordMessageService {
     return this.discordMessageRepository.find();
   }
 
-  async findAllByServerId(
-    serverId: string,
+  async findAllByGuildId(
+    guildId: string,
   ): Promise<Result<DiscordMessage[], ErrorCode>> {
     const entities = await this.discordMessageRepository.find({
-      where: { discordServerId: serverId },
+      where: { discordGuildId: guildId },
     });
 
     return entities.length > 0
@@ -48,13 +48,13 @@ export class DiscordMessageService {
     return entity ? ok(entity) : err(ErrorCode.DISCORD_MESSAGE_NOT_FOUND);
   }
 
-  async findRandomMessageByServerId(
-    serverId: string,
+  async findRandomMessageByGuildId(
+    guildId: string,
     count: number = 1,
   ): Promise<Result<DiscordMessage[], ErrorCode>> {
     const entities = await this.discordMessageRepository
       .createQueryBuilder('message')
-      .where('message.discordServerId = :serverId', { serverId })
+      .where('message.discordGuildId = :guildId', { guildId })
       .orderBy('RANDOM()')
       .take(count)
       .getMany();
@@ -73,7 +73,7 @@ export class DiscordMessageService {
       attachments: dto.attachments,
       discordUserId: dto.discordUserId,
       discordChannelId: dto.discordChannelId,
-      discordServerId: dto.discordServerId,
+      discordGuildId: dto.discordGuildId,
     });
 
     const savedDiscordMessage =
@@ -103,7 +103,7 @@ export class DiscordMessageService {
       attachments: dto.attachments,
       discordUserId: dto.discordUserId,
       discordChannelId: dto.discordChannelId,
-      discordServerId: dto.discordServerId,
+      discordGuildId: dto.discordGuildId,
     });
 
     return ok(updatedDiscordMessage);

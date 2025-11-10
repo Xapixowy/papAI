@@ -6,7 +6,7 @@ export class DiscordMessageDto {
   attachments?: string[];
   discordUserId: string;
   discordChannelId: string;
-  discordServerId: string;
+  discordGuildId: string;
   createdAt: Date;
 
   constructor({
@@ -15,7 +15,7 @@ export class DiscordMessageDto {
     attachments,
     discordUserId,
     discordChannelId,
-    discordServerId,
+    discordGuildId,
     createdAt,
   }: {
     id?: string;
@@ -23,7 +23,7 @@ export class DiscordMessageDto {
     attachments?: string[];
     discordUserId: string;
     discordChannelId: string;
-    discordServerId: string;
+    discordGuildId: string;
     createdAt: Date;
   }) {
     this.id = id;
@@ -31,7 +31,7 @@ export class DiscordMessageDto {
     this.attachments = attachments;
     this.discordUserId = discordUserId;
     this.discordChannelId = discordChannelId;
-    this.discordServerId = discordServerId;
+    this.discordGuildId = discordGuildId;
     this.createdAt = createdAt;
   }
 
@@ -42,7 +42,7 @@ export class DiscordMessageDto {
       attachments: entity.attachments,
       discordUserId: entity.discordUserId,
       discordChannelId: entity.discordChannelId,
-      discordServerId: entity.discordServerId,
+      discordGuildId: entity.discordGuildId,
       createdAt: entity.createdAt,
     });
   }

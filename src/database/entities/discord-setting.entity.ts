@@ -1,4 +1,4 @@
-import { DiscordSettingType } from '@Enums/discord-setting-type.enum';
+import { DiscordSettingType } from '@Enums/discord/discord-setting-type.enum';
 import {
   Column,
   CreateDateColumn,
@@ -11,6 +11,9 @@ import {
 export class DiscordSetting {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'text', name: 'discord_guild_id', nullable: true })
+  discordGuildId: string | null;
 
   @Column({ unique: true })
   key: string;
