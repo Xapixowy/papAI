@@ -1,6 +1,7 @@
 import { GoodMorningCommandsController } from '@Controllers/discord/good-morning-commands.controller';
-import { QueryCommandsController } from '@Controllers/discord/good-morning/channel-commands.controller';
+import { QueryCommandsController } from '@Controllers/discord/good-morning/query-commands.controller';
 import { TenorModule } from '@Modules/api/tenor.module';
+import { DiscordChannelModule } from '@Modules/discord-channel.module';
 import { DiscordSettingsModule } from '@Modules/discord-settings.module';
 import { Module } from '@nestjs/common';
 import { GoodMorningCommandsService } from '@Services/discord/good-morning-commands.service';
@@ -17,6 +18,7 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     DiscordGuildFeatureGuardModule,
     DiscordUserRoleGuardModule,
     DiscordSettingsModule,
+    DiscordChannelModule,
     TenorModule,
   ],
   providers: [

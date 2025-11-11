@@ -18,14 +18,14 @@ export class DiscordGuildFeatureExceptionFilter implements ExceptionFilter {
   ) {
     const discordInteraction = getDiscordInteractionFromArgs(host.getArgs());
     const discordMessage = getDiscordMessageFromArgs(host.getArgs());
-    const { message, silentRejection } = exception;
+    const { message } = exception;
 
     if (!discordInteraction && !discordMessage) {
       this.logger.error('Could not extract interaction or message from args.');
       return;
     }
 
-    if (discordMessage || !discordInteraction || silentRejection) {
+    if (discordMessage || !discordInteraction) {
       this.logger.error(message);
       return;
     }

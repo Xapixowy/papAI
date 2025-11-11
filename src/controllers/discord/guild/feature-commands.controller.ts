@@ -1,4 +1,5 @@
 import { GUILD_COMMANDS_CONFIG } from '@Constants/discord/guild-commands.constant';
+import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { FeatureOption } from '@Options/feature.option';
@@ -31,6 +32,7 @@ export class FeatureCommandsController extends BaseCommandsController {
   }
 
   @Subcommand(FEATURE_COMMANDS_CONFIG.commands.add)
+  @RequiresDiscordUserRole(...FEATURE_COMMANDS_CONFIG.commands.add.userRoles)
   public async onAddFeatureCommand(
     @Context() [interaction]: SlashCommandContext,
     @Options() { feature }: FeatureOption,
@@ -53,6 +55,7 @@ export class FeatureCommandsController extends BaseCommandsController {
   }
 
   @Subcommand(FEATURE_COMMANDS_CONFIG.commands.remove)
+  @RequiresDiscordUserRole(...FEATURE_COMMANDS_CONFIG.commands.remove.userRoles)
   public async onRemoveFeatureCommand(
     @Context() [interaction]: SlashCommandContext,
     @Options() { feature }: FeatureOption,

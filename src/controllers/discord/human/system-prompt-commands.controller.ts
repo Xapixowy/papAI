@@ -33,10 +33,7 @@ export class SystemPromptCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: SYSTEM_PROMPT_COMMANDS_CONFIG.commands.get.name,
-    description: SYSTEM_PROMPT_COMMANDS_CONFIG.commands.get.description,
-  })
+  @Subcommand(SYSTEM_PROMPT_COMMANDS_CONFIG.commands.get)
   @RequiresDiscordUserRole(
     ...SYSTEM_PROMPT_COMMANDS_CONFIG.commands.get.userRoles,
   )
@@ -58,10 +55,7 @@ export class SystemPromptCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: SYSTEM_PROMPT_COMMANDS_CONFIG.commands.set.name,
-    description: SYSTEM_PROMPT_COMMANDS_CONFIG.commands.set.description,
-  })
+  @Subcommand(SYSTEM_PROMPT_COMMANDS_CONFIG.commands.set)
   @RequiresDiscordUserRole(
     ...SYSTEM_PROMPT_COMMANDS_CONFIG.commands.set.userRoles,
   )

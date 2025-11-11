@@ -16,6 +16,9 @@ export class DiscordChannel {
   })
   id: string;
 
+  @Column({ type: 'text' })
+  name: string;
+
   @Column({ type: 'text', name: 'discord_guild_id' })
   discordGuildId: string;
 

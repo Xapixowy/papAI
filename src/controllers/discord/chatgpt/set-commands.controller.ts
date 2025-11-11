@@ -33,10 +33,7 @@ export class SetCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: SET_COMMANDS_CONFIG.commands.price.name,
-    description: SET_COMMANDS_CONFIG.commands.price.description,
-  })
+  @Subcommand(SET_COMMANDS_CONFIG.commands.price)
   @RequiresDiscordUserRole(...SET_COMMANDS_CONFIG.commands.price.userRoles)
   public async onSetPriceCommand(
     @Context() [interaction]: SlashCommandContext,
@@ -52,10 +49,7 @@ export class SetCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: SET_COMMANDS_CONFIG.commands.currency.name,
-    description: SET_COMMANDS_CONFIG.commands.currency.description,
-  })
+  @Subcommand(SET_COMMANDS_CONFIG.commands.currency)
   @RequiresDiscordUserRole(...SET_COMMANDS_CONFIG.commands.currency.userRoles)
   public async onSetCurrencyCommand(
     @Context() [interaction]: SlashCommandContext,
@@ -71,10 +65,7 @@ export class SetCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: SET_COMMANDS_CONFIG.commands.reminder.name,
-    description: SET_COMMANDS_CONFIG.commands.reminder.description,
-  })
+  @Subcommand(SET_COMMANDS_CONFIG.commands.reminder)
   @RequiresDiscordUserRole(...SET_COMMANDS_CONFIG.commands.reminder.userRoles)
   public async onSetReminderCommand(
     @Context() [interaction]: SlashCommandContext,
@@ -91,10 +82,7 @@ export class SetCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: SET_COMMANDS_CONFIG.commands.payment.name,
-    description: SET_COMMANDS_CONFIG.commands.payment.description,
-  })
+  @Subcommand(SET_COMMANDS_CONFIG.commands.payment)
   @RequiresDiscordUserRole(...SET_COMMANDS_CONFIG.commands.payment.userRoles)
   public async onSetPaymentCommand(
     @Context() [interaction]: SlashCommandContext,

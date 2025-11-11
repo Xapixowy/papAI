@@ -1,5 +1,6 @@
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
 import { DiscordGuildDto } from '@DTOs/discord-guild.dto';
+import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
@@ -90,5 +91,22 @@ export class DiscordGuildService {
     const configValue = config.value;
 
     return ok(configValue.features.includes(feature));
+  }
+
+  async isChannelFeatureEnabled({
+    guildId,
+    feature,
+  }: {
+    guildId: string;
+    feature: DiscordChannelFeature;
+  }): Promise<Result<boolean, ErrorCode>> {
+    const config = await this.findById(guildId);
+
+    if (config.isErr()) {
+      return err(ErrorCode.DISCORD_GUILD_NOT_FOUND);
+    }
+    const configValue = config.value;
+
+    return ok(configValue.channelFeatureDefaults[feature]);
   }
 }

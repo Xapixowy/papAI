@@ -1,7 +1,9 @@
+import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { TenorService } from '@Services/api/tenor.service';
+import { DiscordChannelService } from '@Services/discord-channel.service';
 import { DiscordGuildService } from '@Services/discord-guild.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
 
@@ -12,12 +14,17 @@ export class GoodMorningCommandsService {
   constructor(
     private readonly discordSettingsService: DiscordSettingsService,
     private readonly discordGuildService: DiscordGuildService,
+    private readonly discordChannelService: DiscordChannelService,
     private readonly tenorService: TenorService,
   ) {}
 
-  public async goodMorningMessageHandler(
-    guildId: string,
-  ): Promise<string | null> {
+  public async goodMorningMessageHandler({
+    guildId,
+    channelId,
+  }: {
+    guildId: string;
+    channelId: string;
+  }): Promise<string | null> {
     const isFeatureOnGuildEnabled =
       await this.discordGuildService.isFeatureEnabled({
         guildId,
@@ -25,6 +32,33 @@ export class GoodMorningCommandsService {
       });
 
     if (isFeatureOnGuildEnabled.isErr() || !isFeatureOnGuildEnabled.value) {
+      return null;
+    }
+
+    const isFeatureOnChannelEnabled =
+      await this.discordChannelService.isFeatureEnabled({
+        channelId,
+        feature: DiscordChannelFeature.GOOD_MORNING_MESSAGES,
+      });
+
+    if (
+      !isFeatureOnChannelEnabled.isErr() &&
+      isFeatureOnChannelEnabled.value === false
+    ) {
+      return null;
+    }
+
+    const isFeatureOnChannelDefaultEnabled =
+      await this.discordGuildService.isChannelFeatureEnabled({
+        guildId,
+        feature: DiscordChannelFeature.GOOD_MORNING_MESSAGES,
+      });
+
+    if (
+      isFeatureOnChannelEnabled.isErr() &&
+      (isFeatureOnChannelDefaultEnabled.isErr() ||
+        !isFeatureOnChannelDefaultEnabled.value)
+    ) {
       return null;
     }
 

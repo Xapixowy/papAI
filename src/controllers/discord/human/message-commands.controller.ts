@@ -1,5 +1,6 @@
 import { HUMAN_COMMANDS_CONFIG } from '@Constants/discord/human-commands.constant';
 import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
+import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
@@ -30,6 +31,7 @@ export class MessageCommandsController extends BaseCommandsController {
   }
 
   @Subcommand(MESSAGE_COMMANDS_CONFIG.commands.remove)
+  @RequiresDiscordUserRole(...MESSAGE_COMMANDS_CONFIG.commands.remove.userRoles)
   public async onMessageRemoveCommand(
     @Context() [interaction]: SlashCommandContext,
     @Options() { messageId }: MessageIdOption,

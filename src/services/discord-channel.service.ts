@@ -1,5 +1,6 @@
 import { DiscordChannel } from '@Database/entities/discord-channel.entity';
 import { DiscordChannelDto } from '@DTOs/discord-channel.dto';
+import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -47,6 +48,7 @@ export class DiscordChannelService {
 
     const newChannel = this.repository.create({
       id: dto.id,
+      name: dto.name,
       discordGuildId: dto.discordGuildId,
       features: dto.features,
     });
@@ -84,5 +86,22 @@ export class DiscordChannelService {
     return result.affected && result.affected > 0
       ? ok(undefined)
       : err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+  }
+
+  async isFeatureEnabled({
+    channelId,
+    feature,
+  }: {
+    channelId: string;
+    feature: DiscordChannelFeature;
+  }): Promise<Result<boolean, ErrorCode>> {
+    const config = await this.findById(channelId);
+
+    if (config.isErr()) {
+      return err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+    }
+    const configValue = config.value;
+
+    return ok(configValue.features[feature]);
   }
 }

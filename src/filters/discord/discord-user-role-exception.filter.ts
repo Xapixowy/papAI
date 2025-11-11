@@ -3,6 +3,7 @@ import { DiscordUserRoleForbiddenException } from '@Exceptions/discord/discord-u
 import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { EmbedBuilderService } from '@Services/discord/embed-builder.service';
 import { getDiscordInteractionFromArgs } from '@Utils/functions/get-discord-interction-from-args.function';
+import { getDiscordMessageFromArgs } from '@Utils/functions/get-discord-message-from.args.function';
 import { MessageFlags } from 'discord.js';
 
 @Catch(DiscordUserRoleForbiddenException)
@@ -15,15 +16,22 @@ export class DiscordUserRoleExceptionFilter implements ExceptionFilter {
     exception: DiscordUserRoleForbiddenException,
     host: ArgumentsHost,
   ) {
-    const interaction = getDiscordInteractionFromArgs(host.getArgs());
+    const discordInteraction = getDiscordInteractionFromArgs(host.getArgs());
+    const discordMessage = getDiscordMessageFromArgs(host.getArgs());
+    const { message } = exception;
 
-    if (!interaction) {
+    if (!discordInteraction) {
       this.logger.error('Could not extract interaction from args.');
       return;
     }
 
+    if (discordMessage || !discordInteraction) {
+      this.logger.error(message);
+      return;
+    }
+
     const embed = this.embedBuilderService.simple({
-      description: exception.message,
+      description: message,
       title: 'Authorization',
       variant: 'error',
       thumbnail: BOT_COMMANDS_CONFIG.embed.thumbnail,
@@ -31,17 +39,17 @@ export class DiscordUserRoleExceptionFilter implements ExceptionFilter {
     });
 
     try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ embeds: [embed] });
+      if (discordInteraction.deferred || discordInteraction.replied) {
+        await discordInteraction.editReply({ embeds: [embed] });
       } else {
-        await interaction.reply({
+        await discordInteraction.reply({
           flags: [MessageFlags.Ephemeral],
           embeds: [embed],
         });
       }
     } catch (error) {
       this.logger.warn(
-        `Filter failed to send "forbid" message to user ${interaction.user.id}`,
+        `Filter failed to send "forbid" message to user ${discordInteraction.user.id}`,
         error,
       );
     }

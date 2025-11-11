@@ -6,13 +6,13 @@ import { DiscordChannelModule } from '@Modules/discord-channel.module';
 import { DiscordMessageModule } from '@Modules/discord-message.module';
 import { DiscordSettingsModule } from '@Modules/discord-settings.module';
 import { DiscordUsersModule } from '@Modules/discord-users.module';
+import { DiscordGuildFeatureGuardModule } from '@Modules/guards/discord-guild-feature-guard.module';
+import { DiscordUserRoleGuardModule } from '@Modules/guards/discord-user-role-guard.module';
 import { Module } from '@nestjs/common';
 import { HumanCommandsService } from '@Services/discord/human-commands.service';
 import { MessageCommandsService } from '@Services/discord/human/message-commands.service';
 import { SystemPromptCommandsService } from '@Services/discord/human/system-prompt-commands.service';
 import { GatewayIntentBits } from 'discord.js';
-import { DiscordGuildFeatureGuardModule } from '../guards/discord-guild-feature-guard.module';
-import { DiscordUserRoleGuardModule } from '../guards/discord-user-role-guard.module';
 import { BaseCommandsModule } from './base-commands.module';
 import { EmbedBuilderModule } from './services/embed-builder.module';
 

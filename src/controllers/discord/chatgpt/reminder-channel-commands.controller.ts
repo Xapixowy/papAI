@@ -42,10 +42,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.add.name,
-    description: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.add.description,
-  })
+  @Subcommand(REMINDER_CHANNEL_COMMANDS_CONFIG.commands.add)
   @RequiresDiscordUserRole(
     ...REMINDER_CHANNEL_COMMANDS_CONFIG.commands.add.userRoles,
   )
@@ -64,10 +61,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.remove.name,
-    description: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.remove.description,
-  })
+  @Subcommand(REMINDER_CHANNEL_COMMANDS_CONFIG.commands.remove)
   @RequiresDiscordUserRole(
     ...REMINDER_CHANNEL_COMMANDS_CONFIG.commands.remove.userRoles,
   )
@@ -105,10 +99,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.list.name,
-    description: REMINDER_CHANNEL_COMMANDS_CONFIG.commands.list.description,
-  })
+  @Subcommand(REMINDER_CHANNEL_COMMANDS_CONFIG.commands.list)
   @RequiresDiscordUserRole(
     ...REMINDER_CHANNEL_COMMANDS_CONFIG.commands.list.userRoles,
   )

@@ -45,6 +45,8 @@ export class GoodMorningCommandsController extends BaseCommandsController {
       return;
     }
 
+    const channelId = message.channel.id;
+
     const messageContentLower = message.content.toLowerCase();
 
     if (!messageContentLower.includes('gm')) {
@@ -52,7 +54,10 @@ export class GoodMorningCommandsController extends BaseCommandsController {
     }
 
     const goodMorningMessage =
-      await this.goodMorningCommandsService.goodMorningMessageHandler(guildId);
+      await this.goodMorningCommandsService.goodMorningMessageHandler({
+        guildId,
+        channelId,
+      });
 
     if (goodMorningMessage === null) {
       return;

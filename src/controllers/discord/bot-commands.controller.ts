@@ -33,10 +33,7 @@ export class BotCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: BOT_COMMANDS_CONFIG.commands.initialize.name,
-    description: BOT_COMMANDS_CONFIG.commands.initialize.description,
-  })
+  @Subcommand(BOT_COMMANDS_CONFIG.commands.initialize)
   @RequiresDiscordUserRole(...BOT_COMMANDS_CONFIG.commands.initialize.userRoles)
   public async onInitializeCommand(
     @Context() [interaction]: SlashCommandContext,

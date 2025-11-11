@@ -51,10 +51,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     await this.transactionCommandsService.transactionRemindCronjobHandler();
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.add.name,
-    description: TRANSACTION_COMMANDS_CONFIG.commands.add.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.add)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.add.userRoles,
   )
@@ -75,10 +72,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.remove.name,
-    description: TRANSACTION_COMMANDS_CONFIG.commands.remove.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.remove)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.remove.userRoles,
   )
@@ -121,10 +115,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.history.name,
-    description: TRANSACTION_COMMANDS_CONFIG.commands.history.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.history)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.history.userRoles,
   )
@@ -144,10 +135,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.summary.name,
-    description: TRANSACTION_COMMANDS_CONFIG.commands.summary.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.summary)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.summary.userRoles,
   )
@@ -166,11 +154,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.generateSummary.name,
-    description:
-      TRANSACTION_COMMANDS_CONFIG.commands.generateSummary.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.generateSummary)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.generateSummary.userRoles,
   )
@@ -189,10 +173,7 @@ export class TransactionCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: TRANSACTION_COMMANDS_CONFIG.commands.remind.name,
-    description: TRANSACTION_COMMANDS_CONFIG.commands.remind.description,
-  })
+  @Subcommand(TRANSACTION_COMMANDS_CONFIG.commands.remind)
   @RequiresDiscordUserRole(
     ...TRANSACTION_COMMANDS_CONFIG.commands.remind.userRoles,
   )

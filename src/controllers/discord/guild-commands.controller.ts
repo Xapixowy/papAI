@@ -1,7 +1,9 @@
 import { GUILD_COMMANDS_CONFIG } from '@Constants/discord/guild-commands.constant';
+import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { GuildCommandsService } from '@Services/discord/guild-commands.service';
+import { CommandConfigCommand } from '@Types/discord/command-config.type';
 import { GatewayIntentBits, MessageFlags } from 'discord.js';
 import {
   Context,
@@ -16,6 +18,12 @@ export const GuildCommandDecorator = createCommandGroupDecorator({
   description: GUILD_COMMANDS_CONFIG.description,
 });
 
+const INITIALIZE_COMMAND_CONFIG = GUILD_COMMANDS_CONFIG.commands
+  .initialize as CommandConfigCommand;
+
+const LIST_COMMAND_CONFIG = GUILD_COMMANDS_CONFIG.commands
+  .list as CommandConfigCommand;
+
 @Injectable()
 @UseGuards(DiscordUserRoleGuard)
 @GuildCommandDecorator()
@@ -28,7 +36,8 @@ export class GuildCommandsController extends BaseCommandsController {
     super();
   }
 
-  @Subcommand(GUILD_COMMANDS_CONFIG.commands.initialize)
+  @Subcommand(INITIALIZE_COMMAND_CONFIG)
+  @RequiresDiscordUserRole(...INITIALIZE_COMMAND_CONFIG.userRoles)
   public async onInitializeCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {
@@ -50,10 +59,8 @@ export class GuildCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: GUILD_COMMANDS_CONFIG.commands.list.name,
-    description: GUILD_COMMANDS_CONFIG.commands.list.description,
-  })
+  @Subcommand(LIST_COMMAND_CONFIG)
+  @RequiresDiscordUserRole(...LIST_COMMAND_CONFIG.userRoles)
   public async onListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {

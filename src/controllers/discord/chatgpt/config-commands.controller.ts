@@ -29,10 +29,7 @@ export class ConfigCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: CONFIG_COMMANDS_CONFIG.commands.list.name,
-    description: CONFIG_COMMANDS_CONFIG.commands.list.description,
-  })
+  @Subcommand(CONFIG_COMMANDS_CONFIG.commands.list)
   @RequiresDiscordUserRole(...CONFIG_COMMANDS_CONFIG.commands.list.userRoles)
   public async onConfigListCommand(
     @Context() [interaction]: SlashCommandContext,

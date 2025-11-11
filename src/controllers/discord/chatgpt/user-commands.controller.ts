@@ -30,10 +30,7 @@ export class UserCommandsController extends BaseCommandsController {
     return [GatewayIntentBits.Guilds];
   }
 
-  @Subcommand({
-    name: USER_COMMANDS_CONFIG.commands.add.name,
-    description: USER_COMMANDS_CONFIG.commands.add.description,
-  })
+  @Subcommand(USER_COMMANDS_CONFIG.commands.add)
   @RequiresDiscordUserRole(...USER_COMMANDS_CONFIG.commands.add.userRoles)
   public async onAddCommand(
     @Context() [interaction]: SlashCommandContext,
@@ -52,10 +49,7 @@ export class UserCommandsController extends BaseCommandsController {
     });
   }
 
-  @Subcommand({
-    name: USER_COMMANDS_CONFIG.commands.remove.name,
-    description: USER_COMMANDS_CONFIG.commands.remove.description,
-  })
+  @Subcommand(USER_COMMANDS_CONFIG.commands.remove)
   @RequiresDiscordUserRole(...USER_COMMANDS_CONFIG.commands.remove.userRoles)
   public async onRemoveCommand(
     @Context() [interaction]: SlashCommandContext,

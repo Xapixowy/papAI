@@ -5,6 +5,7 @@ import { GatewayIntentBits } from 'discord.js';
 import { NecordModule } from 'necord';
 import { BaseCommandsModule } from './discord/base-commands.module';
 import { BotCommandsModule } from './discord/bot-commands.module';
+import { ChannelCommandsModule } from './discord/channel-commands.module';
 import { ChatgptCommandsModule } from './discord/chatgpt-commands.module';
 import { GoodMorningCommandsModule } from './discord/good-morning-commands.module';
 import { GuildCommandsModule } from './discord/guild-commands.module';
@@ -27,6 +28,7 @@ import { HumanCommandsModule } from './discord/human-commands.module';
       inject: [ConfigService],
     }),
     BotCommandsModule,
+    ChannelCommandsModule,
     ChatgptCommandsModule,
     GuildCommandsModule,
     GoodMorningCommandsModule,
@@ -37,6 +39,7 @@ export class DiscordModule extends BaseCommandsModule {
   static get botIntents(): GatewayIntentBits[] {
     return [
       ...BotCommandsModule.botIntents,
+      ...ChannelCommandsModule.botIntents,
       ...ChatgptCommandsModule.botIntents,
       ...GuildCommandsModule.botIntents,
       ...GoodMorningCommandsModule.botIntents,
