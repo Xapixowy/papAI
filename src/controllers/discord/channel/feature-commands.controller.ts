@@ -9,11 +9,11 @@ import {
   CommandConfigCommand,
   CommandConfigGroup,
 } from '@Types/discord/command-config.type';
-import { GatewayIntentBits, GuildChannel, MessageFlags } from 'discord.js';
+import { GatewayIntentBits, MessageFlags } from 'discord.js';
 import {
   Context,
   Options,
-  SelectedChannels,
+  SelectedStrings,
   type SlashCommandContext,
   StringSelect,
   type StringSelectContext,
@@ -69,13 +69,15 @@ export class FeatureCommandsController extends BaseCommandsController {
   @RequiresDiscordUserRole(...FEATURE_COMMANDS_CONFIG.commands.set.userRoles)
   async onSetSelect(
     @Context() [interaction]: StringSelectContext,
-    @SelectedChannels() [channel]: GuildChannel[],
+    @SelectedStrings() [channelId]: string[],
   ): Promise<void> {
     const selectId = interaction.customId;
 
+    console.log(channelId, selectId);
+
     const embed = await this.featureCommandsService.setSelectHandler({
       selectId,
-      channelId: channel.id,
+      channelId,
     });
 
     await interaction.reply({
