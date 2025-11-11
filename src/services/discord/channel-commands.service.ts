@@ -5,6 +5,7 @@ import { DiscordChannelDto } from '@DTOs/discord-channel.dto';
 import { DiscordSelectId } from '@Enums/discord/discord-select-id.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { DiscordChannelService } from '@Services/discord-channel.service';
+import { DiscordGuildService } from '@Services/discord-guild.service';
 import { EmbedVariant } from '@Types/discord/embed-variant.type';
 import {
   ActionRowBuilder,
@@ -20,6 +21,7 @@ export class ChannelCommandsService {
   constructor(
     private readonly embedBuilderService: ChannelEmbedBuilderService,
     private readonly discordChannelService: DiscordChannelService,
+    private readonly discordGuildService: DiscordGuildService,
   ) {}
 
   async addHandler({
@@ -36,6 +38,15 @@ export class ChannelCommandsService {
     if (!channel.isErr() && channel.value) {
       return this.generateSimpleEmbed({
         description: 'Channel already exists.',
+        variant: 'error',
+      });
+    }
+
+    const guild = await this.discordGuildService.findById(guildId);
+
+    if (guild.isErr()) {
+      return this.generateSimpleEmbed({
+        description: ERROR_CODE_MESSAGE_MAP[guild.error],
         variant: 'error',
       });
     }

@@ -1,5 +1,6 @@
 import { CHANNEL_COMMANDS_CONFIG } from '@Constants/discord/channel-commands.constant';
 import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSelectId } from '@Enums/discord/discord-select-id.enum';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
@@ -11,6 +12,7 @@ import {
 } from '@Types/discord/command-config.type';
 import { GatewayIntentBits, MessageFlags } from 'discord.js';
 import {
+  ComponentParam,
   Context,
   Options,
   SelectedStrings,
@@ -65,18 +67,17 @@ export class FeatureCommandsController extends BaseCommandsController {
     });
   }
 
-  @StringSelect(DiscordSelectId.CHANNELS_TO_SET_FEATURE)
+  @StringSelect(`${DiscordSelectId.CHANNELS_TO_SET_FEATURE}/:feature/:value`)
   @RequiresDiscordUserRole(...FEATURE_COMMANDS_CONFIG.commands.set.userRoles)
   async onSetSelect(
     @Context() [interaction]: StringSelectContext,
     @SelectedStrings() [channelId]: string[],
+    @ComponentParam('feature') feature: DiscordChannelFeature,
+    @ComponentParam('value') value: string,
   ): Promise<void> {
-    const selectId = interaction.customId;
-
-    console.log(channelId, selectId);
-
     const embed = await this.featureCommandsService.setSelectHandler({
-      selectId,
+      feature,
+      value: value === 'true',
       channelId,
     });
 

@@ -64,7 +64,7 @@ export class FeatureCommandsService {
 
     const channelsSelectMenu = new StringSelectMenuBuilder()
       .setCustomId(
-        `${DiscordSelectId.CHANNELS_TO_SET_FEATURE}:${feature}:${value ? 'true' : 'false'}`,
+        `${DiscordSelectId.CHANNELS_TO_SET_FEATURE}/${feature}/${value ? 'true' : 'false'}`,
       )
       .setPlaceholder('Select a channel to set the feature')
       .setMinValues(1)
@@ -85,17 +85,15 @@ export class FeatureCommandsService {
   }
 
   async setSelectHandler({
-    selectId,
+    feature,
+    value,
     channelId,
   }: {
-    selectId: string;
+    feature: DiscordChannelFeature;
+    value: boolean;
     channelId: string;
   }): Promise<EmbedBuilder> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_, feature, value] = selectId.split(':');
-
-    const parsedValue = value === 'true';
-
     const channel = await this.discordChannelService.findById(channelId);
 
     if (channel.isErr()) {
@@ -108,7 +106,7 @@ export class FeatureCommandsService {
     const channelValue = channel.value;
 
     const newChannel = DiscordChannelDto.fromEntity(channelValue);
-    newChannel.features[feature] = parsedValue;
+    newChannel.features[feature] = value;
 
     const updatedChannel = await this.discordChannelService.update(newChannel);
 

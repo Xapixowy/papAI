@@ -1,6 +1,7 @@
 import { ChannelCommandsController } from '@Controllers/discord/channel-commands.controller';
 import { FeatureCommandsController } from '@Controllers/discord/channel/feature-commands.controller';
 import { DiscordChannelModule } from '@Modules/discord-channel.module';
+import { DiscordGuildModule } from '@Modules/discord-guild.module';
 import { DiscordUserRoleGuardModule } from '@Modules/guards/discord-user-role-guard.module';
 import { Module } from '@nestjs/common';
 import { ChannelCommandsService } from '@Services/discord/channel-commands.service';
@@ -10,7 +11,11 @@ import { GatewayIntentBits } from 'discord.js';
 import { BaseCommandsModule } from './base-commands.module';
 
 @Module({
-  imports: [DiscordUserRoleGuardModule, DiscordChannelModule],
+  imports: [
+    DiscordUserRoleGuardModule,
+    DiscordGuildModule,
+    DiscordChannelModule,
+  ],
   providers: [
     ChannelEmbedBuilderService,
     FeatureCommandsService,
