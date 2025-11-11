@@ -1,10 +1,11 @@
+import { REQUIRES_DISCORD_USER_ROLE } from '@Decorators/requires-discord-user-role.decorator';
+import { SILENT_REJECTION } from '@Decorators/silent-rejection.decorator';
 import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { DiscordUserRoleForbiddenException } from '@Exceptions/discord/discord-user-role-forbidden.exception';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import { getDiscordInteractionFromArgs } from '@Utils/functions/get-discord-interction-from-args.function';
-import { REQUIRES_DISCORD_USER_ROLE } from '../../decorators/requires-discord-user-role.decorator';
 
 @Injectable()
 export class DiscordUserRoleGuard implements CanActivate {
@@ -14,6 +15,12 @@ export class DiscordUserRoleGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const silentRejection =
+      this.reflector.getAllAndOverride<boolean>(SILENT_REJECTION, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false;
+
     const requiredDiscordUserRoles = this.reflector.get<DiscordUserRole[]>(
       REQUIRES_DISCORD_USER_ROLE,
       context.getHandler(),
@@ -28,6 +35,7 @@ export class DiscordUserRoleGuard implements CanActivate {
     if (!discordInteraction) {
       throw new DiscordUserRoleForbiddenException(
         'You do not have permission to do this.',
+        silentRejection,
       );
     }
 
@@ -38,6 +46,7 @@ export class DiscordUserRoleGuard implements CanActivate {
     if (discordUser.isErr()) {
       throw new DiscordUserRoleForbiddenException(
         'You do not have permission to do this.',
+        silentRejection,
       );
     }
 
@@ -59,6 +68,7 @@ export class DiscordUserRoleGuard implements CanActivate {
     if (!hasDiscordUserRequiredRole) {
       throw new DiscordUserRoleForbiddenException(
         'You do not have permission to do this.',
+        silentRejection,
       );
     }
 

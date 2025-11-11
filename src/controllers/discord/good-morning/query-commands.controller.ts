@@ -1,6 +1,7 @@
 import { GOOD_MORNING_COMMANDS_CONFIG } from '@Constants/discord/good-morning-commands.constant';
 import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
 import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { SilentRejection } from '@Decorators/silent-rejection.decorator';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
@@ -16,6 +17,7 @@ const QUERY_COMMANDS_CONFIG = GOOD_MORNING_COMMANDS_CONFIG.commands.query;
 
 @Injectable()
 @UseGuards(DiscordGuildFeatureGuard, DiscordUserRoleGuard)
+@SilentRejection()
 @RequiresDiscordGuildFeature(DiscordFeature.GOOD_MORNING)
 @GoodMorningCommandDecorator({
   name: QUERY_COMMANDS_CONFIG.name,
@@ -35,6 +37,7 @@ export class QueryCommandsController extends BaseCommandsController {
     description: QUERY_COMMANDS_CONFIG.commands.get.description,
   })
   @RequiresDiscordUserRole(...QUERY_COMMANDS_CONFIG.commands.get.userRoles)
+  @SilentRejection()
   public async onQueryGetCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {
@@ -57,6 +60,7 @@ export class QueryCommandsController extends BaseCommandsController {
     description: QUERY_COMMANDS_CONFIG.commands.set.description,
   })
   @RequiresDiscordUserRole(...QUERY_COMMANDS_CONFIG.commands.set.userRoles)
+  @SilentRejection()
   public async onQuerySetCommand(
     @Context() [interaction]: SlashCommandContext,
     @Options() { query }: QueryOption,

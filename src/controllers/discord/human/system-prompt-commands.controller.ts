@@ -1,5 +1,8 @@
 import { HUMAN_COMMANDS_CONFIG } from '@Constants/discord/human-commands.constant';
+import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
 import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
+import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { QueryOption } from '@Options/query.option';
@@ -13,7 +16,8 @@ const SYSTEM_PROMPT_COMMANDS_CONFIG =
   HUMAN_COMMANDS_CONFIG.commands.systemPrompt;
 
 @Injectable()
-@UseGuards(DiscordUserRoleGuard)
+@UseGuards(DiscordGuildFeatureGuard, DiscordUserRoleGuard)
+@RequiresDiscordGuildFeature(DiscordFeature.HUMAN)
 @HumanCommandDecorator({
   name: SYSTEM_PROMPT_COMMANDS_CONFIG.name,
   description: SYSTEM_PROMPT_COMMANDS_CONFIG.description,

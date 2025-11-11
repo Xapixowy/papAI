@@ -1,4 +1,7 @@
 import { HUMAN_COMMANDS_CONFIG } from '@Constants/discord/human-commands.constant';
+import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
+import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
+import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { MessageIdOption } from '@Options/message-id.option';
@@ -11,7 +14,8 @@ import { HumanCommandDecorator } from '../human-commands.controller';
 const MESSAGE_COMMANDS_CONFIG = HUMAN_COMMANDS_CONFIG.commands.message;
 
 @Injectable()
-@UseGuards(DiscordUserRoleGuard)
+@UseGuards(DiscordGuildFeatureGuard, DiscordUserRoleGuard)
+@RequiresDiscordGuildFeature(DiscordFeature.HUMAN)
 @HumanCommandDecorator({
   name: MESSAGE_COMMANDS_CONFIG.name,
   description: MESSAGE_COMMANDS_CONFIG.description,

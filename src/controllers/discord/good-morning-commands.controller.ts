@@ -1,4 +1,7 @@
 import { GOOD_MORNING_COMMANDS_CONFIG } from '@Constants/discord/good-morning-commands.constant';
+import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
+import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
+import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { GoodMorningCommandsService } from '@Services/discord/good-morning-commands.service';
@@ -12,7 +15,8 @@ export const GoodMorningCommandDecorator = createCommandGroupDecorator({
 });
 
 @Injectable()
-@UseGuards(DiscordUserRoleGuard)
+@UseGuards(DiscordGuildFeatureGuard, DiscordUserRoleGuard)
+@RequiresDiscordGuildFeature(DiscordFeature.GOOD_MORNING)
 @GoodMorningCommandDecorator()
 export class GoodMorningCommandsController extends BaseCommandsController {
   constructor(
@@ -47,15 +51,15 @@ export class GoodMorningCommandsController extends BaseCommandsController {
       return;
     }
 
-    const goodMornignMessage =
+    const goodMorningMessage =
       await this.goodMorningCommandsService.goodMorningMessageHandler(guildId);
 
-    if (goodMornignMessage === null) {
+    if (goodMorningMessage === null) {
       return;
     }
 
     await message.reply({
-      content: goodMornignMessage,
+      content: goodMorningMessage,
     });
   }
 }
