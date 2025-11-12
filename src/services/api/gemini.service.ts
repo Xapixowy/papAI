@@ -32,9 +32,8 @@ export class GeminiService {
     }
 
     try {
-      const textGenerationModelName = this.configService.get<string>(
-        'gemini.modelNames.textGeneration',
-      );
+      const textGenerationModelName =
+        this.configService.get<string>('gemini.modelName');
 
       if (!textGenerationModelName) {
         return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);

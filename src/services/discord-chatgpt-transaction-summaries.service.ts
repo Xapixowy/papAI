@@ -1,9 +1,9 @@
 import { DiscordChatgptTransactionSummary } from '@Database/entities/discord-chatgpt-transaction-summary.entity';
+import { DiscordChatgptTransactionSummaryDto } from '@DTOs/discord-chatgpt-transaction-summary.dto';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { err, ok, Result } from 'neverthrow';
-import { DiscordChatgptTransactionSummaryDto } from 'src/dtos/discord-chatgpt-transaction-summary.dto';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -14,15 +14,13 @@ export class DiscordChatgptTransactionSummariesService {
   ) {}
 
   async findAll(): Promise<DiscordChatgptTransactionSummary[]> {
-    const entities = await this.repository.find();
-    return entities;
+    return await this.repository.find();
   }
 
   async findAllByUserId(
     discordUserId: string,
   ): Promise<DiscordChatgptTransactionSummary[]> {
-    const entities = await this.repository.find({ where: { discordUserId } });
-    return entities;
+    return await this.repository.find({ where: { discordUserId } });
   }
 
   async findById(

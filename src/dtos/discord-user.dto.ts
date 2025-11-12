@@ -1,11 +1,10 @@
 import { DiscordUser } from '@Database/entities/discord-user.entity';
-import { DiscordUserRole } from '@Enums/discord-user-role.enum';
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { DiscordChatgptTransactionSummaryDto } from './discord-chatgpt-transaction-summary.dto';
 import { DiscordChatgptTransactionDto } from './discord-chatgpt-transaction.dto';
 
 export class DiscordUserDto {
   id?: string;
-  userId: string;
   username: string;
   roles: DiscordUserRole[];
   chatgptTransactions?: DiscordChatgptTransactionDto[];
@@ -15,7 +14,6 @@ export class DiscordUserDto {
 
   constructor({
     id,
-    userId,
     username,
     roles,
     chatgptTransactions,
@@ -24,7 +22,6 @@ export class DiscordUserDto {
     updatedAt,
   }: {
     id?: string;
-    userId: string;
     username: string;
     roles: DiscordUserRole[];
     chatgptTransactions?: DiscordChatgptTransactionDto[];
@@ -33,7 +30,6 @@ export class DiscordUserDto {
     updatedAt?: Date;
   }) {
     this.id = id;
-    this.userId = userId;
     this.username = username;
     this.roles = roles;
     this.chatgptTransactions = chatgptTransactions;
@@ -45,7 +41,6 @@ export class DiscordUserDto {
   static fromEntity(entity: DiscordUser): DiscordUserDto {
     return new DiscordUserDto({
       id: entity.id,
-      userId: entity.userId,
       username: entity.username,
       roles: entity.roles,
       chatgptTransactions: entity.chatgptTransactions?.map((t) =>

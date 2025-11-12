@@ -1,10 +1,10 @@
-import { DiscordUserRole } from '@Enums/discord-user-role.enum';
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import {
   Column,
   CreateDateColumn,
   Entity,
   OneToMany,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { DiscordChatgptTransactionSummary } from './discord-chatgpt-transaction-summary.entity';
@@ -12,11 +12,8 @@ import { DiscordChatgptTransaction } from './discord-chatgpt-transaction.entity'
 
 @Entity('discord_users')
 export class DiscordUser {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('text')
   id: string;
-
-  @Column({ unique: true })
-  userId: string;
 
   @Column()
   username: string;

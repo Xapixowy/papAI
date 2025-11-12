@@ -1,5 +1,5 @@
-import { validateEnv } from '@Configs/env.config';
 import * as dotenv from 'dotenv';
+import { validateEnv } from 'src/env-validation';
 import { DataSource } from 'typeorm';
 
 dotenv.config();
