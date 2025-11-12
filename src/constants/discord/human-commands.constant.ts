@@ -23,12 +23,28 @@ export const HUMAN_COMMANDS_CONFIG: CommandConfigParentGroup<
         get: {
           name: 'get',
           description: 'Gets the system prompt for mention replies.',
-          userRoles: [DiscordUserRole.SUPER_ADMIN],
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
         },
         set: {
           name: 'set',
           description: 'Sets the system prompt for mention replies.',
-          userRoles: [DiscordUserRole.SUPER_ADMIN],
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
+        },
+      },
+    },
+    randomReplyPercentage: {
+      name: 'random-reply-percentage',
+      description: 'Random reply percentage commands',
+      commands: {
+        get: {
+          name: 'get',
+          description: 'Gets the random reply percentage.',
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
+        },
+        set: {
+          name: 'set',
+          description: 'Sets the random reply percentage.',
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
         },
       },
     },

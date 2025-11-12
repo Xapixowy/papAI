@@ -42,9 +42,7 @@ export class HumanCommandsController extends BaseCommandsController {
   }
 
   @On('messageCreate')
-  public async onMentionMessage(
-    @Context() [message]: [Message],
-  ): Promise<void> {
+  async onMentionMessage(@Context() [message]: [Message]): Promise<void> {
     const isBotMessage = message.author.bot;
     const isBotMention = message.mentions.users.has(this.client.user!.id);
     const isMessageTextChannel = message.channel instanceof TextChannel;
@@ -84,45 +82,41 @@ export class HumanCommandsController extends BaseCommandsController {
     }
   }
 
-  // @On('messageCreate')
-  // public async onMessageRandomReply(
-  //   @Context() [message]: [Message],
-  // ): Promise<void> {
-  //   const isBotMessage = message.author.bot;
-  //   const isBotMention = message.mentions.users.has(this.client.user!.id);
-  //   const isMessageTextChannel = message.channel instanceof TextChannel;
-  //   const isMessageInGuild = message.guild;
+  @On('messageCreate')
+  async onMessageRandomReply(@Context() [message]: [Message]): Promise<void> {
+    const isBotMessage = message.author.bot;
+    const isBotMention = message.mentions.users.has(this.client.user!.id);
+    const isMessageTextChannel = message.channel instanceof TextChannel;
+    const isMessageInGuild = message.guild;
 
-  //   if (
-  //     isBotMessage ||
-  //     isBotMention ||
-  //     !isMessageTextChannel ||
-  //     !isMessageInGuild
-  //   )
-  //     return;
+    if (
+      isBotMessage ||
+      isBotMention ||
+      !isMessageTextChannel ||
+      !isMessageInGuild
+    )
+      return;
 
-  //   // TODO: Temporarily disabled
-  //   return;
+    const attachments = message.attachments.map((attachment) => attachment);
+    const guildEmojis = message.guild.emojis.cache.map((emoji) => emoji);
 
-  //   // const attachments = message.attachments.map((attachment) => attachment);
+    const replyMessage =
+      await this.humanCommandsService.messageRandomReplyHandler({
+        message: message.content,
+        attachments: attachments.length ? attachments : undefined,
+        messageId: message.id,
+        userId: message.author.id,
+        channelId: message.channel.id,
+        guildId: message.guild.id,
+        guildEmojis,
+      });
 
-  //   // const replyMessage =
-  //   //   await this.humanCommandsService.messageRandomReplyHandler({
-  //   //     message: message.content,
-  //   //     attachments: attachments.length ? attachments : undefined,
-  //   //     messageId: message.id,
-  //   //     userId: message.author.id,
-  //   //     channelId: message.channel.id,
-  //   //     serverId: message.guild.id,
-  //   //     percentChance: 5,
-  //   //   });
+    if (!replyMessage) {
+      return;
+    }
 
-  //   // if (!replyMessage) {
-  //   //   return;
-  //   // }
-
-  //   // await message.reply({
-  //   //   content: replyMessage,
-  //   // });
-  // }
+    await message.reply({
+      content: replyMessage,
+    });
+  }
 }

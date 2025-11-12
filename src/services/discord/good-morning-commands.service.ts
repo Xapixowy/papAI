@@ -1,5 +1,4 @@
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
-import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { TenorService } from '@Services/api/tenor.service';
@@ -25,16 +24,6 @@ export class GoodMorningCommandsService {
     guildId: string;
     channelId: string;
   }): Promise<string | null> {
-    const isFeatureOnGuildEnabled =
-      await this.discordGuildService.isFeatureEnabled({
-        guildId,
-        feature: DiscordFeature.GOOD_MORNING,
-      });
-
-    if (isFeatureOnGuildEnabled.isErr() || !isFeatureOnGuildEnabled.value) {
-      return null;
-    }
-
     const isFeatureOnChannelEnabled =
       await this.discordChannelService.isFeatureEnabled({
         channelId,

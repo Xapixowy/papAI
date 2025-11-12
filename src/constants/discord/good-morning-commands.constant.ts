@@ -1,3 +1,4 @@
+import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import {
   CommandConfigCommand,
   CommandConfigGroup,
@@ -38,12 +39,12 @@ export const GOOD_MORNING_COMMANDS_CONFIG: CommandConfigParentGroup<
         get: {
           name: 'add',
           description: 'Adds a channel for the bot to listen to.',
-          userRoles: [],
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
         },
         set: {
           name: 'remove',
           description: 'Removes a channel the bot is listening to.',
-          userRoles: [],
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
         },
       },
     },

@@ -22,4 +22,5 @@ export const GUILD_SETTING_DEFAULTS: Record<
   [DiscordSettingKey.GOOD_MORNING_QUERY]: 'Good morning',
   [DiscordSettingKey.HUMAN_SYSTEM_PROMPT]:
     'You are a helpful assistant that answers questions. Your responses are short and concise.',
+  [DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE]: 5,
 };
