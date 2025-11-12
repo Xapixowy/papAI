@@ -1,12 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryColumn,
-} from 'typeorm';
-import { DiscordChannel } from './discord-channel.entity';
+import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('discord_messages')
 export class DiscordMessage {
@@ -24,13 +16,6 @@ export class DiscordMessage {
 
   @Column('text', { name: 'discord_channel_id' })
   discordChannelId: string;
-
-  @ManyToOne(() => DiscordChannel, { onDelete: 'CASCADE' })
-  @JoinColumn({
-    name: 'discord_channel_id',
-    referencedColumnName: 'id',
-  })
-  discordChannel: DiscordChannel;
 
   @Column('text', { name: 'discord_guild_id' })
   discordGuildId: string;
