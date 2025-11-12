@@ -54,7 +54,6 @@ export class InitializeDatabase1762735225312 implements MigrationInterface {
                 "value" jsonb NOT NULL,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-                CONSTRAINT "UQ_d23921ed807a76f9ef0ca7dc541" UNIQUE ("key"),
                 CONSTRAINT "PK_fd652d20ad1b01dd085b2af0cae" PRIMARY KEY ("id")
             )
         `);

@@ -15,7 +15,7 @@ export class DiscordSetting {
   @Column({ type: 'text', name: 'discord_guild_id', nullable: true })
   discordGuildId: string | null;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar' })
   key: string;
 
   @Column({
