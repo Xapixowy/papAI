@@ -3,11 +3,9 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { DiscordMessage } from './discord-message.entity';
 
 @Entity('discord_channels')
 export class DiscordChannel {
@@ -24,9 +22,6 @@ export class DiscordChannel {
 
   @Column({ type: 'json' })
   features: Record<DiscordChannelFeature, boolean>;
-
-  @OneToMany(() => DiscordMessage, (m) => m.discordChannel)
-  messages: DiscordMessage[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
