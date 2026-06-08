@@ -1,5 +1,5 @@
 allowBuilds:
   '@nestjs/core': true
   necord: true
-  sharp: false
-  unrs-resolver: false
+  sharp: true
+  unrs-resolver: true
