@@ -2,45 +2,60 @@ import { ErrorCode } from '@Enums/error-code.enum';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { GifContentFilter } from '@Types/api/gif-content-filter.type';
-import { TenorSearchResponse } from '@Types/api/tenor/search-response.type';
+import { GiphySearchResponse } from '@Types/api/giphy/search-response.type';
 import { AxiosError, AxiosResponse } from 'axios';
 import { err, ok, Result } from 'neverthrow';
 import { catchError, firstValueFrom, map } from 'rxjs';
 
+const CONTENT_FILTER_TO_GIPHY_RATING: Record<GifContentFilter, string> = {
+  high: 'g',
+  medium: 'pg',
+  low: 'pg-13',
+  off: 'r',
+};
+
+const GIPHY_RANDOM_OFFSET_MAX = 50;
+
 @Injectable()
-export class TenorService {
-  private readonly logger = new Logger(TenorService.name);
+export class GiphyService {
+  private readonly logger = new Logger(GiphyService.name);
 
   constructor(private readonly httpService: HttpService) {}
 
   async searchGifs({
     query,
     limit = 10,
+    offset = 0,
     randomize = false,
     contentFilter = 'medium',
   }: {
     query: string;
     limit?: number;
-    /** Randomize result ordering. */
+    /** Pagination offset. Default: 0. */
+    offset?: number;
+    /** Randomize results by picking a random offset. Overrides `offset`. Default: false. */
     randomize?: boolean;
-    /** Content safety level. Default: 'medium'. */
+    /** Content safety level. Default: 'medium' (maps to Giphy rating 'pg'). */
     contentFilter?: GifContentFilter;
-  }): Promise<Result<TenorSearchResponse, ErrorCode>> {
+  }): Promise<Result<GiphySearchResponse, ErrorCode>> {
+    const resolvedOffset = randomize
+      ? Math.floor(Math.random() * GIPHY_RANDOM_OFFSET_MAX)
+      : offset;
+
     try {
       const response = await firstValueFrom(
         this.httpService
-          .get<TenorSearchResponse>('search', {
+          .get<GiphySearchResponse>('gifs/search', {
             params: {
               q: query,
               limit,
-              random: randomize,
-              contentfilter: contentFilter,
-              media_filter: 'gif,tinygif',
+              offset: resolvedOffset,
+              rating: CONTENT_FILTER_TO_GIPHY_RATING[contentFilter],
             },
           })
           .pipe(
             map(
-              (response: AxiosResponse<TenorSearchResponse>) => response.data,
+              (response: AxiosResponse<GiphySearchResponse>) => response.data,
             ),
             catchError((error: AxiosError) => {
               this.logger.error(
@@ -53,7 +68,7 @@ export class TenorService {
 
       return ok(response);
     } catch {
-      return err(ErrorCode.TENOR_SEARCH_NOT_FOUND);
+      return err(ErrorCode.GIPHY_SEARCH_NOT_FOUND);
     }
   }
 }

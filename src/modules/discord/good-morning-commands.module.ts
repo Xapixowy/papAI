@@ -1,5 +1,7 @@
 import { GoodMorningCommandsController } from '@Controllers/discord/good-morning-commands.controller';
 import { QueryCommandsController } from '@Controllers/discord/good-morning/query-commands.controller';
+import { GiphyModule } from '@Modules/api/giphy.module';
+import { KlipyModule } from '@Modules/api/klipy.module';
 import { TenorModule } from '@Modules/api/tenor.module';
 import { DiscordChannelModule } from '@Modules/discord-channel.module';
 import { DiscordSettingsModule } from '@Modules/discord-settings.module';
@@ -20,6 +22,8 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     DiscordSettingsModule,
     DiscordChannelModule,
     TenorModule,
+    GiphyModule,
+    KlipyModule,
   ],
   providers: [
     QueryCommandsService,

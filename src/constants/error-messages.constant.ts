@@ -26,6 +26,8 @@ export const ERROR_CODE_MESSAGE_MAP: Record<ErrorCode, string> = {
   [ErrorCode.DISCORD_MESSAGES_NOT_FOUND]: 'Messages not found.',
   [ErrorCode.DISCORD_MESSAGE_NOT_FOUND]: 'Message not found.',
   [ErrorCode.TENOR_SEARCH_NOT_FOUND]: 'Tenor search not found.',
+  [ErrorCode.GIPHY_SEARCH_NOT_FOUND]: 'Giphy search not found.',
+  [ErrorCode.KLIPY_SEARCH_NOT_FOUND]: 'Klipy search not found.',
   [ErrorCode.GEMINI_INITIALIZATION_ERROR]: 'Gemini initialization error.',
   [ErrorCode.GEMINI_MODEL_NOT_FOUND]: 'Gemini model not found.',
   [ErrorCode.GEMINI_GENERATION_ERROR]: 'Gemini generation error.',

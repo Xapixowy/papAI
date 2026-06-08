@@ -1,10 +1,14 @@
+import { GIF_PROVIDERS, GifProvider } from '@Constants/gif-providers.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { Injectable, Logger } from '@nestjs/common';
+import { GiphyService } from '@Services/api/giphy.service';
+import { KlipyService } from '@Services/api/klipy.service';
 import { TenorService } from '@Services/api/tenor.service';
 import { DiscordChannelService } from '@Services/discord-channel.service';
 import { DiscordGuildService } from '@Services/discord-guild.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
+import { EmbedBuilder } from 'discord.js';
 
 @Injectable()
 export class GoodMorningCommandsService {
@@ -15,6 +19,8 @@ export class GoodMorningCommandsService {
     private readonly discordGuildService: DiscordGuildService,
     private readonly discordChannelService: DiscordChannelService,
     private readonly tenorService: TenorService,
+    private readonly giphyService: GiphyService,
+    private readonly klipyService: KlipyService,
   ) {}
 
   public async goodMorningMessageHandler({
@@ -23,7 +29,7 @@ export class GoodMorningCommandsService {
   }: {
     guildId: string;
     channelId: string;
-  }): Promise<string | null> {
+  }): Promise<EmbedBuilder | null> {
     const isFeatureOnChannelEnabled =
       await this.discordChannelService.isFeatureEnabled({
         channelId,
@@ -65,36 +71,102 @@ export class GoodMorningCommandsService {
       return null;
     }
 
-    const goodMorningQuerySettingValue = goodMorningQuerySetting.value;
+    const result = await this.fetchGifUrl(goodMorningQuerySetting.value);
+    if (!result) return null;
 
-    const gifResult = await this.tenorService.searchGifs({
-      query: goodMorningQuerySettingValue,
+    this.logger.log(`Good Morning GIF fetched via ${result.provider.name}.`);
+
+    return new EmbedBuilder()
+      .setImage(result.url)
+      .setAuthor({ name: `Powered by ${result.provider.name}`, url: result.provider.url });
+  }
+
+  private async fetchGifUrl(
+    query: string,
+  ): Promise<{ url: string; provider: GifProvider } | null> {
+    const providers = this.shuffled([
+      () => this.fetchTenorGif(query),
+      () => this.fetchGiphyGif(query),
+      () => this.fetchKlipyGif(query),
+    ]);
+
+    for (const fetch of providers) {
+      const result = await fetch();
+      if (result) return result;
+    }
+
+    this.logger.error('All GIF providers failed to return a result.');
+    return null;
+  }
+
+  private async fetchTenorGif(
+    query: string,
+  ): Promise<{ url: string; provider: GifProvider } | null> {
+    const result = await this.tenorService.searchGifs({
+      query,
       limit: 1,
-      random: true,
+      randomize: true,
     });
 
-    if (gifResult.isErr()) {
-      this.logger.error(
-        'There was an error searching for a GIF.',
-        gifResult.error,
-      );
+    if (result.isErr()) {
+      this.logger.error('Tenor GIF search failed.', result.error);
       return null;
     }
 
-    const gifResultValue = gifResult.value;
+    const url = result.value.results[0]?.media_formats?.gif?.url;
+    return url ? { url, provider: GIF_PROVIDERS.tenor } : null;
+  }
 
-    if (gifResultValue.results?.length === 0) {
-      this.logger.error('No GIF found.');
+  private async fetchGiphyGif(
+    query: string,
+  ): Promise<{ url: string; provider: GifProvider } | null> {
+    const result = await this.giphyService.searchGifs({
+      query,
+      limit: 10,
+      randomize: true,
+    });
+
+    if (result.isErr()) {
+      this.logger.error('Giphy GIF search failed.', result.error);
       return null;
     }
 
-    const gifUrl = gifResultValue.results[0]?.media_formats?.gif?.url;
+    const gifs = result.value.data;
+    if (!gifs.length) return null;
 
-    if (!gifUrl) {
-      this.logger.error('No GIF URL found.');
+    const random = gifs[Math.floor(Math.random() * gifs.length)];
+    const url = random?.images?.original?.url;
+    return url ? { url, provider: GIF_PROVIDERS.giphy } : null;
+  }
+
+  private async fetchKlipyGif(
+    query: string,
+  ): Promise<{ url: string; provider: GifProvider } | null> {
+    const result = await this.klipyService.searchGifs({
+      query,
+      limit: 10,
+      randomize: true,
+    });
+
+    if (result.isErr()) {
+      this.logger.error('Klipy GIF search failed.', result.error);
       return null;
     }
 
-    return gifUrl;
+    if (!result.value.result) {
+      this.logger.error('Klipy returned unsuccessful result.');
+      return null;
+    }
+
+    const gifs = result.value.data.data;
+    if (!gifs.length) return null;
+
+    const random = gifs[Math.floor(Math.random() * gifs.length)];
+    const url = random?.file?.md?.gif?.url;
+    return url ? { url, provider: GIF_PROVIDERS.klipy } : null;
+  }
+
+  private shuffled<T>(arr: T[]): T[] {
+    return [...arr].sort(() => Math.random() - 0.5);
   }
 }

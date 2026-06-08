@@ -8,7 +8,7 @@ import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { GoodMorningCommandsService } from '@Services/discord/good-morning-commands.service';
-import { GatewayIntentBits, Message } from 'discord.js';
+import { EmbedBuilder, GatewayIntentBits, Message } from 'discord.js';
 import { Context, createCommandGroupDecorator, On } from 'necord';
 import { BaseCommandsController } from './base-commands.controller';
 
@@ -58,18 +58,18 @@ export class GoodMorningCommandsController extends BaseCommandsController {
       return;
     }
 
-    const goodMorningMessage =
+    const embed =
       await this.goodMorningCommandsService.goodMorningMessageHandler({
         guildId,
         channelId,
       });
 
-    if (goodMorningMessage === null) {
+    if (!(embed instanceof EmbedBuilder)) {
       return;
     }
 
     await message.reply({
-      content: goodMorningMessage,
+      embeds: [embed],
     });
   }
 }
