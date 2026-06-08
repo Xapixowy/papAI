@@ -93,7 +93,6 @@ export class FeatureCommandsService {
     value: boolean;
     channelId: string;
   }): Promise<EmbedBuilder> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const channel = await this.discordChannelService.findById(channelId);
 
     if (channel.isErr()) {

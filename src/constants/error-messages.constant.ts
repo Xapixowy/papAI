@@ -39,4 +39,13 @@ export const ERROR_CODE_MESSAGE_MAP: Record<ErrorCode, string> = {
     'Image compression wrong dimensions.',
   [ErrorCode.IMAGE_COMPRESSION_WRONG_QUALITY]:
     'Image compression wrong quality.',
+  [ErrorCode.STEAM_API_ERROR]: 'Steam API error.',
+  [ErrorCode.STEAM_USER_NOT_FOUND]: 'Steam user not found.',
+  [ErrorCode.STEAM_GAME_NOT_FOUND]: 'Steam game not found.',
+  [ErrorCode.STEAM_OBSERVER_NOT_FOUND]: 'Steam observer not found.',
+  [ErrorCode.STEAM_OBSERVER_EXISTS]: 'Steam observer already exists.',
+  [ErrorCode.STEAM_OBSERVER_PENDING_NOT_FOUND]:
+    'Session expired. Run /steam observer add again.',
+  [ErrorCode.STEAM_NO_CHANNELS_WITH_FEATURE]:
+    'No channels with Steam feature enabled. Enable it via /channel feature.',
 };

@@ -76,9 +76,10 @@ export class GoodMorningCommandsService {
 
     this.logger.log(`Good Morning GIF fetched via ${result.provider.name}.`);
 
-    return new EmbedBuilder()
-      .setImage(result.url)
-      .setAuthor({ name: `Powered by ${result.provider.name}`, url: result.provider.url });
+    return new EmbedBuilder().setImage(result.url).setAuthor({
+      name: `Powered by ${result.provider.name}`,
+      url: result.provider.url,
+    });
   }
 
   private async fetchGifUrl(

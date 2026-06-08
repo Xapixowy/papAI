@@ -24,6 +24,14 @@ export class DiscordUsersService {
     return entity ? ok(entity) : err(ErrorCode.DISCORD_USER_NOT_FOUND);
   }
 
+  async findByUserIds(userIds: string[]): Promise<DiscordUser[]> {
+    if (!userIds.length) return [];
+    return this.repository
+      .createQueryBuilder('u')
+      .where('u.id IN (:...ids)', { ids: userIds })
+      .getMany();
+  }
+
   async findAll(): Promise<Result<DiscordUser[], ErrorCode>> {
     const entities = await this.repository.find();
     return entities.length > 0

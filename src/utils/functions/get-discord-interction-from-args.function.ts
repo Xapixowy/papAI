@@ -1,22 +1,35 @@
 import {
+  ButtonInteraction,
   ChatInputCommandInteraction,
   StringSelectMenuInteraction,
 } from 'discord.js';
-import { SlashCommandContext, StringSelectContext } from 'necord';
+import {
+  ButtonContext,
+  SlashCommandContext,
+  StringSelectContext,
+} from 'necord';
 
 export const getDiscordInteractionFromArgs = (
   args: any[] = [],
-): ChatInputCommandInteraction | StringSelectMenuInteraction | null => {
+):
+  | ChatInputCommandInteraction
+  | StringSelectMenuInteraction
+  | ButtonInteraction
+  | null => {
   if (!args.length) {
     return null;
   }
 
-  const commandContext = args[0] as SlashCommandContext | StringSelectContext;
+  const commandContext = args[0] as
+    | SlashCommandContext
+    | StringSelectContext
+    | ButtonContext;
 
   const interaction = commandContext.find(
     (arg) =>
       arg instanceof ChatInputCommandInteraction ||
-      arg instanceof StringSelectMenuInteraction,
+      arg instanceof StringSelectMenuInteraction ||
+      arg instanceof ButtonInteraction,
   );
 
   return interaction ?? null;
