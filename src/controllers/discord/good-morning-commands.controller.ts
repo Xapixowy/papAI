@@ -1,4 +1,7 @@
-import { GOOD_MORNING_COMMANDS_CONFIG } from '@Constants/discord/good-morning-commands.constant';
+import {
+  GOOD_MORNING_COMMANDS_CONFIG,
+  GOOD_MORNING_KEYWORDS,
+} from '@Constants/discord/good-morning-commands.constant';
 import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
@@ -46,10 +49,12 @@ export class GoodMorningCommandsController extends BaseCommandsController {
     }
 
     const channelId = message.channel.id;
-
     const messageContentLower = message.content.toLowerCase();
+    const containsGoodMorningKeyword = GOOD_MORNING_KEYWORDS.some((keyword) =>
+      messageContentLower.includes(keyword),
+    );
 
-    if (!messageContentLower.includes('gm')) {
+    if (!containsGoodMorningKeyword) {
       return;
     }
 

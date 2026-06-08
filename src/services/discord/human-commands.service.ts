@@ -1,3 +1,4 @@
+import { GOOD_MORNING_KEYWORDS } from '@Constants/discord/good-morning-commands.constant';
 import { REGEX_DISCORD_EMOJI, REGEX_EMOJI } from '@Constants/regex.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
@@ -141,6 +142,31 @@ export class HumanCommandsService {
     guildId: string;
     guildEmojis: GuildEmoji[];
   }): Promise<null | string> {
+    const containsGoodMorningKeyword = GOOD_MORNING_KEYWORDS.some((keyword) =>
+      message.toLowerCase().includes(keyword),
+    );
+
+    if (containsGoodMorningKeyword) {
+      const goodMorningOnChannel =
+        await this.discordChannelService.isFeatureEnabled({
+          channelId,
+          feature: DiscordChannelFeature.GOOD_MORNING_MESSAGES,
+        });
+      const goodMorningOnGuild =
+        await this.discordGuildService.isChannelFeatureEnabled({
+          guildId,
+          feature: DiscordChannelFeature.GOOD_MORNING_MESSAGES,
+        });
+
+      const isGoodMorningActive =
+        (goodMorningOnChannel.isOk() && goodMorningOnChannel.value) ||
+        (goodMorningOnChannel.isErr() &&
+          goodMorningOnGuild.isOk() &&
+          goodMorningOnGuild.value);
+
+      if (isGoodMorningActive) return null;
+    }
+
     const isSaveMessagesFeatureOnChannelEnabled =
       await this.discordChannelService.isFeatureEnabled({
         channelId,

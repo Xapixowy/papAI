@@ -5,6 +5,8 @@ import {
   CommandConfigParentGroup,
 } from '@Types/discord/command-config.type';
 
+export const GOOD_MORNING_KEYWORDS = ['good morning', 'gm', 'dzień dobry'];
+
 export const GOOD_MORNING_COMMANDS_CONFIG: CommandConfigParentGroup<
   CommandConfigGroup<CommandConfigCommand>
 > = {
