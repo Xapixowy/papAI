@@ -1,4 +1,4 @@
-import { SteamObserverCommandsController } from '@Controllers/discord/steam-commands.controller';
+import { SteamObserverCommandsController } from '@Controllers/discord/steam/steam-observer-commands.controller';
 import { DiscordChannelModule } from '@Modules/discord-channel.module';
 import { DiscordGuildModule } from '@Modules/discord-guild.module';
 import { DiscordSteamObserversModule } from '@Modules/discord-steam-observers.module';

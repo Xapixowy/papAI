@@ -155,7 +155,7 @@ export class EmbedBuilderService {
       .setFooter(this.generateFooter());
   }
 
-  private generateFooter(): {
+  protected generateFooter(): {
     text: string;
     iconURL: string | undefined;
   } {

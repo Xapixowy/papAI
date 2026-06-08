@@ -247,7 +247,9 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
     const embed = new EmbedBuilder()
       .setColor('#1b2838')
       .setTitle(STEAM_COMMANDS_CONFIG.embed.title)
-      .setDescription(description);
+      .setDescription(description)
+      .setTimestamp()
+      .setFooter(this.generateFooter());
 
     if (steamUser?.avatarUrl) {
       embed.setThumbnail(steamUser.avatarUrl);

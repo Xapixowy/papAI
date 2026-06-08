@@ -141,7 +141,8 @@ export class SteamObserverSchedulerService implements OnApplicationBootstrap {
   }
 
   async enrichGames(appIds: number[]): Promise<EnrichResult> {
-    const unenrichedIds = await this.steamGamesService.findUnenrichedIds(appIds);
+    const unenrichedIds =
+      await this.steamGamesService.findUnenrichedIds(appIds);
     const result: EnrichResult = {
       enriched: 0,
       notFound: 0,

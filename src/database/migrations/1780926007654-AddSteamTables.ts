@@ -1,10 +1,10 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddSteamTables1780926007654 implements MigrationInterface {
-    name = 'AddSteamTables1780926007654'
+  name = 'AddSteamTables1780926007654';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE TABLE "steam_users" (
                 "id" text NOT NULL,
                 "username" text NOT NULL,
@@ -15,7 +15,7 @@ export class AddSteamTables1780926007654 implements MigrationInterface {
                 CONSTRAINT "PK_c4c5292d0c4e5afc21cc1a09da8" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "steam_games" (
                 "id" integer NOT NULL,
                 "name" text NOT NULL,
@@ -40,7 +40,7 @@ export class AddSteamTables1780926007654 implements MigrationInterface {
                 CONSTRAINT "PK_1c31506395d88ad04ed7bbfff86" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "discord_steam_observers" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "discord_user_id" text NOT NULL,
@@ -51,7 +51,7 @@ export class AddSteamTables1780926007654 implements MigrationInterface {
                 CONSTRAINT "PK_582d3c699de195ee6317bbda6b8" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "steam_user_games" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "steam_user_id" text NOT NULL,
@@ -61,77 +61,76 @@ export class AddSteamTables1780926007654 implements MigrationInterface {
                 CONSTRAINT "PK_fda8803560d5d39aa9e991a55f0" PRIMARY KEY ("id")
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TYPE "public"."discord_guilds_features_enum"
             RENAME TO "discord_guilds_features_enum_old"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TYPE "public"."discord_guilds_features_enum" AS ENUM('good_morning', 'human', 'steam')
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features" DROP DEFAULT
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features" TYPE "public"."discord_guilds_features_enum" [] USING "features"::"text"::"public"."discord_guilds_features_enum" []
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features"
             SET DEFAULT '{}'
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TYPE "public"."discord_guilds_features_enum_old"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "channel_feature_defaults"
             SET DEFAULT '{"human_save_messages":false,"human_random_reply":true,"good_morning_messages":false,"steam":false}'
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "channel_feature_defaults"
             SET DEFAULT '{"human_save_messages":false,"human_random_reply":true,"good_morning_messages":false}'
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TYPE "public"."discord_guilds_features_enum_old" AS ENUM('good_morning', 'human')
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features" DROP DEFAULT
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features" TYPE "public"."discord_guilds_features_enum_old" [] USING "features"::"text"::"public"."discord_guilds_features_enum_old" []
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "discord_guilds"
             ALTER COLUMN "features"
             SET DEFAULT '{}'
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TYPE "public"."discord_guilds_features_enum"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TYPE "public"."discord_guilds_features_enum_old"
             RENAME TO "discord_guilds_features_enum"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "steam_user_games"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "discord_steam_observers"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "steam_games"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "steam_users"
         `);
-    }
-
+  }
 }

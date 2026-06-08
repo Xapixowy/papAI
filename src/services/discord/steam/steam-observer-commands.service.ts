@@ -1,5 +1,6 @@
 import { STEAM_COMMANDS_CONFIG } from '@Constants/discord/steam-commands.constant';
 import { ERROR_CODE_MESSAGE_MAP } from '@Constants/error-messages.constant';
+import { STEAM_CONFIG } from '@Constants/steam-config.constant';
 import { DiscordSteamObserverDto } from '@DTOs/discord-steam-observer.dto';
 import { SteamUserDto } from '@DTOs/steam-user.dto';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
@@ -25,9 +26,10 @@ import {
 } from 'discord.js';
 import { Redis } from 'ioredis';
 import { SteamObserverEmbedBuilderService } from './steam-observer-embed-builder.service';
-import { EnrichResult, SteamObserverSchedulerService } from './steam-observer-scheduler.service';
-
-const PENDING_TTL = 300;
+import {
+  EnrichResult,
+  SteamObserverSchedulerService,
+} from './steam-observer-scheduler.service';
 
 @Injectable()
 export class SteamObserverCommandsService {
@@ -106,7 +108,7 @@ export class SteamObserverCommandsService {
       this.pendingKey(discordUserId, guildId),
       JSON.stringify(pending),
       'EX',
-      PENDING_TTL,
+      STEAM_CONFIG.pendingObserverTtl,
     );
 
     const { embed, button } =
@@ -205,7 +207,9 @@ export class SteamObserverCommandsService {
       }),
     );
 
-    const gamesResult = await this.steamApiService.getOwnedGames(pending.steamId);
+    const gamesResult = await this.steamApiService.getOwnedGames(
+      pending.steamId,
+    );
     if (gamesResult.isOk() && gamesResult.value.length > 0) {
       const ownedGames = gamesResult.value;
       await this.steamGamesService.upsertMany(ownedGames);
@@ -258,7 +262,8 @@ export class SteamObserverCommandsService {
       });
     }
 
-    const { steamUsers, channels, guilds, discordUsers } = await this.buildObserverMaps(observers);
+    const { steamUsers, channels, guilds, discordUsers } =
+      await this.buildObserverMaps(observers);
 
     return this.embedBuilderService.observerList({
       observers,
@@ -295,7 +300,8 @@ export class SteamObserverCommandsService {
       };
     }
 
-    const { steamUsers, channels, discordUsers } = await this.buildObserverMaps(observers);
+    const { steamUsers, channels, discordUsers } =
+      await this.buildObserverMaps(observers);
 
     const { embed, component } = this.embedBuilderService.observerRemoveSelect({
       observers,
@@ -410,7 +416,12 @@ export class SteamObserverCommandsService {
   }
 
   private async buildObserverMaps(
-    observers: { steamUserId: string; discordChannelId: string; discordGuildId: string; discordUserId: string }[],
+    observers: {
+      steamUserId: string;
+      discordChannelId: string;
+      discordGuildId: string;
+      discordUserId: string;
+    }[],
   ) {
     const steamUserIds = [...new Set(observers.map((o) => o.steamUserId))];
     const channelIds = [...new Set(observers.map((o) => o.discordChannelId))];
@@ -433,7 +444,9 @@ export class SteamObserverCommandsService {
 
     const discordUserEntities =
       await this.discordUsersService.findByUserIds(discordUserIds);
-    const discordUsers = new Map(discordUserEntities.map((u) => [u.id, u.username]));
+    const discordUsers = new Map(
+      discordUserEntities.map((u) => [u.id, u.username]),
+    );
 
     return { steamUsers, channels, guilds, discordUsers };
   }
@@ -471,7 +484,10 @@ export class SteamObserverCommandsService {
 
     let enrichResult: EnrichResult | null = null;
     if (enrich) {
-      enrichResult = await this.schedulerService.enrichAllForSteamUserIds(uniqueSteamUserIds);
+      enrichResult =
+        await this.schedulerService.enrichAllForSteamUserIds(
+          uniqueSteamUserIds,
+        );
     }
 
     const updateSection = this.embedBuilderService.generateSection({

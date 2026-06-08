@@ -1,3 +1,4 @@
+import { GIPHY_CONFIG } from '@Constants/gif-providers.constant';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
@@ -6,15 +7,6 @@ import { GiphySearchResponse } from '@Types/api/giphy/search-response.type';
 import { AxiosError, AxiosResponse } from 'axios';
 import { err, ok, Result } from 'neverthrow';
 import { catchError, firstValueFrom, map } from 'rxjs';
-
-const CONTENT_FILTER_TO_GIPHY_RATING: Record<GifContentFilter, string> = {
-  high: 'g',
-  medium: 'pg',
-  low: 'pg-13',
-  off: 'r',
-};
-
-const GIPHY_RANDOM_OFFSET_MAX = 50;
 
 @Injectable()
 export class GiphyService {
@@ -39,7 +31,7 @@ export class GiphyService {
     contentFilter?: GifContentFilter;
   }): Promise<Result<GiphySearchResponse, ErrorCode>> {
     const resolvedOffset = randomize
-      ? Math.floor(Math.random() * GIPHY_RANDOM_OFFSET_MAX)
+      ? Math.floor(Math.random() * GIPHY_CONFIG.randomOffsetMax)
       : offset;
 
     try {
@@ -50,7 +42,7 @@ export class GiphyService {
               q: query,
               limit,
               offset: resolvedOffset,
-              rating: CONTENT_FILTER_TO_GIPHY_RATING[contentFilter],
+              rating: GIPHY_CONFIG.contentFilterRating[contentFilter],
             },
           })
           .pipe(

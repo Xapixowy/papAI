@@ -1,3 +1,4 @@
+import { KLIPY_CONFIG } from '@Constants/gif-providers.constant';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
@@ -6,8 +7,6 @@ import { KlipySearchResponse } from '@Types/api/klipy/search-response.type';
 import { AxiosError, AxiosResponse } from 'axios';
 import { err, ok, Result } from 'neverthrow';
 import { catchError, firstValueFrom, map } from 'rxjs';
-
-const KLIPY_RANDOM_PAGE_MAX = 5;
 
 @Injectable()
 export class KlipyService {
@@ -32,7 +31,7 @@ export class KlipyService {
     contentFilter?: GifContentFilter;
   }): Promise<Result<KlipySearchResponse, ErrorCode>> {
     const resolvedPage = randomize
-      ? Math.floor(Math.random() * KLIPY_RANDOM_PAGE_MAX) + 1
+      ? Math.floor(Math.random() * KLIPY_CONFIG.randomPageMax) + 1
       : page;
 
     try {
