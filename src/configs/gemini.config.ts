@@ -8,6 +8,6 @@ export default registerAs(
     modelName: string;
   } => ({
     apiKey: process.env[EnvKey.GEMINI_API_KEY]!,
-    modelName: 'gemini-2.5-flash',
+    modelName: 'gemini-3.1-flash-lite',
   }),
 );
