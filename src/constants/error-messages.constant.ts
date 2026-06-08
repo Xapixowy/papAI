@@ -33,4 +33,8 @@ export const ERROR_CODE_MESSAGE_MAP: Record<ErrorCode, string> = {
   [ErrorCode.DISCORD_GUILD_EXISTS]: 'Guild already exists.',
   [ErrorCode.DISCORD_GUILD_UNABLE_TO_CREATE]: 'Guild unable to create.',
   [ErrorCode.DISCORD_GUILD_UNABLE_TO_UPDATE]: 'Guild unable to update.',
+  [ErrorCode.IMAGE_COMPRESSION_WRONG_DIMENSIONS]:
+    'Image compression wrong dimensions.',
+  [ErrorCode.IMAGE_COMPRESSION_WRONG_QUALITY]:
+    'Image compression wrong quality.',
 };

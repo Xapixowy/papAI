@@ -5,6 +5,7 @@ import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Part } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@Services/api/gemini.service';
 import { DiscordChannelService } from '@Services/discord-channel.service';
 import { DiscordGuildService } from '@Services/discord-guild.service';
@@ -38,6 +39,7 @@ export class HumanCommandsService {
     private readonly discordMessageService: DiscordMessageService,
     private readonly discordChannelService: DiscordChannelService,
     private readonly discordGuildService: DiscordGuildService,
+    private readonly configService: ConfigService,
   ) {}
 
   public async mentionMessageHandler({
@@ -46,12 +48,18 @@ export class HumanCommandsService {
     channelId,
     guildId,
     attachments,
+    userDisplayName,
+    userId,
+    embedImageUrls,
   }: {
     message: string;
     messageId: string;
     channelId: string;
     guildId: string;
     attachments?: Attachment[];
+    userDisplayName: string;
+    userId: string;
+    embedImageUrls?: string[];
   }): Promise<string[] | EmbedBuilder> {
     const systemPrompt =
       await this.discordSettingsService.getValueByKey<string>({
@@ -68,9 +76,19 @@ export class HumanCommandsService {
       await DiscordAttachmentsHelper.convertImagesToGeminiParts(
         attachments ?? [],
       );
+    const embedImageParts =
+      await DiscordAttachmentsHelper.convertImageUrlsToGeminiParts(
+        embedImageUrls ?? [],
+      );
 
     const systemPromptValue = systemPrompt.value;
-    const queryParts: Part[] = [{ text: message }, ...imagesAttachmentsParts];
+    const queryParts: Part[] = [
+      {
+        text: `[${userDisplayName} <@${userId}>]: ${this.replaceBotMentionWithName(message)}`,
+      },
+      ...imagesAttachmentsParts,
+      ...embedImageParts,
+    ];
 
     const channelMessageHistory = await this.getChannelMessages(
       channelId,
@@ -337,10 +355,30 @@ export class HumanCommandsService {
             imageAttachments,
           );
 
+        const embedImageUrls = message.embeds
+          .flatMap((embed) => [embed.image?.url, embed.thumbnail?.url])
+          .filter((url): url is string => !!url);
+        const embedImageParts =
+          await DiscordAttachmentsHelper.convertImageUrlsToGeminiParts(
+            embedImageUrls,
+          );
+
+        const allImageParts = [...imagesAttachmentsParts, ...embedImageParts];
+
+        const isBot = message.author.id === this.client.user?.id;
+        const authorDisplayName = isBot
+          ? undefined
+          : (message.member?.displayName ??
+            message.author.displayName ??
+            message.author.username);
+        const authorId = isBot ? undefined : message.author.id;
+
         convertedMessages.push({
-          role: message.author.id === this.client.user?.id ? 'model' : 'user',
-          text: message.content,
-          attachments: imagesAttachmentsParts.map((part) => ({
+          role: isBot ? 'model' : 'user',
+          text: this.replaceBotMentionWithName(message.content),
+          authorDisplayName,
+          authorId,
+          attachments: allImageParts.map((part) => ({
             contentType: part.inlineData!.mimeType,
             data: part.inlineData!.data,
           })),
@@ -353,6 +391,15 @@ export class HumanCommandsService {
     } catch {
       return err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
     }
+  }
+
+  private replaceBotMentionWithName(text: string): string {
+    const botId = this.client.user?.id;
+    const botName = this.configService.get<string>('discord.botName') ?? 'Bot';
+
+    if (!botId) return text;
+
+    return text.replace(new RegExp(`<@!?${botId}>`, 'g'), botName);
   }
 
   private generateSimpleEmbed({

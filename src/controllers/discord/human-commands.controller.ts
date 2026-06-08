@@ -58,6 +58,13 @@ export class HumanCommandsController extends BaseCommandsController {
     const stopTyping = startTypingInterval(message.channel);
 
     const attachments = message.attachments.map((attachment) => attachment);
+    const userDisplayName =
+      message.member?.displayName ??
+      message.author.globalName ??
+      message.author.username;
+    const embedImageUrls = message.embeds
+      .flatMap((embed) => [embed.image?.url, embed.thumbnail?.url])
+      .filter((url): url is string => !!url);
 
     const generatedMessage =
       await this.humanCommandsService.mentionMessageHandler({
@@ -66,6 +73,9 @@ export class HumanCommandsController extends BaseCommandsController {
         messageId: message.id,
         guildId,
         attachments,
+        userDisplayName,
+        userId: message.author.id,
+        embedImageUrls,
       });
 
     if (stopTyping) stopTyping();
