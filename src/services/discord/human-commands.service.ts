@@ -161,7 +161,7 @@ export class HumanCommandsService {
     guildEmojis: GuildEmoji[];
   }): Promise<null | string> {
     const containsGoodMorningKeyword = GOOD_MORNING_KEYWORDS.some((keyword) =>
-      message.toLowerCase().includes(keyword),
+      message.toLowerCase().startsWith(keyword),
     );
 
     if (containsGoodMorningKeyword) {

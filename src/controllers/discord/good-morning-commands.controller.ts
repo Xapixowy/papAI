@@ -51,7 +51,7 @@ export class GoodMorningCommandsController extends BaseCommandsController {
     const channelId = message.channel.id;
     const messageContentLower = message.content.toLowerCase();
     const containsGoodMorningKeyword = GOOD_MORNING_KEYWORDS.some((keyword) =>
-      messageContentLower.includes(keyword),
+      messageContentLower.startsWith(keyword),
     );
 
     if (!containsGoodMorningKeyword) {
