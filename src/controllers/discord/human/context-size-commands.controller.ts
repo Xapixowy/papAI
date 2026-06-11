@@ -33,7 +33,9 @@ export class ContextSizeCommandsController extends BaseCommandsController {
   }
 
   @Subcommand(CONTEXT_SIZE_COMMANDS_CONFIG.commands.get)
-  @RequiresDiscordUserRole(...CONTEXT_SIZE_COMMANDS_CONFIG.commands.get.userRoles)
+  @RequiresDiscordUserRole(
+    ...CONTEXT_SIZE_COMMANDS_CONFIG.commands.get.userRoles,
+  )
   public async onGetCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {
@@ -43,7 +45,8 @@ export class ContextSizeCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.contextSizeCommandsService.contextSizeGetHandler(guildId);
+    const embed =
+      await this.contextSizeCommandsService.contextSizeGetHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
@@ -52,7 +55,9 @@ export class ContextSizeCommandsController extends BaseCommandsController {
   }
 
   @Subcommand(CONTEXT_SIZE_COMMANDS_CONFIG.commands.set)
-  @RequiresDiscordUserRole(...CONTEXT_SIZE_COMMANDS_CONFIG.commands.set.userRoles)
+  @RequiresDiscordUserRole(
+    ...CONTEXT_SIZE_COMMANDS_CONFIG.commands.set.userRoles,
+  )
   public async onSetCommand(
     @Context() [interaction]: SlashCommandContext,
     @Options() { size }: ContextSizeOption,

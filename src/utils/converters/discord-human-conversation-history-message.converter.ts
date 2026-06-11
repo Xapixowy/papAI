@@ -16,15 +16,14 @@ export class DiscordHumanConversationHistoryMessageConverter {
     message: DiscordHumanConversationHistoryMessage,
   ): Content {
     const date = new Date(message.createdAt);
-    const timestamp = date
-      .toISOString()
-      .replace('T', ' ')
-      .substring(0, 16);
+    const timestamp = date.toISOString().replace('T', ' ').substring(0, 16);
     const prefix =
-      message.role === 'user' && message.authorDisplayName
-        ? `[${timestamp} UTC] [${message.authorDisplayName}${message.authorId ? ` <@${message.authorId}>` : ''}]:`
-        : `[${timestamp} UTC]`;
-    const textPart = { text: `${prefix} ${message.text}` };
+      message.role === 'user'
+        ? `[${timestamp} UTC]${message.authorDisplayName ? ` [${message.authorDisplayName}${message.authorId ? ` <@${message.authorId}>` : ''}]` : ''}:`
+        : '';
+    const textPart = {
+      text: prefix ? `${prefix} ${message.text}` : message.text,
+    };
     const imageParts = (message.attachments ?? []).map((attachment) => ({
       inlineData: {
         mimeType: attachment.contentType,

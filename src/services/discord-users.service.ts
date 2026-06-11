@@ -32,6 +32,13 @@ export class DiscordUsersService {
       .getMany();
   }
 
+  async findByUsernamePartial(username: string): Promise<DiscordUser[]> {
+    return this.repository
+      .createQueryBuilder('u')
+      .where('u.username ILIKE :username', { username: `%${username}%` })
+      .getMany();
+  }
+
   async findAll(): Promise<Result<DiscordUser[], ErrorCode>> {
     const entities = await this.repository.find();
     return entities.length > 0

@@ -81,7 +81,10 @@ export class GeminiService {
     queryParts: Part[];
     tools: Tool[];
   }): Promise<
-    Result<{ text: string } | { functionCalls: FunctionCall[] }, ErrorCode>
+    Result<
+      { text: string } | { functionCalls: FunctionCall[]; modelContent: Content },
+      ErrorCode
+    >
   > {
     if (!this.gemini) {
       return err(ErrorCode.GEMINI_INITIALIZATION_ERROR);
@@ -119,13 +122,81 @@ export class GeminiService {
         this.logger.log(
           `Gemini requested function calls: ${functionCalls.map((f) => f.name).join(', ')}`,
         );
-        return ok({ functionCalls });
+        const modelContent = result.response.candidates![0].content;
+        return ok({ functionCalls, modelContent });
       }
 
       this.logger.log(
         `Content generated from Gemini: ${response.text().length} characters`,
       );
       return ok({ text: response.text() });
+    } catch (error) {
+      this.logger.error('Error generating content from Gemini:', error);
+      return err(ErrorCode.GEMINI_GENERATION_ERROR);
+    }
+  }
+
+  async generateContentWithFunctionResponse({
+    systemPrompt,
+    queryParts,
+    modelContent,
+    functionCallName,
+    functionResponse,
+  }: {
+    systemPrompt: string;
+    queryParts: Part[];
+    modelContent: Content;
+    functionCallName: string;
+    functionResponse: unknown;
+  }): Promise<Result<string, ErrorCode>> {
+    if (!this.gemini) {
+      return err(ErrorCode.GEMINI_INITIALIZATION_ERROR);
+    }
+
+    try {
+      const textGenerationModelName =
+        this.configService.get<string>('gemini.modelName');
+
+      if (!textGenerationModelName) {
+        return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
+      }
+
+      const model = this.gemini.getGenerativeModel({
+        model: textGenerationModelName,
+        systemInstruction: systemPrompt,
+      });
+
+      const contents: Content[] = [
+        { role: 'user', parts: queryParts },
+        modelContent,
+        {
+          role: 'function',
+          parts: [
+            {
+              functionResponse: {
+                name: functionCallName,
+                response: { result: functionResponse },
+              },
+            },
+          ],
+        },
+      ];
+
+      const request: GenerateContentRequest = { contents };
+
+      this.logger.log('Generating content from Gemini (function response)...');
+      const result = await model.generateContent(request);
+      const response = result.response;
+
+      if (!response) {
+        this.logger.error('Error generating content from Gemini');
+        return err(ErrorCode.GEMINI_GENERATION_ERROR);
+      }
+
+      this.logger.log(
+        `Content generated from Gemini: ${response.text().length} characters`,
+      );
+      return ok(response.text());
     } catch (error) {
       this.logger.error('Error generating content from Gemini:', error);
       return err(ErrorCode.GEMINI_GENERATION_ERROR);

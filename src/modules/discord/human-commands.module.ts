@@ -13,6 +13,7 @@ import { DiscordUserRoleGuardModule } from '@Modules/guards/discord-user-role-gu
 import { Module } from '@nestjs/common';
 import { HumanCommandsService } from '@Services/discord/human-commands.service';
 import { ContextSizeCommandsService } from '@Services/discord/human/context-size-commands.service';
+import { HumanGeminiToolsService } from '@Services/discord/human/gemini-tools.service';
 import { MessageCommandsService } from '@Services/discord/human/message-commands.service';
 import { RandomReplyPercentageCommandsService } from '@Services/discord/human/random-reply-percentage-commands.service';
 import { SystemPromptCommandsService } from '@Services/discord/human/system-prompt-commands.service';
@@ -42,6 +43,7 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     SystemPromptCommandsController,
     ContextSizeCommandsService,
     ContextSizeCommandsController,
+    HumanGeminiToolsService,
   ],
 })
 export class HumanCommandsModule extends BaseCommandsModule {

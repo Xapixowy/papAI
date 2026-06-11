@@ -1,9 +1,13 @@
 import { GOOD_MORNING_KEYWORDS } from '@Constants/discord/good-morning-commands.constant';
+import {
+  GET_CONVERSATION_HISTORY_TOOL_NAME,
+  HUMAN_GEMINI_TOOLS,
+  SEARCH_SAVED_MESSAGES_TOOL_NAME,
+} from '@Constants/discord/human-gemini-tools.constant';
 import { REGEX_DISCORD_EMOJI, REGEX_EMOJI } from '@Constants/regex.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
-import { ErrorCode } from '@Enums/error-code.enum';
-import { Part, Tool } from '@google/generative-ai';
+import { Part } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@Services/api/gemini.service';
@@ -11,17 +15,12 @@ import { DiscordChannelService } from '@Services/discord-channel.service';
 import { DiscordGuildService } from '@Services/discord-guild.service';
 import { DiscordMessageService } from '@Services/discord-message.service';
 import { DiscordSettingsService } from '@Services/discord-settings.service';
-import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
-import { DiscordHumanConversationHistoryMessageConverter } from '@Utils/converters/discord-human-conversation-history-message.converter';
-import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
 import {
-  Attachment,
-  Client,
-  EmbedBuilder,
-  GuildEmoji,
-  TextChannel,
-} from 'discord.js';
-import { err, ok, Result } from 'neverthrow';
+  SearchSavedMessagesArgs,
+  HumanGeminiToolsService,
+} from '@Services/discord/human/gemini-tools.service';
+import { MarkdownHelper } from '@Utils/helpers/markdown.helper';
+import { Attachment, Client, EmbedBuilder, GuildEmoji } from 'discord.js';
 import { DiscordAttachmentsHelper } from '../../utils/helpers/discord-attachments.helper';
 
 @Injectable()
@@ -36,6 +35,7 @@ export class HumanCommandsService {
     private readonly discordChannelService: DiscordChannelService,
     private readonly discordGuildService: DiscordGuildService,
     private readonly configService: ConfigService,
+    private readonly humanGeminiToolsService: HumanGeminiToolsService,
   ) {}
 
   public async mentionMessageHandler({
@@ -95,22 +95,10 @@ export class HumanCommandsService {
       ? contextSizeSetting.value
       : 20;
 
-    const tools: Tool[] = [
-      {
-        functionDeclarations: [
-          {
-            name: 'get_conversation_history',
-            description:
-              'Retrieves previous messages from this channel with author names and timestamps (UTC). You MUST call this tool whenever the request involves any of the following: summarizing or analyzing what a specific person or user wrote; questions about channel history or past messages; follow-up questions referencing earlier parts of the conversation; requests mentioning a specific date or time; any task that requires knowing what was previously said by anyone in this channel. When in doubt, call this tool.',
-          },
-        ],
-      },
-    ];
-
     const firstResult = await this.geminiService.generateContentWithTools({
       systemPrompt: systemPromptValue,
       queryParts,
-      tools,
+      tools: HUMAN_GEMINI_TOOLS,
     });
 
     if (firstResult.isErr()) {
@@ -121,66 +109,58 @@ export class HumanCommandsService {
     const firstResultValue = firstResult.value;
 
     if ('text' in firstResultValue) {
-      const text = firstResultValue.text;
-      if (text.length === 0) return ['🤷‍♂️'];
-      return MarkdownHelper.splitMessageWithCodeAndPagination({
-        text,
-        maxPageLength: 1800,
-      });
+      return this.splitOrFallback(firstResultValue.text);
     }
 
-    const channelMessageHistory = await this.getChannelMessages(
-      channelId,
-      messageId,
-      contextSize,
-    );
-    const channelMessageHistoryOk = channelMessageHistory
-      .match(
-        (messages) => messages,
-        () => [] as DiscordHumanConversationHistoryMessage[],
-      )
-      .filter((message) => {
-        if (message.messageId === undefined) {
-          return true;
-        }
+    const [functionCall] = firstResultValue.functionCalls;
 
-        return message.messageId !== messageId;
-      })
-      .sort((a, b) => {
-        const aDate = new Date(a.createdAt);
-        const bDate = new Date(b.createdAt);
+    if (functionCall.name === GET_CONVERSATION_HISTORY_TOOL_NAME) {
+      const history =
+        await this.humanGeminiToolsService.handleGetConversationHistory({
+          channelId,
+          messageId,
+          limit: contextSize,
+        });
 
-        return aDate.getTime() - bDate.getTime();
+      const result = await this.geminiService.generateContent({
+        systemPrompt: systemPromptValue,
+        queryParts,
+        conversationHistory: history,
       });
 
-    const channelMessageHistoryContent = channelMessageHistoryOk.map(
-      (message) =>
-        DiscordHumanConversationHistoryMessageConverter.toGeminiContent(
-          message,
-        ),
-    );
+      if (result.isErr()) {
+        this.logger.error('There was an error generating the message.');
+        return ['🤷‍♂️'];
+      }
 
-    const generationResult = await this.geminiService.generateContent({
-      systemPrompt: systemPromptValue,
-      queryParts: queryParts,
-      conversationHistory: channelMessageHistoryContent,
-    });
-
-    if (generationResult.isErr()) {
-      this.logger.error('There was an error generating the message.');
-      return ['🤷‍♂️'];
+      return this.splitOrFallback(result.value);
     }
 
-    const generationResultValue = generationResult.value;
+    if (functionCall.name === SEARCH_SAVED_MESSAGES_TOOL_NAME) {
+      const searchResult =
+        await this.humanGeminiToolsService.handleSearchSavedMessages({
+          ...(functionCall.args as SearchSavedMessagesArgs),
+          guildId,
+        });
 
-    if (generationResultValue.length === 0) {
-      return ['🤷‍♂️'];
+      const result =
+        await this.geminiService.generateContentWithFunctionResponse({
+          systemPrompt: systemPromptValue,
+          queryParts,
+          modelContent: firstResultValue.modelContent,
+          functionCallName: functionCall.name,
+          functionResponse: searchResult,
+        });
+
+      if (result.isErr()) {
+        this.logger.error('There was an error generating the message.');
+        return ['🤷‍♂️'];
+      }
+
+      return this.splitOrFallback(result.value);
     }
 
-    return MarkdownHelper.splitMessageWithCodeAndPagination({
-      text: generationResultValue,
-      maxPageLength: 1800,
-    });
+    return ['🤷‍♂️'];
   }
 
   public async messageRandomReplyHandler({
@@ -314,7 +294,6 @@ export class HumanCommandsService {
 
     if (shouldSendEmoji) {
       const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-
       return randomEmoji;
     }
 
@@ -338,6 +317,14 @@ export class HumanCommandsService {
     }
 
     return finalMessage;
+  }
+
+  private splitOrFallback(text: string): string[] {
+    if (text.length === 0) return ['🤷‍♂️'];
+    return MarkdownHelper.splitMessageWithCodeAndPagination({
+      text,
+      maxPageLength: 1800,
+    });
   }
 
   private getEmojisFromMessageIfExistsOnGuild({
@@ -364,74 +351,6 @@ export class HumanCommandsService {
     }
 
     return emojis;
-  }
-
-  private async getChannelMessages(
-    channelId: string,
-    messageId: string,
-    limit: number = 20,
-  ): Promise<Result<DiscordHumanConversationHistoryMessage[], ErrorCode>> {
-    try {
-      const channel = await this.client.channels.fetch(channelId);
-
-      if (!(channel instanceof TextChannel)) {
-        return err(ErrorCode.DISCORD_CHANNEL_WRONG_TYPE);
-      }
-
-      const messages = await channel.messages.fetch({
-        limit,
-        before: messageId,
-      });
-
-      const convertedMessages: DiscordHumanConversationHistoryMessage[] = [];
-
-      for (const message of Array.from(messages.values())) {
-        const attachments = message.attachments.map((attachment) => attachment);
-
-        const imageAttachments =
-          DiscordAttachmentsHelper.filterImages(attachments);
-
-        const imagesAttachmentsParts =
-          await DiscordAttachmentsHelper.convertImagesToGeminiParts(
-            imageAttachments,
-          );
-
-        const embedImageUrls = message.embeds
-          .flatMap((embed) => [embed.image?.url, embed.thumbnail?.url])
-          .filter((url): url is string => !!url);
-        const embedImageParts =
-          await DiscordAttachmentsHelper.convertImageUrlsToGeminiParts(
-            embedImageUrls,
-          );
-
-        const allImageParts = [...imagesAttachmentsParts, ...embedImageParts];
-
-        const isBot = message.author.id === this.client.user?.id;
-        const authorDisplayName = isBot
-          ? undefined
-          : (message.member?.displayName ??
-            message.author.displayName ??
-            message.author.username);
-        const authorId = isBot ? undefined : message.author.id;
-
-        convertedMessages.push({
-          role: isBot ? 'model' : 'user',
-          text: this.replaceBotMentionWithName(message.content),
-          authorDisplayName,
-          authorId,
-          attachments: allImageParts.map((part) => ({
-            contentType: part.inlineData!.mimeType,
-            data: part.inlineData!.data,
-          })),
-          createdAt: message.createdAt.toISOString(),
-          messageId: message.id,
-        });
-      }
-
-      return ok(convertedMessages);
-    } catch {
-      return err(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
-    }
   }
 
   private replaceBotMentionWithName(text: string): string {

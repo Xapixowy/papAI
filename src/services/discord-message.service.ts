@@ -48,6 +48,64 @@ export class DiscordMessageService {
     return entity ? ok(entity) : err(ErrorCode.DISCORD_MESSAGE_NOT_FOUND);
   }
 
+  async search({
+    guildId,
+    keyword,
+    userIds,
+    channelId,
+    dateFrom,
+    dateTo,
+    hasAttachments,
+    limit = 20,
+  }: {
+    guildId: string;
+    keyword?: string;
+    userIds?: string[];
+    channelId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    hasAttachments?: boolean;
+    limit?: number;
+  }) {
+    const qb = this.discordMessageRepository
+      .createQueryBuilder('msg')
+      .where('msg.discordGuildId = :guildId', { guildId })
+      .orderBy('msg.createdAt', 'DESC')
+      .take(limit);
+
+    if (keyword) {
+      qb.andWhere('msg.message ILIKE :keyword', { keyword: `%${keyword}%` });
+    }
+
+    if (userIds && userIds.length > 0) {
+      qb.andWhere('msg.discordUserId IN (:...userIds)', { userIds });
+    }
+
+    if (channelId) {
+      qb.andWhere('msg.discordChannelId = :channelId', { channelId });
+    }
+
+    if (dateFrom) {
+      qb.andWhere('msg.createdAt >= :dateFrom', { dateFrom });
+    }
+
+    if (dateTo) {
+      qb.andWhere('msg.createdAt <= :dateTo', { dateTo });
+    }
+
+    if (hasAttachments === true) {
+      qb.andWhere(
+        'msg.attachments IS NOT NULL AND array_length(msg.attachments, 1) > 0',
+      );
+    } else if (hasAttachments === false) {
+      qb.andWhere(
+        '(msg.attachments IS NULL OR array_length(msg.attachments, 1) = 0)',
+      );
+    }
+
+    return qb.getMany();
+  }
+
   async findRandomMessageByGuildId(
     guildId: string,
     count: number = 1,
