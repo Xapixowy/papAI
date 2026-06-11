@@ -35,7 +35,7 @@ export class RandomReplyPercentageCommandsService {
     const timestamp = Math.floor(setting.value.updatedAt.getTime() / 1000);
 
     return this.generateSimpleEmbed({
-      description: `Random reply percentage is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
+      description: `Random reply percentage is set to \`${value}\`.\n\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
       variant: 'success',
     });
   }

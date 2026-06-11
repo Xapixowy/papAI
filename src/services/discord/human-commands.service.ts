@@ -3,7 +3,7 @@ import { REGEX_DISCORD_EMOJI, REGEX_EMOJI } from '@Constants/regex.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
-import { Part } from '@google/generative-ai';
+import { Part, Tool } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@Services/api/gemini.service';
@@ -22,10 +22,7 @@ import {
   TextChannel,
 } from 'discord.js';
 import { err, ok, Result } from 'neverthrow';
-import { HUMAN_COMMANDS_CONFIG } from '../../constants/discord/human-commands.constant';
-import { EmbedVariant } from '../../types/discord/embed-variant.type';
 import { DiscordAttachmentsHelper } from '../../utils/helpers/discord-attachments.helper';
-import { EmbedBuilderService } from './embed-builder.service';
 
 @Injectable()
 export class HumanCommandsService {
@@ -33,7 +30,6 @@ export class HumanCommandsService {
 
   constructor(
     private readonly discordSettingsService: DiscordSettingsService,
-    private readonly embedBuilderService: EmbedBuilderService,
     private readonly geminiService: GeminiService,
     private readonly client: Client,
     private readonly discordMessageService: DiscordMessageService,
@@ -98,6 +94,40 @@ export class HumanCommandsService {
     const contextSize = contextSizeSetting.isOk()
       ? contextSizeSetting.value
       : 20;
+
+    const tools: Tool[] = [
+      {
+        functionDeclarations: [
+          {
+            name: 'get_conversation_history',
+            description:
+              'Retrieves previous messages from this channel. Call this when the user references something previously said, asks a follow-up question, or when answering requires prior context from this conversation.',
+          },
+        ],
+      },
+    ];
+
+    const firstResult = await this.geminiService.generateContentWithTools({
+      systemPrompt: systemPromptValue,
+      queryParts,
+      tools,
+    });
+
+    if (firstResult.isErr()) {
+      this.logger.error('There was an error generating the message.');
+      return ['🤷‍♂️'];
+    }
+
+    const firstResultValue = firstResult.value;
+
+    if ('text' in firstResultValue) {
+      const text = firstResultValue.text;
+      if (text.length === 0) return ['🤷‍♂️'];
+      return MarkdownHelper.splitMessageWithCodeAndPagination({
+        text,
+        maxPageLength: 1800,
+      });
+    }
 
     const channelMessageHistory = await this.getChannelMessages(
       channelId,
@@ -411,21 +441,5 @@ export class HumanCommandsService {
     if (!botId) return text;
 
     return text.replace(new RegExp(`<@!?${botId}>`, 'g'), botName);
-  }
-
-  private generateSimpleEmbed({
-    description,
-    variant,
-  }: {
-    description: string;
-    variant: EmbedVariant;
-  }): EmbedBuilder {
-    return this.embedBuilderService.simple({
-      description: description,
-      title: HUMAN_COMMANDS_CONFIG.embed.title,
-      thumbnail: HUMAN_COMMANDS_CONFIG.embed.thumbnail,
-      variant: variant,
-      logger: this.logger,
-    });
   }
 }

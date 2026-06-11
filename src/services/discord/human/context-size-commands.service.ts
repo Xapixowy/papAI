@@ -36,7 +36,7 @@ export class ContextSizeCommandsService {
     const timestamp = Math.floor(updatedAt.getTime() / 1000);
 
     return this.generateSimpleEmbed({
-      description: `Context size is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
+      description: `Context size is set to \`${value}\`.\n\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
       variant: 'success',
     });
   }

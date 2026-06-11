@@ -33,7 +33,7 @@ export class SystemPromptCommandsService {
     const timestamp = Math.floor(setting.value.updatedAt.getTime() / 1000);
 
     return this.generateSimpleEmbed({
-      description: `System prompt is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
+      description: `System prompt is set to \`${value}\`.\n\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
       variant: 'success',
     });
   }
