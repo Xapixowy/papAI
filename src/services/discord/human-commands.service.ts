@@ -101,7 +101,7 @@ export class HumanCommandsService {
           {
             name: 'get_conversation_history',
             description:
-              'Retrieves previous messages from this channel. Call this when the user references something previously said, asks a follow-up question, or when answering requires prior context from this conversation.',
+              'Retrieves previous messages from this channel with author names and timestamps (UTC). You MUST call this tool whenever the request involves any of the following: summarizing or analyzing what a specific person or user wrote; questions about channel history or past messages; follow-up questions referencing earlier parts of the conversation; requests mentioning a specific date or time; any task that requires knowing what was previously said by anyone in this channel. When in doubt, call this tool.',
           },
         ],
       },
