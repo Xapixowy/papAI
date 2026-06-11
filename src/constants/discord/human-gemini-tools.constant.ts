@@ -26,11 +26,12 @@ export const HUMAN_GEMINI_TOOLS: Tool[] = [
             author_name: {
               type: SchemaType.STRING,
               description:
-                'Filter by Discord username (partial match, case-insensitive).',
+                'Filter by message author. Accepts: a Discord mention (e.g. "<@123456>"), a raw user ID, a display name, a server nickname, or a username — resolved against server members (partial match, case-insensitive).',
             },
             channel_id: {
               type: SchemaType.STRING,
-              description: 'Filter by Discord channel ID.',
+              description:
+                'Filter by channel. Accepts: a channel mention (e.g. "<#123456>"), a raw channel ID, or a channel name — resolved against server channels (partial match, case-insensitive).',
             },
             date_from: {
               type: SchemaType.STRING,

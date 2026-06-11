@@ -82,7 +82,8 @@ export class GeminiService {
     tools: Tool[];
   }): Promise<
     Result<
-      { text: string } | { functionCalls: FunctionCall[]; modelContent: Content },
+      | { text: string }
+      | { functionCalls: FunctionCall[]; modelContent: Content },
       ErrorCode
     >
   > {

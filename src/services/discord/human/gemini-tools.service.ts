@@ -76,16 +76,47 @@ export class HumanGeminiToolsService {
 
     let userIds: string[] | undefined;
     if (author_name) {
-      const matchedUsers =
-        await this.discordUsersService.findByUsernamePartial(author_name);
-      userIds = matchedUsers.map((u) => u.id);
+      const mentionMatch = author_name.match(/^<@!?(\d+)>$/);
+      if (mentionMatch) {
+        userIds = [mentionMatch[1]];
+      } else {
+        const guild = this.client.guilds.cache.get(guildId);
+        const needle = author_name.toLowerCase();
+
+        const cachedMemberIds = guild
+          ? guild.members.cache
+              .filter(
+                (m) =>
+                  m.displayName.toLowerCase().includes(needle) ||
+                  (m.nickname?.toLowerCase().includes(needle) ?? false) ||
+                  m.user.username.toLowerCase().includes(needle),
+              )
+              .map((m) => m.id)
+          : [];
+
+        if (cachedMemberIds.length > 0) {
+          userIds = cachedMemberIds;
+        } else {
+          const matchedUsers =
+            await this.discordUsersService.findByUsernamePartial(author_name);
+          userIds = matchedUsers.map((u) => u.id);
+        }
+      }
     }
 
     const guild = this.client.guilds.cache.get(guildId);
-    const resolvedChannelId =
-      channel_id && guild?.channels.cache.has(channel_id)
-        ? channel_id
-        : undefined;
+    const rawChannelId = channel_id?.match(/^<#(\d+)>$/)?.[1] ?? channel_id;
+    let resolvedChannelId: string | undefined;
+    if (rawChannelId && guild) {
+      if (guild.channels.cache.has(rawChannelId)) {
+        resolvedChannelId = rawChannelId;
+      } else {
+        const byName = guild.channels.cache.find((c) =>
+          c.name.toLowerCase().includes(rawChannelId.toLowerCase()),
+        );
+        resolvedChannelId = byName?.id;
+      }
+    }
 
     const results = await this.discordMessageService.search({
       guildId,
