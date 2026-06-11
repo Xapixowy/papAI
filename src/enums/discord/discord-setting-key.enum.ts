@@ -7,4 +7,5 @@ export enum DiscordSettingKey {
   GOOD_MORNING_QUERY = 'good_morning_query',
   HUMAN_SYSTEM_PROMPT = 'human_system_prompt',
   HUMAN_RANDOM_REPLY_PERCENTAGE = 'human_random_reply_percentage',
+  HUMAN_CONTEXT_SIZE = 'human_context_size',
 }

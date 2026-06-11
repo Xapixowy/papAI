@@ -24,4 +24,5 @@ export const GUILD_SETTING_DEFAULTS: Record<
   [DiscordSettingKey.HUMAN_SYSTEM_PROMPT]:
     'You are a helpful assistant that answers questions. Your responses are short and concise.',
   [DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE]: 5,
+  [DiscordSettingKey.HUMAN_CONTEXT_SIZE]: 20,
 };

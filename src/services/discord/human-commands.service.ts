@@ -90,9 +90,19 @@ export class HumanCommandsService {
       ...embedImageParts,
     ];
 
+    const contextSizeSetting =
+      await this.discordSettingsService.getValueByKey<number>({
+        key: DiscordSettingKey.HUMAN_CONTEXT_SIZE,
+        guildId,
+      });
+    const contextSize = contextSizeSetting.isOk()
+      ? contextSizeSetting.value
+      : 20;
+
     const channelMessageHistory = await this.getChannelMessages(
       channelId,
       messageId,
+      contextSize,
     );
     const channelMessageHistoryOk = channelMessageHistory
       .match(
@@ -329,6 +339,7 @@ export class HumanCommandsService {
   private async getChannelMessages(
     channelId: string,
     messageId: string,
+    limit: number = 20,
   ): Promise<Result<DiscordHumanConversationHistoryMessage[], ErrorCode>> {
     try {
       const channel = await this.client.channels.fetch(channelId);
@@ -338,7 +349,7 @@ export class HumanCommandsService {
       }
 
       const messages = await channel.messages.fetch({
-        limit: 20,
+        limit,
         before: messageId,
       });
 

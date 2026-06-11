@@ -59,5 +59,21 @@ export const HUMAN_COMMANDS_CONFIG: CommandConfigParentGroup<
         },
       },
     },
+    contextSize: {
+      name: 'context-size',
+      description: 'Context size commands',
+      commands: {
+        get: {
+          name: 'get',
+          description: 'Gets the number of messages taken into context.',
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
+        },
+        set: {
+          name: 'set',
+          description: 'Sets the number of messages taken into context.',
+          userRoles: [DiscordUserRole.SUPER_ADMIN, DiscordUserRole.ADMIN],
+        },
+      },
+    },
   },
 };

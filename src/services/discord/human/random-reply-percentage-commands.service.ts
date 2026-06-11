@@ -19,23 +19,23 @@ export class RandomReplyPercentageCommandsService {
   public async randomReplyPercentageGetHandler(
     guildId: string,
   ): Promise<EmbedBuilder> {
-    const randomReplyPercentage =
-      await this.discordSettingsService.getValueByKey<number>({
-        key: DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE,
-        guildId,
-      });
+    const setting = await this.discordSettingsService.findByKey({
+      key: DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE,
+      guildId,
+    });
 
-    if (randomReplyPercentage.isErr()) {
+    if (setting.isErr()) {
       return this.generateSimpleEmbed({
-        description: ERROR_CODE_MESSAGE_MAP[randomReplyPercentage.error],
+        description: ERROR_CODE_MESSAGE_MAP[setting.error],
         variant: 'error',
       });
     }
 
-    const randomReplyPercentageValue = randomReplyPercentage.value;
+    const value = setting.value.value as number;
+    const timestamp = Math.floor(setting.value.updatedAt.getTime() / 1000);
 
     return this.generateSimpleEmbed({
-      description: `Random reply percentage is set to \`${randomReplyPercentageValue}\`.`,
+      description: `Random reply percentage is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
       variant: 'success',
     });
   }

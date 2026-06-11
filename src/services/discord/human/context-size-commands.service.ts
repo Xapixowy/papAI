@@ -7,8 +7,10 @@ import { EmbedVariant } from '@Types/discord/embed-variant.type';
 import { EmbedBuilder } from 'discord.js';
 import { EmbedBuilderService } from '../embed-builder.service';
 
+export const HUMAN_CONTEXT_SIZE_DEFAULT = 20;
+
 @Injectable()
-export class SystemPromptCommandsService {
+export class ContextSizeCommandsService {
   private readonly logger = new Logger(this.constructor.name);
 
   constructor(
@@ -16,50 +18,51 @@ export class SystemPromptCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
-  public async systemPromptGetHandler(guildId: string): Promise<EmbedBuilder> {
+  public async contextSizeGetHandler(guildId: string): Promise<EmbedBuilder> {
     const setting = await this.discordSettingsService.findByKey({
-      key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
+      key: DiscordSettingKey.HUMAN_CONTEXT_SIZE,
       guildId,
     });
 
     if (setting.isErr()) {
       return this.generateSimpleEmbed({
-        description: ERROR_CODE_MESSAGE_MAP[setting.error],
-        variant: 'error',
+        description: `Context size is set to \`${HUMAN_CONTEXT_SIZE_DEFAULT}\` (default).`,
+        variant: 'success',
       });
     }
 
-    const value = setting.value.value as string;
-    const timestamp = Math.floor(setting.value.updatedAt.getTime() / 1000);
+    const value = setting.value.value as number;
+    const updatedAt = setting.value.updatedAt;
+    const timestamp = Math.floor(updatedAt.getTime() / 1000);
 
     return this.generateSimpleEmbed({
-      description: `System prompt is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
+      description: `Context size is set to \`${value}\`.\nLast updated: <t:${timestamp}:F> (<t:${timestamp}:R>)`,
       variant: 'success',
     });
   }
 
-  public async systemPromptSetHandler({
-    systemPrompt,
+  public async contextSizeSetHandler({
+    value,
     guildId,
   }: {
-    systemPrompt: string;
+    value: number;
     guildId: string;
   }): Promise<EmbedBuilder> {
-    const systemPromptSetting = await this.discordSettingsService.set({
-      key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
-      value: systemPrompt,
+    const result = await this.discordSettingsService.set({
+      key: DiscordSettingKey.HUMAN_CONTEXT_SIZE,
+      value: Math.round(value),
       guildId,
     });
 
-    if (systemPromptSetting.isErr()) {
+    if (result.isErr()) {
       return this.generateSimpleEmbed({
-        description: ERROR_CODE_MESSAGE_MAP[systemPromptSetting.error],
+        description: ERROR_CODE_MESSAGE_MAP[result.error],
         variant: 'error',
       });
     }
 
     return this.generateSimpleEmbed({
-      description: `System prompt set to \`${systemPrompt}\`.`,
+      description: `Context size set to \`${Math.round(value)}\`.`,
       variant: 'success',
     });
   }
@@ -72,10 +75,10 @@ export class SystemPromptCommandsService {
     variant: EmbedVariant;
   }): EmbedBuilder {
     return this.embedBuilderService.simple({
-      description: description,
+      description,
       title: HUMAN_COMMANDS_CONFIG.embed.title,
       thumbnail: HUMAN_COMMANDS_CONFIG.embed.thumbnail,
-      variant: variant,
+      variant,
       logger: this.logger,
     });
   }

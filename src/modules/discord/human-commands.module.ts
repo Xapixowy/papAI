@@ -1,4 +1,5 @@
 import { HumanCommandsController } from '@Controllers/discord/human-commands.controller';
+import { ContextSizeCommandsController } from '@Controllers/discord/human/context-size-commands.controller';
 import { MessageCommandsController } from '@Controllers/discord/human/message-commands.controller';
 import { RandomReplyPercentageCommandsController } from '@Controllers/discord/human/random-reply-percentage-commands.controller';
 import { SystemPromptCommandsController } from '@Controllers/discord/human/system-prompt-commands.controller';
@@ -11,6 +12,7 @@ import { DiscordGuildFeatureGuardModule } from '@Modules/guards/discord-guild-fe
 import { DiscordUserRoleGuardModule } from '@Modules/guards/discord-user-role-guard.module';
 import { Module } from '@nestjs/common';
 import { HumanCommandsService } from '@Services/discord/human-commands.service';
+import { ContextSizeCommandsService } from '@Services/discord/human/context-size-commands.service';
 import { MessageCommandsService } from '@Services/discord/human/message-commands.service';
 import { RandomReplyPercentageCommandsService } from '@Services/discord/human/random-reply-percentage-commands.service';
 import { SystemPromptCommandsService } from '@Services/discord/human/system-prompt-commands.service';
@@ -38,6 +40,8 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     RandomReplyPercentageCommandsController,
     SystemPromptCommandsService,
     SystemPromptCommandsController,
+    ContextSizeCommandsService,
+    ContextSizeCommandsController,
   ],
 })
 export class HumanCommandsModule extends BaseCommandsModule {
@@ -47,6 +51,7 @@ export class HumanCommandsModule extends BaseCommandsModule {
       ...MessageCommandsController.botIntents,
       ...RandomReplyPercentageCommandsController.botIntents,
       ...SystemPromptCommandsController.botIntents,
+      ...ContextSizeCommandsController.botIntents,
     ];
   }
 }
