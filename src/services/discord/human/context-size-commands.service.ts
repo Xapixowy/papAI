@@ -18,7 +18,7 @@ export class ContextSizeCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
-  public async contextSizeGetHandler(guildId: string): Promise<EmbedBuilder> {
+  public async contextSizeGetHandler(guildId: string): Promise<EmbedBuilder[]> {
     const setting = await this.discordSettingsService.findByKey({
       key: DiscordSettingKey.HUMAN_CONTEXT_SIZE,
       guildId,
@@ -47,7 +47,7 @@ export class ContextSizeCommandsService {
   }: {
     value: number;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const result = await this.discordSettingsService.set({
       key: DiscordSettingKey.HUMAN_CONTEXT_SIZE,
       value: Math.round(value),
@@ -73,7 +73,7 @@ export class ContextSizeCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: HUMAN_COMMANDS_CONFIG.embed.title,

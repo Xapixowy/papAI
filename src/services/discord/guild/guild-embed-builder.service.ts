@@ -20,7 +20,7 @@ export class GuildEmbedBuilderService extends EmbedBuilderService {
   }: {
     description: string;
     guildConfigs: DiscordGuildDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const guildConfigsSection = this.generateGuildConfigsSection({
       guildConfigs,
     });

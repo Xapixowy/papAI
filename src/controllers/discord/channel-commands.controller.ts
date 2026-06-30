@@ -59,7 +59,7 @@ export class ChannelCommandsController extends BaseCommandsController {
 
     const { id: channelId, name: channelName } = channel;
 
-    const embed = await this.channelCommandsService.addHandler({
+    const embeds = await this.channelCommandsService.addHandler({
       guildId,
       channelId,
       channelName,
@@ -67,7 +67,7 @@ export class ChannelCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -82,12 +82,12 @@ export class ChannelCommandsController extends BaseCommandsController {
       return;
     }
 
-    const { embed, component } =
+    const { embeds, component } =
       await this.channelCommandsService.removeHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component && [component],
     });
   }
@@ -102,12 +102,12 @@ export class ChannelCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed =
+    const embeds =
       await this.channelCommandsService.removeSelectHandler(channelId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -122,11 +122,11 @@ export class ChannelCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.channelCommandsService.listHandler(guildId);
+    const embeds = await this.channelCommandsService.listHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

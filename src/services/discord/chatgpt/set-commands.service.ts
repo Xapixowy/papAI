@@ -23,7 +23,7 @@ export class SetCommandsService {
     price,
   }: {
     price: number;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const newPrice = await this.discordSettingsService.set({
       key: DiscordSettingKey.CHATGPT_PRICE,
       value: price,
@@ -46,7 +46,7 @@ export class SetCommandsService {
     currency,
   }: {
     currency: CurrencyCode;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const newCurrency = await this.discordSettingsService.set({
       key: DiscordSettingKey.CHATGPT_CURRENCY,
       value: currency,
@@ -71,7 +71,7 @@ export class SetCommandsService {
   }: {
     day: number;
     time: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const newDate = await this.discordSettingsService.set({
       key: DiscordSettingKey.CHATGPT_REMINDER_DATE,
       value: `0 0 ${time} ${day} * *`,
@@ -96,7 +96,7 @@ export class SetCommandsService {
     day,
   }: {
     day: number;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const newDate = await this.discordSettingsService.set({
       key: DiscordSettingKey.CHATGPT_PAYMENT_DATE,
       value: day,
@@ -121,7 +121,7 @@ export class SetCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,

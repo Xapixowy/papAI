@@ -41,11 +41,11 @@ export class QueryCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.queryCommandsService.queryGetHandler(guildId);
+    const embeds = await this.queryCommandsService.queryGetHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -61,14 +61,14 @@ export class QueryCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.queryCommandsService.querySetHandler({
+    const embeds = await this.queryCommandsService.querySetHandler({
       query,
       guildId,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

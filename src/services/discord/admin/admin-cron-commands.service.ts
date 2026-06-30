@@ -10,7 +10,7 @@ export class AdminCronCommandsService {
     private readonly embedBuilderService: AdminEmbedBuilderService,
   ) {}
 
-  listHandler(): EmbedBuilder {
+  listHandler(): EmbedBuilder[] {
     const cronJobs = this.schedulerRegistry.getCronJobs();
 
     const jobs = [...cronJobs.entries()].map(([name, job]) => ({

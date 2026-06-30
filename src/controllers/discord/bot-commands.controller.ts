@@ -40,14 +40,14 @@ export class BotCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id: userId, username } = interaction.user;
 
-    const embed = await this.botCommandsService.initializeCommandHandler({
+    const embeds = await this.botCommandsService.initializeCommandHandler({
       userId,
       username,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

@@ -61,14 +61,14 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const embed = await this.transactionCommandsService.transactionAddHandler({
+    const embeds = await this.transactionCommandsService.transactionAddHandler({
       userId: id,
       price,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds: embeds,
     });
   }
 
@@ -81,14 +81,14 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const { embed, component } =
+    const { embeds, component } =
       await this.transactionCommandsService.transactionRemoveHandler({
         userId: id,
       });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component && [component],
     });
   }
@@ -103,7 +103,7 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const embed =
+    const embeds =
       await this.transactionCommandsService.transactionRemoveSelectHandler({
         userId: id,
         transactionId,
@@ -111,7 +111,7 @@ export class TransactionCommandsController extends BaseCommandsController {
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -124,14 +124,14 @@ export class TransactionCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id } = interaction.user;
 
-    const embed =
+    const embeds =
       await this.transactionCommandsService.transactionHistoryHandler({
         userId: id,
       });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -143,14 +143,14 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { ephemeral }: EphemeralOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed =
+    const embeds =
       await this.transactionCommandsService.transactionSummaryHandler();
 
     const isEphemeral = ephemeral === null ? true : ephemeral;
 
     return interaction.reply({
       flags: isEphemeral ? [MessageFlags.Ephemeral] : [],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -162,14 +162,14 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { ephemeral }: EphemeralOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed =
+    const embeds =
       await this.transactionCommandsService.transactionGenerateSummaryHandler();
 
     const isEphemeral = ephemeral === null ? true : ephemeral;
 
     return interaction.reply({
       flags: isEphemeral ? [MessageFlags.Ephemeral] : [],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -181,25 +181,25 @@ export class TransactionCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { sendToAllReminderChannels }: SendToAllReminderChannelsOption,
   ): Promise<InteractionResponse<boolean>> {
-    const { embed, remindEmbed, channels } =
+    const { embeds, remindEmbeds, channels } =
       await this.transactionCommandsService.transactionRemindHandler({
         sendToAllReminderChannels: sendToAllReminderChannels ?? false,
       });
 
-    if (remindEmbed && channels) {
+    if (remindEmbeds && channels) {
       for (const channel of channels) {
         await channel.sendTyping();
-        await channel.send({ embeds: [remindEmbed] });
+        await channel.send({ embeds: remindEmbeds });
       }
 
       return interaction.reply({
         flags: [MessageFlags.Ephemeral],
-        embeds: [embed],
+        embeds,
       });
     }
 
     return interaction.reply({
-      embeds: [embed],
+      embeds,
     });
   }
 }

@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { Client, ColorResolvable, EmbedBuilder } from 'discord.js';
 import { EmbedVariant } from '../../types/discord/embed-variant.type';
 
+const EMBED_DESCRIPTION_MAX = 4096;
+const EMBED_COUNT_MAX = 10;
+
 @Injectable()
 export class EmbedBuilderService {
   constructor(
@@ -22,35 +25,20 @@ export class EmbedBuilderService {
     thumbnail?: string;
     variant: EmbedVariant;
     logger?: Logger;
-  }): EmbedBuilder {
-    switch (variant) {
-      case 'success':
-        return this.simpleSuccess({
-          description,
-          title,
-          thumbnail,
-        });
-      case 'error':
-        return this.simpleError({
-          description,
-          title,
-          thumbnail,
-          logger,
-        });
-      case 'warning':
-        return this.simpleWarning({
-          description,
-          title,
-          thumbnail,
-        });
-      case 'info':
-      default:
-        return this.simpleInfo({
-          description,
-          title,
-          thumbnail,
-        });
+  }): EmbedBuilder[] {
+    if (logger && variant === 'error') {
+      logger.error(description);
     }
+
+    const chunks = this.chunkDescription(description);
+    return chunks.slice(0, EMBED_COUNT_MAX).map((chunk, i) =>
+      this.buildSingleEmbed({
+        description: chunk,
+        title: i === 0 ? title : undefined,
+        thumbnail: i === 0 ? thumbnail : undefined,
+        variant,
+      }),
+    );
   }
 
   generateSection({
@@ -63,92 +51,60 @@ export class EmbedBuilderService {
     return `### ${title}\n${description.join('\n')}`;
   }
 
-  private simpleInfo({
+  protected chunkDescription(
+    description: string,
+    maxChars = EMBED_DESCRIPTION_MAX,
+  ): string[] {
+    if (description.length <= maxChars) return [description];
+
+    const chunks: string[] = [];
+    const lines = description.split('\n');
+    let current = '';
+
+    for (const line of lines) {
+      const addition = current ? '\n' + line : line;
+      if (current.length + addition.length > maxChars) {
+        if (current) chunks.push(current);
+        current = line.length > maxChars ? line.slice(0, maxChars) : line;
+      } else {
+        current += addition;
+      }
+    }
+
+    if (current) chunks.push(current);
+    return chunks;
+  }
+
+  private buildSingleEmbed({
     description,
-    title = 'Info',
+    title,
     thumbnail,
+    variant,
   }: {
     description: string;
     title?: string;
     thumbnail?: string;
+    variant: EmbedVariant;
   }): EmbedBuilder {
-    const color = this.configService.get<ColorResolvable>(
-      'discord.colors.info',
-    )!;
+    const colorKey = {
+      success: 'discord.colors.success',
+      error: 'discord.colors.error',
+      warning: 'discord.colors.warning',
+      info: 'discord.colors.info',
+    }[variant];
+
+    const defaultTitle = {
+      success: 'Success',
+      error: 'Error',
+      warning: 'Warning',
+      info: 'Info',
+    }[variant];
+
+    const color = this.configService.get<ColorResolvable>(colorKey)!;
 
     return new EmbedBuilder()
       .setColor(color)
-      .setTitle(title)
-      .setDescription(description)
-      .setTimestamp()
-      .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter());
-  }
-
-  private simpleSuccess({
-    description,
-    title = 'Success',
-    thumbnail,
-  }: {
-    description: string;
-    title?: string;
-    thumbnail?: string;
-  }): EmbedBuilder {
-    const color = this.configService.get<ColorResolvable>(
-      'discord.colors.success',
-    )!;
-
-    return new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
-      .setDescription(description)
-      .setTimestamp()
-      .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter());
-  }
-
-  private simpleError({
-    description = 'Something went wrong.',
-    title = 'Error',
-    thumbnail,
-    logger,
-  }: {
-    description?: string;
-    title?: string;
-    thumbnail?: string;
-    logger?: Logger;
-  }): EmbedBuilder {
-    logger?.error(description);
-
-    const color = this.configService.get<ColorResolvable>(
-      'discord.colors.error',
-    )!;
-
-    return new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
-      .setDescription(description)
-      .setTimestamp()
-      .setThumbnail(thumbnail ?? null)
-      .setFooter(this.generateFooter());
-  }
-
-  private simpleWarning({
-    description = 'Something went wrong.',
-    title = 'Warning',
-    thumbnail,
-  }: {
-    description?: string;
-    title?: string;
-    thumbnail?: string;
-  }): EmbedBuilder {
-    const color = this.configService.get<ColorResolvable>(
-      'discord.colors.warning',
-    )!;
-
-    return new EmbedBuilder()
-      .setColor(color)
-      .setTitle(title)
+      .setTitle(title ?? defaultTitle)
       .setDescription(description)
       .setTimestamp()
       .setThumbnail(thumbnail ?? null)

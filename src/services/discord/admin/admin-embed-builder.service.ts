@@ -15,7 +15,7 @@ export class AdminEmbedBuilderService extends EmbedBuilderService {
 
   cronList(
     jobs: { name: string; nextRun: string; lastRun: string | null }[],
-  ): EmbedBuilder {
+  ): EmbedBuilder[] {
     const items = jobs.map(
       (j) =>
         `- \`${j.name}\`\n  - Next run: \`${j.nextRun}\`\n  - Last run: \`${j.lastRun ?? 'never'}\``,

@@ -38,14 +38,14 @@ export class UserCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id, username } = user.user;
 
-    const embed = await this.userCommandsService.userAddHandler({
+    const embeds = await this.userCommandsService.userAddHandler({
       userId: id,
       username,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -57,14 +57,14 @@ export class UserCommandsController extends BaseCommandsController {
   ): Promise<InteractionResponse<boolean>> {
     const { id, username } = user.user;
 
-    const embed = await this.userCommandsService.userRemoveHandler({
+    const embeds = await this.userCommandsService.userRemoveHandler({
       userId: id,
       username,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

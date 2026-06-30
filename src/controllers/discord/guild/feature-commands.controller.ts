@@ -43,14 +43,14 @@ export class FeatureCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.featureCommandsService.addFeatureHandler({
+    const embeds = await this.featureCommandsService.addFeatureHandler({
       guildId,
       feature,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -66,14 +66,14 @@ export class FeatureCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.featureCommandsService.removeFeatureHandler({
+    const embeds = await this.featureCommandsService.removeFeatureHandler({
       guildId,
       feature,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

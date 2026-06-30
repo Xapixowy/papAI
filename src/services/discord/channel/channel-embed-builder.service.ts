@@ -20,7 +20,7 @@ export class ChannelEmbedBuilderService extends EmbedBuilderService {
   }: {
     description: string;
     channels: DiscordChannelDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const channelConfigsSection = this.generateChannelConfigsSection({
       channels,
     });

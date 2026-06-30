@@ -32,7 +32,7 @@ export class ChannelCommandsService {
     channelId: string;
     channelName: string;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const channel = await this.discordChannelService.findById(channelId);
 
     if (!channel.isErr() && channel.value) {
@@ -74,14 +74,14 @@ export class ChannelCommandsService {
   }
 
   async removeHandler(guildId: string): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const channels = await this.discordChannelService.findAllByGuildId(guildId);
 
     if (channels.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: ERROR_CODE_MESSAGE_MAP[channels.error],
           variant: 'error',
         }),
@@ -92,7 +92,7 @@ export class ChannelCommandsService {
 
     if (channelsValue.length === 0) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'There are no channels.',
           variant: 'error',
         }),
@@ -117,7 +117,7 @@ export class ChannelCommandsService {
     );
 
     return {
-      embed: this.generateSimpleEmbed({
+      embeds: this.generateSimpleEmbed({
         description: 'Select a channel to remove.',
         variant: 'info',
       }),
@@ -125,7 +125,7 @@ export class ChannelCommandsService {
     };
   }
 
-  async removeSelectHandler(channelId: string): Promise<EmbedBuilder> {
+  async removeSelectHandler(channelId: string): Promise<EmbedBuilder[]> {
     const channel = await this.discordChannelService.findById(channelId);
 
     if (channel.isErr()) {
@@ -151,7 +151,7 @@ export class ChannelCommandsService {
     });
   }
 
-  async listHandler(guildId: string): Promise<EmbedBuilder> {
+  async listHandler(guildId: string): Promise<EmbedBuilder[]> {
     const channels = await this.discordChannelService.findAllByGuildId(guildId);
 
     if (channels.isErr()) {
@@ -182,7 +182,7 @@ export class ChannelCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       variant,

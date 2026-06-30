@@ -36,14 +36,14 @@ export class MessageCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { messageId }: MessageIdOption,
   ): Promise<void> {
-    const embed = await this.messageCommandsService.messageRemoveHandler({
+    const embeds = await this.messageCommandsService.messageRemoveHandler({
       messageId,
       userId: interaction.user.id,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

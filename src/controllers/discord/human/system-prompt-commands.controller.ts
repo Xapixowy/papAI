@@ -46,12 +46,12 @@ export class SystemPromptCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed =
+    const embeds =
       await this.systemPromptCommandsService.systemPromptGetHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -69,16 +69,15 @@ export class SystemPromptCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.systemPromptCommandsService.systemPromptSetHandler(
-      {
+    const embeds =
+      await this.systemPromptCommandsService.systemPromptSetHandler({
         systemPrompt: query,
         guildId,
-      },
-    );
+      });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

@@ -22,7 +22,7 @@ export class ConfigCommandsService {
     private readonly embedBuilderService: ChatgptEmbedBuilderService,
   ) {}
 
-  public async configListHandler(): Promise<EmbedBuilder> {
+  public async configListHandler(): Promise<EmbedBuilder[]> {
     const chatgptCurrency =
       await this.discordSettingsService.getValueByKey<CurrencyCode>({
         key: DiscordSettingKey.CHATGPT_CURRENCY,
@@ -113,7 +113,7 @@ export class ConfigCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,

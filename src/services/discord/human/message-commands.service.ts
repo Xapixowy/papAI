@@ -24,7 +24,7 @@ export class MessageCommandsService {
   }: {
     messageId: string;
     userId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const messageToDelete =
       await this.discordMessageService.findById(messageId);
 
@@ -90,7 +90,7 @@ export class MessageCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description: description,
       title: HUMAN_COMMANDS_CONFIG.embed.title,

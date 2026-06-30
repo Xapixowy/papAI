@@ -23,7 +23,7 @@ export class UserCommandsService {
   }: {
     userId: string;
     username: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const existingUser = await this.discordUsersService.findByUserId(userId);
 
     if (existingUser.isOk()) {
@@ -78,7 +78,7 @@ export class UserCommandsService {
   }: {
     userId: string;
     username: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const existingUser = await this.discordUsersService.findByUserId(userId);
 
     if (existingUser.isErr()) {
@@ -132,7 +132,7 @@ export class UserCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,

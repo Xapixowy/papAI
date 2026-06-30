@@ -39,13 +39,13 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { price }: PriceOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.setCommandsService.setPriceHandler({
+    const embeds = await this.setCommandsService.setPriceHandler({
       price,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -55,13 +55,13 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { currency }: CurrencyOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.setCommandsService.setCurrencyHandler({
+    const embeds = await this.setCommandsService.setCurrencyHandler({
       currency,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -71,14 +71,14 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { day, time }: DayTimeOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.setCommandsService.setReminderHandler({
+    const embeds = await this.setCommandsService.setReminderHandler({
       day,
       time,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -88,13 +88,13 @@ export class SetCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { day }: DayOfMonthOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.setCommandsService.setPaymentDateHandler({
+    const embeds = await this.setCommandsService.setPaymentDateHandler({
       day,
     });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

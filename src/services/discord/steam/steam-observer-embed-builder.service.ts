@@ -27,7 +27,7 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
   }
 
   steamUserConfirmation(pending: SteamPendingObserver): {
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     button: ActionRowBuilder<ButtonBuilder>;
   } {
     const privacySection = this.generateSection({
@@ -43,7 +43,7 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
         ? '\n\n> ⚠️ Notifications will only work when profile and games are set to public.'
         : '';
 
-    const embed = this.simple({
+    const embeds = this.simple({
       title: STEAM_COMMANDS_CONFIG.embed.title,
       thumbnail: STEAM_COMMANDS_CONFIG.embed.thumbnail,
       variant:
@@ -63,7 +63,7 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
     });
 
     if (pending.avatarUrl) {
-      embed.setImage(pending.avatarUrl);
+      embeds[0].setImage(pending.avatarUrl);
     }
 
     const button = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -74,11 +74,11 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
         .setStyle(ButtonStyle.Primary),
     );
 
-    return { embed, button };
+    return { embeds, button };
   }
 
   channelSelect(channels: { id: string; name: string }[]): {
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component: ActionRowBuilder<StringSelectMenuBuilder>;
   } {
     const select = new StringSelectMenuBuilder()
@@ -97,14 +97,14 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
     const component =
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
 
-    const embed = this.simple({
+    const embeds = this.simple({
       title: STEAM_COMMANDS_CONFIG.embed.title,
       thumbnail: STEAM_COMMANDS_CONFIG.embed.thumbnail,
       variant: 'info',
       description: 'Select a channel where game notifications will be sent.',
     });
 
-    return { embed, component };
+    return { embeds, component };
   }
 
   observerList({
@@ -119,7 +119,7 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
     channels: Map<string, string>;
     guilds: Map<string, string>;
     discordUsers: Map<string, string>;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const byGuild = new Map<string, DiscordSteamObserver[]>();
     for (const o of observers) {
       const list = byGuild.get(o.discordGuildId) ?? [];
@@ -167,7 +167,7 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
     channels: Map<string, string>;
     discordUsers: Map<string, string>;
   }): {
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component: ActionRowBuilder<StringSelectMenuBuilder>;
   } {
     const capped = observers.slice(0, 25);
@@ -200,14 +200,14 @@ export class SteamObserverEmbedBuilderService extends EmbedBuilderService {
         ? '\n\n> Only the first 25 observers are shown.'
         : '';
 
-    const embed = this.simple({
+    const embeds = this.simple({
       title: STEAM_COMMANDS_CONFIG.embed.title,
       thumbnail: STEAM_COMMANDS_CONFIG.embed.thumbnail,
       variant: 'info',
       description: `Select an observer to remove.${extraNote}`,
     });
 
-    return { embed, component };
+    return { embeds, component };
   }
 
   newGameNotification({

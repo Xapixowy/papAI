@@ -30,7 +30,7 @@ export class DiscordGuildFeatureExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const embed = this.embedBuilderService.simple({
+    const embeds = this.embedBuilderService.simple({
       description: message,
       title: 'Guild',
       variant: 'error',
@@ -40,11 +40,11 @@ export class DiscordGuildFeatureExceptionFilter implements ExceptionFilter {
 
     try {
       if (discordInteraction.deferred || discordInteraction.replied) {
-        await discordInteraction.editReply({ embeds: [embed] });
+        await discordInteraction.editReply({ embeds });
       } else {
         await discordInteraction.reply({
           flags: [MessageFlags.Ephemeral],
-          embeds: [embed],
+          embeds,
         });
       }
     } catch (error) {

@@ -29,7 +29,7 @@ export class ReminderChannelCommandsService {
     channel,
   }: {
     channel: GuildChannel;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     let existingReminderChannels =
       await this.discordSettingsService.getValueByKey<
         DiscordChatgptReminderChannel[]
@@ -99,7 +99,7 @@ export class ReminderChannelCommandsService {
   }
 
   public async reminderChannelRemoveHandler(): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const reminderChannels = await this.discordSettingsService.getValueByKey<
@@ -110,7 +110,7 @@ export class ReminderChannelCommandsService {
 
     if (reminderChannels.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: ERROR_CODE_MESSAGE_MAP[reminderChannels.error],
           variant: 'error',
         }),
@@ -121,7 +121,7 @@ export class ReminderChannelCommandsService {
 
     if (reminderChannelsValue.length === 0) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'There are no reminder channels.',
           variant: 'error',
         }),
@@ -146,7 +146,7 @@ export class ReminderChannelCommandsService {
     );
 
     return {
-      embed: this.generateSimpleEmbed({
+      embeds: this.generateSimpleEmbed({
         description: 'Select a reminder channel to remove.',
         variant: 'info',
       }),
@@ -158,7 +158,7 @@ export class ReminderChannelCommandsService {
     channelId,
   }: {
     channelId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const reminderChannels = await this.discordSettingsService.getValueByKey<
       DiscordChatgptReminderChannel[]
     >({
@@ -196,7 +196,7 @@ export class ReminderChannelCommandsService {
     });
   }
 
-  public async reminderChannelListHandler(): Promise<EmbedBuilder> {
+  public async reminderChannelListHandler(): Promise<EmbedBuilder[]> {
     const reminderChannels = await this.discordSettingsService.getValueByKey<
       DiscordChatgptReminderChannel[]
     >({
@@ -224,7 +224,7 @@ export class ReminderChannelCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,

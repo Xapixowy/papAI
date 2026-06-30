@@ -16,7 +16,7 @@ export class QueryCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
-  public async queryGetHandler(guildId: string): Promise<EmbedBuilder> {
+  public async queryGetHandler(guildId: string): Promise<EmbedBuilder[]> {
     const goodMorningQuery =
       await this.discordSettingsService.getValueByKey<string>({
         key: DiscordSettingKey.GOOD_MORNING_QUERY,
@@ -44,7 +44,7 @@ export class QueryCommandsService {
   }: {
     query: string;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const goodMorningQuerySetting = await this.discordSettingsService.set({
       key: DiscordSettingKey.GOOD_MORNING_QUERY,
       value: query,
@@ -70,7 +70,7 @@ export class QueryCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description: description,
       title: GOOD_MORNING_COMMANDS_CONFIG.embed.title,

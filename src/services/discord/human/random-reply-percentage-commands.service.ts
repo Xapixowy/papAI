@@ -18,7 +18,7 @@ export class RandomReplyPercentageCommandsService {
 
   public async randomReplyPercentageGetHandler(
     guildId: string,
-  ): Promise<EmbedBuilder> {
+  ): Promise<EmbedBuilder[]> {
     const setting = await this.discordSettingsService.findByKey({
       key: DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE,
       guildId,
@@ -46,7 +46,7 @@ export class RandomReplyPercentageCommandsService {
   }: {
     value: number;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const randomReplyPercentageSetting = await this.discordSettingsService.set({
       key: DiscordSettingKey.HUMAN_RANDOM_REPLY_PERCENTAGE,
       value: Math.round(value),
@@ -72,7 +72,7 @@ export class RandomReplyPercentageCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description: description,
       title: HUMAN_COMMANDS_CONFIG.embed.title,

@@ -23,7 +23,7 @@ export class FeatureCommandsService {
   }: {
     guildId: string;
     feature: DiscordFeature;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const config = await this.discordGuildService.findById(guildId);
 
     if (config.isErr()) {
@@ -69,7 +69,7 @@ export class FeatureCommandsService {
   }: {
     guildId: string;
     feature: DiscordFeature;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const config = await this.discordGuildService.findById(guildId);
 
     if (config.isErr()) {
@@ -115,7 +115,7 @@ export class FeatureCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       variant,

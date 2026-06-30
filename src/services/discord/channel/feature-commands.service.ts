@@ -31,14 +31,14 @@ export class FeatureCommandsService {
     feature: DiscordChannelFeature;
     value: boolean;
   }): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const channels = await this.discordChannelService.findAllByGuildId(guildId);
 
     if (channels.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: ERROR_CODE_MESSAGE_MAP[channels.error],
           variant: 'error',
         }),
@@ -49,7 +49,7 @@ export class FeatureCommandsService {
 
     if (channelsValue.length === 0) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'There are no channels.',
           variant: 'error',
         }),
@@ -76,7 +76,7 @@ export class FeatureCommandsService {
     );
 
     return {
-      embed: this.generateSimpleEmbed({
+      embeds: this.generateSimpleEmbed({
         description: 'Select a channel to set the feature.',
         variant: 'info',
       }),
@@ -92,7 +92,7 @@ export class FeatureCommandsService {
     feature: DiscordChannelFeature;
     value: boolean;
     channelId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const channel = await this.discordChannelService.findById(channelId);
 
     if (channel.isErr()) {
@@ -128,7 +128,7 @@ export class FeatureCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       variant,

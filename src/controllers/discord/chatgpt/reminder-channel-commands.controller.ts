@@ -50,14 +50,14 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() { channel }: ChannelOption,
   ): Promise<InteractionResponse<boolean>> {
-    const embed =
+    const embeds =
       await this.reminderChannelCommandsService.reminderChannelAddHandler({
         channel,
       });
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds: embeds,
     });
   }
 
@@ -68,12 +68,12 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
   public async onReminderChannelRemoveCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const { embed, component } =
+    const { embeds, component } =
       await this.reminderChannelCommandsService.reminderChannelRemoveHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component && [component],
     });
   }
@@ -86,7 +86,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
     @Context() [interaction]: StringSelectContext,
     @SelectedStrings() [channelId]: string[],
   ): Promise<InteractionResponse<boolean>> {
-    const embed =
+    const embeds =
       await this.reminderChannelCommandsService.reminderChannelRemoveSelectHandler(
         {
           channelId,
@@ -95,7 +95,7 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -106,12 +106,12 @@ export class ReminderChannelCommandsController extends BaseCommandsController {
   public async onReminderChannelListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const embed =
+    const embeds =
       await this.reminderChannelCommandsService.reminderChannelListHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

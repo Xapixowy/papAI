@@ -48,14 +48,14 @@ export class GuildCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.guildCommandsService.initializeHandler({
+    const embeds = await this.guildCommandsService.initializeHandler({
       guildId,
       guildName,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -64,11 +64,11 @@ export class GuildCommandsController extends BaseCommandsController {
   public async onListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {
-    const embed = await this.guildCommandsService.listHandler();
+    const embeds = await this.guildCommandsService.listHandler();
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

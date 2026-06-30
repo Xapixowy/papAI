@@ -58,7 +58,7 @@ export class SteamObserverCommandsService {
     discordUserId: string;
     guildId: string;
   }): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     button?: ActionRowBuilder<ButtonBuilder>;
   }> {
     let steamId = steamInput;
@@ -67,7 +67,7 @@ export class SteamObserverCommandsService {
       const resolved = await this.steamApiService.resolveVanityUrl(steamInput);
       if (resolved.isErr()) {
         return {
-          embed: this.generateSimpleEmbed({
+          embeds: this.generateSimpleEmbed({
             description: 'Steam user not found. Check the ID or vanity URL.',
             variant: 'error',
           }),
@@ -79,7 +79,7 @@ export class SteamObserverCommandsService {
     const playerResult = await this.steamApiService.getPlayerSummary(steamId);
     if (playerResult.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description:
             playerResult.error === ErrorCode.STEAM_USER_NOT_FOUND
               ? 'Steam user not found.'
@@ -111,9 +111,9 @@ export class SteamObserverCommandsService {
       STEAM_CONFIG.pendingObserverTtl,
     );
 
-    const { embed, button } =
+    const { embeds, button } =
       this.embedBuilderService.steamUserConfirmation(pending);
-    return { embed, button };
+    return { embeds, button };
   }
 
   async addButtonHandler({
@@ -123,7 +123,7 @@ export class SteamObserverCommandsService {
     discordUserId: string;
     guildId: string;
   }): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const pendingRaw = await this.redis.get(
@@ -132,7 +132,7 @@ export class SteamObserverCommandsService {
 
     if (!pendingRaw) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description:
             ERROR_CODE_MESSAGE_MAP[ErrorCode.STEAM_OBSERVER_PENDING_NOT_FOUND],
           variant: 'error',
@@ -145,7 +145,7 @@ export class SteamObserverCommandsService {
 
     if (allChannels.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description:
             ERROR_CODE_MESSAGE_MAP[ErrorCode.STEAM_NO_CHANNELS_WITH_FEATURE],
           variant: 'error',
@@ -159,7 +159,7 @@ export class SteamObserverCommandsService {
 
     if (!steamChannels.length) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description:
             ERROR_CODE_MESSAGE_MAP[ErrorCode.STEAM_NO_CHANNELS_WITH_FEATURE],
           variant: 'error',
@@ -167,11 +167,11 @@ export class SteamObserverCommandsService {
       };
     }
 
-    const { embed, component } = this.embedBuilderService.channelSelect(
+    const { embeds, component } = this.embedBuilderService.channelSelect(
       steamChannels.map((c) => ({ id: c.id, name: c.name })),
     );
 
-    return { embed, component };
+    return { embeds, component };
   }
 
   async addSelectHandler({
@@ -182,7 +182,7 @@ export class SteamObserverCommandsService {
     discordUserId: string;
     guildId: string;
     channelId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const key = this.pendingKey(discordUserId, guildId);
     const pendingRaw = await this.redis.get(key);
 
@@ -247,7 +247,7 @@ export class SteamObserverCommandsService {
   }: {
     discordUserId: string;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const role = await this.resolveUserRole(discordUserId);
     const observers = await this.fetchObserversForRole({
       role,
@@ -281,7 +281,7 @@ export class SteamObserverCommandsService {
     discordUserId: string;
     guildId: string;
   }): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const role = await this.resolveUserRole(discordUserId);
@@ -293,7 +293,7 @@ export class SteamObserverCommandsService {
 
     if (!observers.length) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'No observers to remove.',
           variant: 'info',
         }),
@@ -303,14 +303,14 @@ export class SteamObserverCommandsService {
     const { steamUsers, channels, discordUsers } =
       await this.buildObserverMaps(observers);
 
-    const { embed, component } = this.embedBuilderService.observerRemoveSelect({
+    const { embeds, component } = this.embedBuilderService.observerRemoveSelect({
       observers,
       steamUsers,
       channels,
       discordUsers,
     });
 
-    return { embed, component };
+    return { embeds, component };
   }
 
   async removeSelectHandler({
@@ -321,7 +321,7 @@ export class SteamObserverCommandsService {
     observerId: string;
     discordUserId: string;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const observer =
       await this.discordSteamObserversService.findById(observerId);
 
@@ -459,7 +459,7 @@ export class SteamObserverCommandsService {
     discordUserId: string;
     guildId: string;
     enrich: boolean;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const role = await this.resolveUserRole(discordUserId);
     const observers = await this.fetchObserversForRole({
       role,
@@ -530,7 +530,7 @@ export class SteamObserverCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       variant,

@@ -41,11 +41,11 @@ export class AdminCronCommandsController extends BaseCommandsController {
   public async onListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<void> {
-    const embed = this.adminCronCommandsService.listHandler();
+    const embeds = this.adminCronCommandsService.listHandler();
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

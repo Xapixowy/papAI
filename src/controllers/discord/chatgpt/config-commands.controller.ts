@@ -34,11 +34,11 @@ export class ConfigCommandsController extends BaseCommandsController {
   public async onConfigListCommand(
     @Context() [interaction]: SlashCommandContext,
   ): Promise<InteractionResponse<boolean>> {
-    const embed = await this.configCommandsService.configListHandler();
+    const embeds = await this.configCommandsService.configListHandler();
 
     return interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

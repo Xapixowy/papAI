@@ -46,14 +46,14 @@ export class RandomReplyPercentageCommandsController extends BaseCommandsControl
       return;
     }
 
-    const embed =
+    const embeds =
       await this.randomReplyPercentageCommandsService.randomReplyPercentageGetHandler(
         guildId,
       );
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -71,7 +71,7 @@ export class RandomReplyPercentageCommandsController extends BaseCommandsControl
       return;
     }
 
-    const embed =
+    const embeds =
       await this.randomReplyPercentageCommandsService.randomReplyPercentageSetHandler(
         {
           value: percentage,
@@ -81,7 +81,7 @@ export class RandomReplyPercentageCommandsController extends BaseCommandsControl
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

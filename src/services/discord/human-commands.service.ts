@@ -56,7 +56,7 @@ export class HumanCommandsService {
     userDisplayName: string;
     userId: string;
     embedImageUrls?: string[];
-  }): Promise<string[] | EmbedBuilder> {
+  }): Promise<string[] | EmbedBuilder[]> {
     const systemPrompt =
       await this.discordSettingsService.getValueByKey<string>({
         key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,

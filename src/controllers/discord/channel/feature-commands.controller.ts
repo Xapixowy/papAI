@@ -54,7 +54,7 @@ export class FeatureCommandsController extends BaseCommandsController {
       return;
     }
 
-    const { embed, component } = await this.featureCommandsService.setHandler({
+    const { embeds, component } = await this.featureCommandsService.setHandler({
       guildId,
       feature,
       value,
@@ -62,7 +62,7 @@ export class FeatureCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component && [component],
     });
   }
@@ -75,7 +75,7 @@ export class FeatureCommandsController extends BaseCommandsController {
     @ComponentParam('feature') feature: DiscordChannelFeature,
     @ComponentParam('value') value: string,
   ): Promise<void> {
-    const embed = await this.featureCommandsService.setSelectHandler({
+    const embeds = await this.featureCommandsService.setSelectHandler({
       feature,
       value: value === 'true',
       channelId,
@@ -83,7 +83,7 @@ export class FeatureCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

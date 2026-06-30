@@ -45,12 +45,12 @@ export class ContextSizeCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed =
+    const embeds =
       await this.contextSizeCommandsService.contextSizeGetHandler(guildId);
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -68,14 +68,14 @@ export class ContextSizeCommandsController extends BaseCommandsController {
       return;
     }
 
-    const embed = await this.contextSizeCommandsService.contextSizeSetHandler({
+    const embeds = await this.contextSizeCommandsService.contextSizeSetHandler({
       value: size,
       guildId,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 }

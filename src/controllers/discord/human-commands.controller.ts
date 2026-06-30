@@ -80,14 +80,14 @@ export class HumanCommandsController extends BaseCommandsController {
 
     if (stopTyping) stopTyping();
 
-    if (generatedMessage instanceof EmbedBuilder) {
+    if (generatedMessage[0] instanceof EmbedBuilder) {
       await message.reply({
-        embeds: [generatedMessage],
+        embeds: generatedMessage as EmbedBuilder[],
       });
       return;
     }
 
-    for (const page of generatedMessage) {
+    for (const page of generatedMessage as string[]) {
       await message.reply({ content: page });
     }
   }

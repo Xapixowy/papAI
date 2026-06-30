@@ -56,7 +56,7 @@ export class TransactionCommandsService {
   }: {
     userId: string;
     price: number;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const currency =
       await this.discordSettingsService.getValueByKey<CurrencyCode>({
         key: DiscordSettingKey.CHATGPT_CURRENCY,
@@ -95,7 +95,7 @@ export class TransactionCommandsService {
   }: {
     userId: string;
   }): Promise<{
-    embed: EmbedBuilder;
+    embeds: EmbedBuilder[];
     component?: ActionRowBuilder<StringSelectMenuBuilder>;
   }> {
     const transactions =
@@ -103,7 +103,7 @@ export class TransactionCommandsService {
 
     if (transactions.length === 0) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'You have no transactions in ChatGPT.',
           variant: 'error',
         }),
@@ -130,7 +130,7 @@ export class TransactionCommandsService {
     );
 
     return {
-      embed: this.generateSimpleEmbed({
+      embeds: this.generateSimpleEmbed({
         description: 'Select a transaction to remove from ChatGPT.',
         variant: 'info',
       }),
@@ -144,7 +144,7 @@ export class TransactionCommandsService {
   }: {
     userId: string;
     transactionId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const transaction =
       await this.discordChatgptTransactionsService.findById(transactionId);
 
@@ -186,7 +186,7 @@ export class TransactionCommandsService {
     userId,
   }: {
     userId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const transactions =
       await this.discordChatgptTransactionsService.findAllByUserId(userId);
 
@@ -233,13 +233,15 @@ export class TransactionCommandsService {
       };
     });
 
-    return this.generateSimpleEmbed({
+    const embeds = this.generateSimpleEmbed({
       description: 'Transactions history of your last 30 transactions.',
       variant: 'success',
-    }).addFields(embedFields);
+    });
+    embeds[0].addFields(embedFields);
+    return embeds;
   }
 
-  public async transactionSummaryHandler(): Promise<EmbedBuilder> {
+  public async transactionSummaryHandler(): Promise<EmbedBuilder[]> {
     const transactionSummaryData = await this.generateTransactionSummaryData();
 
     if (transactionSummaryData.isErr()) {
@@ -271,7 +273,7 @@ export class TransactionCommandsService {
     });
   }
 
-  public async transactionGenerateSummaryHandler(): Promise<EmbedBuilder> {
+  public async transactionGenerateSummaryHandler(): Promise<EmbedBuilder[]> {
     const transactionSummaryData = await this.generateTransactionSummaryData();
 
     if (transactionSummaryData.isErr()) {
@@ -346,15 +348,15 @@ export class TransactionCommandsService {
   }: {
     sendToAllReminderChannels: boolean;
   }): Promise<{
-    embed: EmbedBuilder;
-    remindEmbed?: EmbedBuilder;
+    embeds: EmbedBuilder[];
+    remindEmbeds?: EmbedBuilder[];
     channels?: TextChannel[];
   }> {
-    const remindEmbed = await this.generateTransactionRemindEmbed();
+    const remindEmbeds = await this.generateTransactionRemindEmbed();
 
     if (!sendToAllReminderChannels) {
       return {
-        embed: remindEmbed,
+        embeds: remindEmbeds,
       };
     }
 
@@ -366,7 +368,7 @@ export class TransactionCommandsService {
 
     if (reminderChannels.isErr()) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: ERROR_CODE_MESSAGE_MAP[reminderChannels.error],
           variant: 'error',
         }),
@@ -385,7 +387,7 @@ export class TransactionCommandsService {
 
     if (isChannelsError) {
       return {
-        embed: this.generateSimpleEmbed({
+        embeds: this.generateSimpleEmbed({
           description: 'There was an error getting the reminder channels.',
           variant: 'error',
         }),
@@ -397,11 +399,11 @@ export class TransactionCommandsService {
       .filter((c) => c instanceof TextChannel);
 
     return {
-      embed: this.generateSimpleEmbed({
+      embeds: this.generateSimpleEmbed({
         description: 'Remind message was sent to all reminder channels.',
         variant: 'success',
       }),
-      remindEmbed,
+      remindEmbeds,
       channels: channelsValue,
     };
   }
@@ -460,10 +462,10 @@ export class TransactionCommandsService {
     const newJob: CronJob = new CronJob(
       reminderDate.value,
       async () => {
-        const embed = await this.generateTransactionRemindEmbed();
+        const embeds = await this.generateTransactionRemindEmbed();
         for (const channel of channelsValue) {
           await channel.sendTyping();
-          await channel.send({ embeds: [embed] });
+          await channel.send({ embeds });
         }
       },
       null,
@@ -477,7 +479,7 @@ export class TransactionCommandsService {
     );
   }
 
-  private async generateTransactionRemindEmbed(): Promise<EmbedBuilder> {
+  private async generateTransactionRemindEmbed(): Promise<EmbedBuilder[]> {
     const paymentDate = await this.discordSettingsService.getValueByKey<number>(
       {
         key: DiscordSettingKey.CHATGPT_PAYMENT_DATE,
@@ -660,7 +662,7 @@ export class TransactionCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       title: CHATGPT_COMMANDS_CONFIG.embed.title,
@@ -688,7 +690,7 @@ export class TransactionCommandsService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.chatgptSummary({
       description,
       nextPaymentDate,
@@ -719,7 +721,7 @@ export class TransactionCommandsService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.chatgptReminder({
       description,
       nextPaymentDate,

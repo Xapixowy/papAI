@@ -30,7 +30,7 @@ export class GuildCommandsService {
   }: {
     guildId: string;
     guildName: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const config = await this.discordGuildService.findById(guildId);
 
     if (!config.isErr()) {
@@ -86,7 +86,7 @@ export class GuildCommandsService {
     });
   }
 
-  async listHandler(): Promise<EmbedBuilder> {
+  async listHandler(): Promise<EmbedBuilder[]> {
     const guildConfigs = await this.discordGuildService.findAll();
 
     return this.embedBuilderService.guildConfigList({
@@ -101,7 +101,7 @@ export class GuildCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description,
       variant,

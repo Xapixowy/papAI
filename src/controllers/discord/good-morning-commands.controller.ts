@@ -64,7 +64,7 @@ export class GoodMorningCommandsController extends BaseCommandsController {
         channelId,
       });
 
-    if (!(embed instanceof EmbedBuilder)) {
+    if (!embed) {
       return;
     }
 

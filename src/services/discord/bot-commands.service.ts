@@ -23,7 +23,7 @@ export class BotCommandsService {
   }: {
     userId: string;
     username: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const superAdminUsers = await this.discordUsersService.findAllByRoles([
       DiscordUserRole.SUPER_ADMIN,
     ]);
@@ -66,7 +66,7 @@ export class BotCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description: description,
       title: BOT_COMMANDS_CONFIG.embed.title,

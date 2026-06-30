@@ -16,7 +16,7 @@ export class SystemPromptCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
-  public async systemPromptGetHandler(guildId: string): Promise<EmbedBuilder> {
+  public async systemPromptGetHandler(guildId: string): Promise<EmbedBuilder[]> {
     const setting = await this.discordSettingsService.findByKey({
       key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
       guildId,
@@ -44,7 +44,7 @@ export class SystemPromptCommandsService {
   }: {
     systemPrompt: string;
     guildId: string;
-  }): Promise<EmbedBuilder> {
+  }): Promise<EmbedBuilder[]> {
     const systemPromptSetting = await this.discordSettingsService.set({
       key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
       value: systemPrompt,
@@ -70,7 +70,7 @@ export class SystemPromptCommandsService {
   }: {
     description: string;
     variant: EmbedVariant;
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     return this.embedBuilderService.simple({
       description: description,
       title: HUMAN_COMMANDS_CONFIG.embed.title,

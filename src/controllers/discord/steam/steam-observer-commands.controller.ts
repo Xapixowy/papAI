@@ -1,3 +1,4 @@
+import { STEAM_COMMANDS_CONFIG } from '@Constants/discord/steam-commands.constant';
 import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
 import { DiscordButtonId } from '@Enums/discord/discord-button-id.enum';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
@@ -21,7 +22,6 @@ import {
 } from 'necord';
 import { BaseCommandsController } from '../base-commands.controller';
 import { SteamCommandDecorator } from '../steam-commands.controller';
-import { STEAM_COMMANDS_CONFIG } from '@Constants/discord/steam-commands.constant';
 
 const OBSERVER_GROUP = STEAM_COMMANDS_CONFIG.commands.observer;
 
@@ -55,7 +55,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
-    const { embed, button } =
+    const { embeds, button } =
       await this.steamObserverCommandsService.addHandler({
         steamInput: steamId,
         discordUserId,
@@ -63,7 +63,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
       });
 
     await interaction.editReply({
-      embeds: [embed],
+      embeds,
       components: button ? [button] : [],
     });
   }
@@ -77,7 +77,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     if (!guildId) return;
 
-    const { embed, component } =
+    const { embeds, component } =
       await this.steamObserverCommandsService.addButtonHandler({
         discordUserId,
         guildId,
@@ -85,7 +85,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component ? [component] : [],
     });
   }
@@ -100,7 +100,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     if (!guildId || !channelId) return;
 
-    const embed = await this.steamObserverCommandsService.addSelectHandler({
+    const embeds = await this.steamObserverCommandsService.addSelectHandler({
       discordUserId,
       guildId,
       channelId,
@@ -108,7 +108,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -121,14 +121,14 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     if (!guildId) return;
 
-    const embed = await this.steamObserverCommandsService.listHandler({
+    const embeds = await this.steamObserverCommandsService.listHandler({
       discordUserId,
       guildId,
     });
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -141,7 +141,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     if (!guildId) return;
 
-    const { embed, component } =
+    const { embeds, component } =
       await this.steamObserverCommandsService.removeHandler({
         discordUserId,
         guildId,
@@ -149,7 +149,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
       components: component ? [component] : [],
     });
   }
@@ -164,7 +164,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     if (!guildId || !observerId) return;
 
-    const embed = await this.steamObserverCommandsService.removeSelectHandler({
+    const embeds = await this.steamObserverCommandsService.removeSelectHandler({
       observerId,
       discordUserId,
       guildId,
@@ -172,7 +172,7 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
-      embeds: [embed],
+      embeds,
     });
   }
 
@@ -188,12 +188,12 @@ export class SteamObserverCommandsController extends BaseCommandsController {
 
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
-    const embed = await this.steamObserverCommandsService.updateHandler({
+    const embeds = await this.steamObserverCommandsService.updateHandler({
       discordUserId,
       guildId,
       enrich: enrich ?? false,
     });
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds });
   }
 }

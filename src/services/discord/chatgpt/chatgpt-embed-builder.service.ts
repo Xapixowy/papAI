@@ -37,7 +37,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const { information, summary } = this.generateChatgptSummarySections({
       nextPaymentDate,
       fromDate,
@@ -74,7 +74,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     totalPrice: number;
     currency: CurrencyCode;
     transactionSummaries: DiscordChatgptTransactionSummaryDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const { information, debtors } = this.generateChatgptSummarySections({
       nextPaymentDate,
       fromDate,
@@ -99,7 +99,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
   }: {
     description: string;
     chatgptReminderChannels: DiscordChatgptReminderChannel[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const reminderChannelsSection = this.generateReminderChannelSection({
       chatgptReminderChannels,
     });
@@ -128,7 +128,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
     chatgptReminderDate: string;
     chatgptReminderChannels: DiscordChatgptReminderChannel[];
     chatgptUsers: DiscordUserDto[];
-  }): EmbedBuilder {
+  }): EmbedBuilder[] {
     const settingsSection = this.generateSettingsSection({
       chatgptCurrency,
       chatgptPrice,
