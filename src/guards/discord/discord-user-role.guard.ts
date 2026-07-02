@@ -1,4 +1,4 @@
-import { REQUIRES_DISCORD_USER_ROLE } from '@Decorators/requires-discord-user-role.decorator';
+import { REQUIRES_DISCORD_USER_ROLE } from '@Decorators/nest/requires-discord-user-role.decorator';
 import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { DiscordUserRoleForbiddenException } from '@Exceptions/discord/discord-user-role-forbidden.exception';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';

@@ -137,6 +137,93 @@ export class GeminiService {
     }
   }
 
+  async generateContentWithFunctionResponseAndTools({
+    systemPrompt,
+    queryParts,
+    modelContent,
+    functionCallName,
+    functionResponse,
+    tools,
+  }: {
+    systemPrompt: string;
+    queryParts: Part[];
+    modelContent: Content;
+    functionCallName: string;
+    functionResponse: unknown;
+    tools: Tool[];
+  }): Promise<
+    Result<
+      | { text: string }
+      | { functionCalls: FunctionCall[]; modelContent: Content },
+      ErrorCode
+    >
+  > {
+    if (!this.gemini) {
+      return err(ErrorCode.GEMINI_INITIALIZATION_ERROR);
+    }
+
+    try {
+      const textGenerationModelName =
+        this.configService.get<string>('gemini.modelName');
+
+      if (!textGenerationModelName) {
+        return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
+      }
+
+      const model = this.gemini.getGenerativeModel({
+        model: textGenerationModelName,
+        systemInstruction: systemPrompt,
+        tools,
+      });
+
+      const contents: Content[] = [
+        { role: 'user', parts: queryParts },
+        modelContent,
+        {
+          role: 'function',
+          parts: [
+            {
+              functionResponse: {
+                name: functionCallName,
+                response: { result: functionResponse },
+              },
+            },
+          ],
+        },
+      ];
+
+      const request: GenerateContentRequest = { contents };
+
+      this.logger.log(
+        'Generating content from Gemini (function response + tools)...',
+      );
+      const result = await model.generateContent(request);
+      const response = result.response;
+
+      if (!response) {
+        return err(ErrorCode.GEMINI_GENERATION_ERROR);
+      }
+
+      const functionCalls = response.functionCalls();
+
+      if (functionCalls && functionCalls.length > 0) {
+        this.logger.log(
+          `Gemini requested function calls: ${functionCalls.map((f) => f.name).join(', ')}`,
+        );
+        const nextModelContent = result.response.candidates![0].content;
+        return ok({ functionCalls, modelContent: nextModelContent });
+      }
+
+      return ok({ text: response.text() });
+    } catch (error) {
+      this.logger.error(
+        'Error generating content from Gemini (function response + tools):',
+        error,
+      );
+      return err(ErrorCode.GEMINI_GENERATION_ERROR);
+    }
+  }
+
   async generateContentWithFunctionResponse({
     systemPrompt,
     queryParts,

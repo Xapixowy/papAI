@@ -106,6 +106,52 @@ export class DiscordMessageService {
     return qb.getMany();
   }
 
+  async searchByUser({
+    discordUserId,
+    keyword,
+    dateFrom,
+    dateTo,
+    hasAttachments,
+    limit = 20,
+  }: {
+    discordUserId: string;
+    keyword?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    hasAttachments?: boolean;
+    limit?: number;
+  }): Promise<DiscordMessage[]> {
+    const qb = this.discordMessageRepository
+      .createQueryBuilder('msg')
+      .where('msg.discordUserId = :discordUserId', { discordUserId })
+      .orderBy('msg.createdAt', 'DESC')
+      .take(limit);
+
+    if (keyword) {
+      qb.andWhere('msg.message ILIKE :keyword', { keyword: `%${keyword}%` });
+    }
+
+    if (dateFrom) {
+      qb.andWhere('msg.createdAt >= :dateFrom', { dateFrom });
+    }
+
+    if (dateTo) {
+      qb.andWhere('msg.createdAt <= :dateTo', { dateTo });
+    }
+
+    if (hasAttachments === true) {
+      qb.andWhere(
+        'msg.attachments IS NOT NULL AND array_length(msg.attachments, 1) > 0',
+      );
+    } else if (hasAttachments === false) {
+      qb.andWhere(
+        '(msg.attachments IS NULL OR array_length(msg.attachments, 1) = 0)',
+      );
+    }
+
+    return qb.getMany();
+  }
+
   async findRandomMessageByGuildId(
     guildId: string,
     count: number = 1,

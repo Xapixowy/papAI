@@ -11,4 +11,4 @@ async function bootstrap() {
   await app.listen(validatedEnv.APP_PORT);
 }
 
-bootstrap();
+void bootstrap();

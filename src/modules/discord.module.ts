@@ -1,7 +1,7 @@
 import { EnvKey } from '@Enums/env-key.enum';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits, Partials } from 'discord.js';
 import { NecordModule } from 'necord';
 import { AdminCommandsModule } from './discord/admin-commands.module';
 import { BaseCommandsModule } from './discord/base-commands.module';
@@ -12,6 +12,7 @@ import { GoodMorningCommandsModule } from './discord/good-morning-commands.modul
 import { GuildCommandsModule } from './discord/guild-commands.module';
 import { HumanCommandsModule } from './discord/human-commands.module';
 import { SteamCommandsModule } from './discord/steam-commands.module';
+import { FitCoachCommandsModule } from './discord/fit-coach-commands.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SteamCommandsModule } from './discord/steam-commands.module';
         return {
           token: configService.get<string>(EnvKey.DISCORD_BOT_TOKEN)!,
           intents: DiscordModule.botIntents,
+          partials: [Partials.Channel, Partials.Message],
           development: developmentGuildId ? [developmentGuildId] : false,
         };
       },
@@ -37,6 +39,7 @@ import { SteamCommandsModule } from './discord/steam-commands.module';
     GoodMorningCommandsModule,
     HumanCommandsModule,
     SteamCommandsModule,
+    FitCoachCommandsModule,
   ],
 })
 export class DiscordModule extends BaseCommandsModule {
@@ -50,6 +53,7 @@ export class DiscordModule extends BaseCommandsModule {
       ...GoodMorningCommandsModule.botIntents,
       ...HumanCommandsModule.botIntents,
       ...SteamCommandsModule.botIntents,
+      ...FitCoachCommandsModule.botIntents,
     ];
   }
 }

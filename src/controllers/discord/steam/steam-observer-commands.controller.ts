@@ -1,5 +1,5 @@
 import { STEAM_COMMANDS_CONFIG } from '@Constants/discord/steam-commands.constant';
-import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
+import { RequiresDiscordGuildFeature } from '@Decorators/nest/requires-discord-guild-feature.decorator';
 import { DiscordButtonId } from '@Enums/discord/discord-button-id.enum';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordSelectId } from '@Enums/discord/discord-select-id.enum';

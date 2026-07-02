@@ -1,5 +1,5 @@
 import { CHANNEL_COMMANDS_CONFIG } from '@Constants/discord/channel-commands.constant';
-import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { RequiresDiscordUserRole } from '@Decorators/nest/requires-discord-user-role.decorator';
 import { DiscordSelectId } from '@Enums/discord/discord-select-id.enum';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';

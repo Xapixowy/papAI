@@ -1,5 +1,5 @@
 import { GUILD_COMMANDS_CONFIG } from '@Constants/discord/guild-commands.constant';
-import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { RequiresDiscordUserRole } from '@Decorators/nest/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { GuildCommandsService } from '@Services/discord/guild-commands.service';

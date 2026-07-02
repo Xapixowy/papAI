@@ -1,6 +1,6 @@
 import { ErrorCode } from '@Enums/error-code.enum';
 import { Content, InlineDataPart, Part } from '@google/generative-ai';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DiscordMessageService } from '@Services/discord-message.service';
 import { DiscordUsersService } from '@Services/discord-users.service';
 import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
@@ -9,20 +9,12 @@ import { DiscordAttachmentsHelper } from '@Utils/helpers/discord-attachments.hel
 import { Client, TextChannel } from 'discord.js';
 import { Result, err, ok } from 'neverthrow';
 
-export interface SearchSavedMessagesArgs {
-  keyword?: string;
-  author_name?: string;
-  channel_id?: string;
-  date_from?: string;
-  date_to?: string;
-  has_attachments?: boolean;
-  limit?: number;
-}
+import type { SearchSavedMessagesArgs } from '@Types/discord/human/gemini-tools.type';
+
+export type { SearchSavedMessagesArgs };
 
 @Injectable()
 export class HumanGeminiToolsService {
-  private readonly logger = new Logger(HumanGeminiToolsService.name);
-
   constructor(
     private readonly client: Client,
     private readonly discordMessageService: DiscordMessageService,

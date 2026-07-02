@@ -1,5 +1,5 @@
 import { HUMAN_COMMANDS_CONFIG } from '@Constants/discord/human-commands.constant';
-import { RequiresDiscordGuildFeature } from '@Decorators/requires-discord-guild-feature.decorator';
+import { RequiresDiscordGuildFeature } from '@Decorators/nest/requires-discord-guild-feature.decorator';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';

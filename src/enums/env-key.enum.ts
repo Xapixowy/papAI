@@ -16,4 +16,5 @@ export enum EnvKey {
   REDIS_HOST = 'REDIS_HOST',
   REDIS_PORT = 'REDIS_PORT',
   STEAM_API_KEY = 'STEAM_API_KEY',
+  USDA_API_KEY = 'USDA_API_KEY',
 }

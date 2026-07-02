@@ -1,4 +1,4 @@
-import { REQUIRES_DISCORD_GUILD_FEATURE } from '@Decorators/requires-discord-guild-feature.decorator';
+import { REQUIRES_DISCORD_GUILD_FEATURE } from '@Decorators/nest/requires-discord-guild-feature.decorator';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildFeatureForbiddenException } from '@Exceptions/discord/discord-guild-feature-forbidden.exception';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
@@ -39,9 +39,8 @@ export class DiscordGuildFeatureGuard implements CanActivate {
     const guildId = discordInteraction?.guildId ?? discordMessage?.guildId;
 
     if (!guildId) {
-      throw new DiscordGuildFeatureForbiddenException(
-        `This feature (\`${requiredDiscordGuildFeature}\`) is not enabled on this guild.`,
-      );
+      // DM context — no guild to check; let the handler body handle the early return
+      return true;
     }
 
     const discordGuild = await this.discordGuildService.findById(guildId);

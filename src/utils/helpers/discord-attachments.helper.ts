@@ -64,9 +64,10 @@ export class DiscordAttachmentsHelper {
         const response = await axios.get(imageUrl, {
           responseType: 'arraybuffer',
         });
-        const base64Data = Buffer.from(response.data, 'binary').toString(
-          'base64',
-        );
+        const base64Data = Buffer.from(
+          response.data as string,
+          'binary',
+        ).toString('base64');
 
         base64Images.push(base64Data);
       } catch (error) {

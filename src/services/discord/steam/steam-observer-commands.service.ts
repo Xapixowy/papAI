@@ -303,12 +303,14 @@ export class SteamObserverCommandsService {
     const { steamUsers, channels, discordUsers } =
       await this.buildObserverMaps(observers);
 
-    const { embeds, component } = this.embedBuilderService.observerRemoveSelect({
-      observers,
-      steamUsers,
-      channels,
-      discordUsers,
-    });
+    const { embeds, component } = this.embedBuilderService.observerRemoveSelect(
+      {
+        observers,
+        steamUsers,
+        channels,
+        discordUsers,
+      },
+    );
 
     return { embeds, component };
   }

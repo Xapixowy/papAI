@@ -16,7 +16,9 @@ export class SystemPromptCommandsService {
     private readonly embedBuilderService: EmbedBuilderService,
   ) {}
 
-  public async systemPromptGetHandler(guildId: string): Promise<EmbedBuilder[]> {
+  public async systemPromptGetHandler(
+    guildId: string,
+  ): Promise<EmbedBuilder[]> {
     const setting = await this.discordSettingsService.findByKey({
       key: DiscordSettingKey.HUMAN_SYSTEM_PROMPT,
       guildId,

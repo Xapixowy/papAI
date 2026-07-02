@@ -1,5 +1,5 @@
 import { CHATGPT_COMMANDS_CONFIG } from '@Constants/discord/chatgpt-commands.constant';
-import { RequiresDiscordUserRole } from '@Decorators/requires-discord-user-role.decorator';
+import { RequiresDiscordUserRole } from '@Decorators/nest/requires-discord-user-role.decorator';
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { DayTimeOption } from '@Options/chatgpt/day-time.option';
