@@ -1,0 +1,76 @@
+[
+  {
+    "version": "0.5.1",
+    "date": "2026-07-02",
+    "changes": [
+      { "type": "feat", "description": "/changelog command — view bot version history" }
+    ]
+  },
+  {
+    "version": "0.5.0",
+    "date": "2026-07-02",
+    "changes": [
+      { "type": "feat", "description": "FitCoach — meal & nutrition tracking module (AI-powered)" },
+      { "type": "feat", "description": "Meal logging via DM chat, photos, and /meal add" },
+      { "type": "feat", "description": "Nutrition lookup against Open Food Facts & USDA databases" },
+      { "type": "feat", "description": "AI estimation for ingredients not found in any database" },
+      { "type": "feat", "description": "Meal time ranges and timezone configuration via interactive modals" },
+      { "type": "feat", "description": "Daily, weekly, monthly and yearly nutrition summaries" },
+      { "type": "feat", "description": "Day summary includes AI-generated nutrition insight" },
+      { "type": "feat", "description": "Ask AI in chat to show meal list or summary for any period" },
+      { "type": "feat", "description": "Onboarding flow with default or custom meal time presets" }
+    ]
+  },
+  {
+    "version": "0.4.6",
+    "date": "2025-12-01",
+    "changes": [
+      { "type": "fix", "description": "Max message character size handling for all embeds" },
+      { "type": "feat", "description": "Saved messages search function" },
+      { "type": "improve", "description": "Context and tool usage tweaks for AI" },
+      { "type": "feat", "description": "Function calling to retrieve conversation context" },
+      { "type": "improve", "description": "Configurable context size for humanized module" }
+    ]
+  },
+  {
+    "version": "0.4.0",
+    "date": "2025-09-01",
+    "changes": [
+      { "type": "feat", "description": "Steam integration — new game release notifications" }
+    ]
+  },
+  {
+    "version": "0.3.0",
+    "date": "2025-06-01",
+    "changes": [
+      { "type": "feat", "description": "Humanized module — AI responds as a human in configured channels" },
+      { "type": "feat", "description": "Channel management commands" },
+      { "type": "feat", "description": "Guild management commands" },
+      { "type": "feat", "description": "2 additional GIF providers with random selection" },
+      { "type": "improve", "description": "Better context handling and image compression for AI" },
+      { "type": "improve", "description": "AI model updated to Gemini 3.1 Flash Lite" },
+      { "type": "fix", "description": "Good morning command now triggers on startsWith" },
+      { "type": "fix", "description": "Good morning no longer triggers random reply" }
+    ]
+  },
+  {
+    "version": "0.2.0",
+    "date": "2025-03-01",
+    "changes": [
+      { "type": "feat", "description": "Good morning command" },
+      { "type": "feat", "description": "ChatGPT subscription payment reminder" },
+      { "type": "feat", "description": "ChatGPT settings management commands" },
+      { "type": "feat", "description": "User role assignment and removal for ChatGPT access" }
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2025-01-01",
+    "changes": [
+      { "type": "feat", "description": "Initial release — full command refactor" },
+      { "type": "feat", "description": "Docker setup and deployment pipeline" },
+      { "type": "feat", "description": "Authorization system with user roles" },
+      { "type": "feat", "description": "Discord settings per guild (key/value store)" }
+    ]
+  }
+]

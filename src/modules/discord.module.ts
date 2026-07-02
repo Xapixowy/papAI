@@ -6,6 +6,7 @@ import { NecordModule } from 'necord';
 import { AdminCommandsModule } from './discord/admin-commands.module';
 import { BaseCommandsModule } from './discord/base-commands.module';
 import { BotCommandsModule } from './discord/bot-commands.module';
+import { ChangelogCommandsModule } from './discord/changelog-commands.module';
 import { ChannelCommandsModule } from './discord/channel-commands.module';
 import { ChatgptCommandsModule } from './discord/chatgpt-commands.module';
 import { GoodMorningCommandsModule } from './discord/good-morning-commands.module';
@@ -33,6 +34,7 @@ import { FitCoachCommandsModule } from './discord/fit-coach-commands.module';
     }),
     AdminCommandsModule,
     BotCommandsModule,
+    ChangelogCommandsModule,
     ChannelCommandsModule,
     ChatgptCommandsModule,
     GuildCommandsModule,
@@ -47,6 +49,7 @@ export class DiscordModule extends BaseCommandsModule {
     return [
       ...AdminCommandsModule.botIntents,
       ...BotCommandsModule.botIntents,
+      ...ChangelogCommandsModule.botIntents,
       ...ChannelCommandsModule.botIntents,
       ...ChatgptCommandsModule.botIntents,
       ...GuildCommandsModule.botIntents,
