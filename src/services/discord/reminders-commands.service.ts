@@ -12,11 +12,12 @@ import { GeminiService } from '@Services/api/gemini.service';
 import { EmbedBuilderService } from '@Services/discord/embed-builder.service';
 import {
   CancelReminderArgs,
+  CancelReminderResult,
   CreateReminderArgs,
+  CreateReminderResult,
   RemindersGeminiToolsService,
 } from '@Services/discord/reminders/gemini-tools.service';
 import { RemindersService } from '@Services/reminders.service';
-import { EmbedVariant } from '@Types/discord/embed-variant.type';
 import { EmbedBuilder } from 'discord.js';
 
 @Injectable()
@@ -54,18 +55,7 @@ export class RemindersCommandsService {
       { discordUserId, discordGuildId, sourceChannelId, timezone, now },
     );
 
-    if (!result.success) {
-      return this.embedBuilderService.simple({
-        description: ERROR_CODE_MESSAGE_MAP[result.error],
-        variant: 'error',
-      });
-    }
-
-    return this.embedBuilderService.simple({
-      title: 'Reminder set',
-      description: `I will remind you about "${result.content}" on ${result.remind_at_local}.`,
-      variant: 'success',
-    });
+    return this.buildCreateResultEmbed(result);
   }
 
   async handleNaturalLanguageMessage({
@@ -79,15 +69,10 @@ export class RemindersCommandsService {
     discordGuildId: string | null;
     sourceChannelId: string;
   }): Promise<EmbedBuilder[]> {
-    const result = await this.runGeminiToolFlow(text, {
+    return this.runGeminiToolFlow(text, {
       discordUserId,
       discordGuildId,
       sourceChannelId,
-    });
-
-    return this.embedBuilderService.simple({
-      description: result.text,
-      variant: result.variant,
     });
   }
 
@@ -133,10 +118,9 @@ export class RemindersCommandsService {
     );
 
     if (!match) {
-      return this.embedBuilderService.simple({
-        description: `No pending reminder found with id \`${idPrefix}\`.`,
-        variant: 'error',
-      });
+      return this.buildErrorEmbed(
+        `No pending reminder found with id \`${idPrefix}\`.`,
+      );
     }
 
     const cancelled = await this.remindersService.cancel(
@@ -145,16 +129,10 @@ export class RemindersCommandsService {
     );
 
     if (cancelled.isErr()) {
-      return this.embedBuilderService.simple({
-        description: 'Could not cancel that reminder.',
-        variant: 'error',
-      });
+      return this.buildErrorEmbed('Could not cancel that reminder.');
     }
 
-    return this.embedBuilderService.simple({
-      description: `Cancelled reminder: ${cancelled.value.content}`,
-      variant: 'success',
-    });
+    return this.buildCancelledEmbed(cancelled.value.content);
   }
 
   private async runGeminiToolFlow(
@@ -164,7 +142,7 @@ export class RemindersCommandsService {
       discordGuildId: string | null;
       sourceChannelId: string;
     },
-  ): Promise<{ text: string; variant: EmbedVariant }> {
+  ): Promise<EmbedBuilder[]> {
     const timezone = this.getTimezone();
     const now = new Date();
     const systemPrompt = this.buildSystemPrompt(timezone, now);
@@ -178,63 +156,90 @@ export class RemindersCommandsService {
 
     if (firstResult.isErr()) {
       this.logger.error('There was an error generating the reminder response.');
-      return {
-        text: 'Something went wrong. Please try again.',
-        variant: 'error',
-      };
+      return this.buildErrorEmbed('Something went wrong. Please try again.');
     }
 
     const firstResultValue = firstResult.value;
 
     if ('text' in firstResultValue) {
-      return { text: firstResultValue.text, variant: 'info' };
+      // Clarifying question / off-topic reply — not a definitive success or
+      // error outcome, so Gemini's own phrasing (in the user's language) is
+      // used as-is here, unlike the standardized templates below.
+      return this.embedBuilderService.simple({
+        description: firstResultValue.text,
+        variant: 'info',
+      });
     }
 
     const [functionCall] = firstResultValue.functionCalls;
-    let toolResult: object;
 
     if (functionCall.name === CREATE_REMINDER_TOOL_NAME) {
-      toolResult = await this.remindersGeminiToolsService.handleCreateReminder(
-        functionCall.args as CreateReminderArgs,
-        { ...ctx, timezone, now },
-      );
-    } else if (functionCall.name === CANCEL_REMINDER_TOOL_NAME) {
-      toolResult = await this.remindersGeminiToolsService.handleCancelReminder(
-        functionCall.args as CancelReminderArgs,
-        { discordUserId: ctx.discordUserId, timezone },
-      );
-    } else {
-      return {
-        text: 'Something went wrong. Please try again.',
-        variant: 'error',
-      };
+      const result =
+        await this.remindersGeminiToolsService.handleCreateReminder(
+          functionCall.args as CreateReminderArgs,
+          { ...ctx, timezone, now },
+        );
+      return this.buildCreateResultEmbed(result);
     }
 
-    const finalResult =
-      await this.geminiService.generateContentWithFunctionResponse({
-        systemPrompt,
-        queryParts,
-        modelContent: firstResultValue.modelContent,
-        functionCallName: functionCall.name,
-        functionResponse: toolResult,
-      });
-
-    if (finalResult.isErr()) {
-      this.logger.error(
-        'There was an error generating the reminder confirmation.',
-      );
-      return {
-        text: 'Something went wrong. Please try again.',
-        variant: 'error',
-      };
+    if (functionCall.name === CANCEL_REMINDER_TOOL_NAME) {
+      const result =
+        await this.remindersGeminiToolsService.handleCancelReminder(
+          functionCall.args as CancelReminderArgs,
+          { discordUserId: ctx.discordUserId, timezone },
+        );
+      return this.buildCancelResultEmbed(result);
     }
 
-    const success =
-      'success' in toolResult
-        ? Boolean((toolResult as { success?: boolean }).success)
-        : true;
+    return this.buildErrorEmbed('Something went wrong. Please try again.');
+  }
 
-    return { text: finalResult.value, variant: success ? 'success' : 'error' };
+  private buildCreateResultEmbed(result: CreateReminderResult): EmbedBuilder[] {
+    if (!result.success) {
+      return this.buildErrorEmbed(ERROR_CODE_MESSAGE_MAP[result.error]);
+    }
+
+    return this.embedBuilderService.simple({
+      title: 'Reminder set',
+      description: `Reminder set for ${result.remind_at_local} — content: "${result.content}"`,
+      variant: 'success',
+    });
+  }
+
+  private buildCancelResultEmbed(result: CancelReminderResult): EmbedBuilder[] {
+    if (result.success) {
+      return this.buildCancelledEmbed(result.content);
+    }
+
+    if (result.reason === 'multiple_matches') {
+      const candidates = result.candidates
+        .map((c) => `"${c.content}" (${c.remind_at_local})`)
+        .join(', ');
+      return this.buildErrorEmbed(
+        `Found multiple matching reminders — please be more specific: ${candidates}`,
+      );
+    }
+
+    if (result.reason === 'no_matches') {
+      return this.buildErrorEmbed('No matching pending reminder found.');
+    }
+
+    return this.buildErrorEmbed('Could not cancel that reminder.');
+  }
+
+  private buildCancelledEmbed(content: string): EmbedBuilder[] {
+    return this.embedBuilderService.simple({
+      title: 'Reminder cancelled',
+      description: `Cancelled reminder: "${content}"`,
+      variant: 'success',
+    });
+  }
+
+  private buildErrorEmbed(message: string): EmbedBuilder[] {
+    return this.embedBuilderService.simple({
+      description: message,
+      variant: 'error',
+    });
   }
 
   private buildSystemPrompt(timezone: string, now: Date): string {

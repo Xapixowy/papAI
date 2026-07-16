@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.5.5",
+    "date": "2026-07-16",
+    "changes": [
+      { "type": "improve", "description": "Reminder confirmation and error messages are now standardized — same wording every time, whether set via /reminder or by talking to the bot" }
+    ]
+  },
+  {
     "version": "0.5.4",
     "date": "2026-07-16",
     "changes": [

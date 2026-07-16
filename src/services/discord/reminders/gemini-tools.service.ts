@@ -13,6 +13,16 @@ export type CreateReminderResult =
   | { success: true; id: string; content: string; remind_at_local: string }
   | { success: false; error: ErrorCode };
 
+export type CancelReminderResult =
+  | { success: true; content: string }
+  | { success: false; reason: 'no_matches' }
+  | {
+      success: false;
+      reason: 'multiple_matches';
+      candidates: { content: string; remind_at_local: string }[];
+    }
+  | { success: false; reason: 'not_found' };
+
 @Injectable()
 export class RemindersGeminiToolsService {
   constructor(private readonly remindersService: RemindersService) {}
@@ -58,7 +68,7 @@ export class RemindersGeminiToolsService {
   async handleCancelReminder(
     args: CancelReminderArgs,
     ctx: { discordUserId: string; timezone: string },
-  ): Promise<object> {
+  ): Promise<CancelReminderResult> {
     const matches = await this.remindersService.findPendingByUserAndContentHint(
       ctx.discordUserId,
       args.content_hint,
