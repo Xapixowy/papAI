@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.5.4",
+    "date": "2026-07-16",
+    "changes": [
+      { "type": "fix", "description": "Steam observer no longer floods the channel with notifications when a private profile becomes public" },
+      { "type": "fix", "description": "Long gaps in Steam profile visibility (1 month+) are re-synced silently instead of notifying about every game accumulated during that time" }
+    ]
+  },
+  {
     "version": "0.5.3",
     "date": "2026-07-16",
     "changes": [

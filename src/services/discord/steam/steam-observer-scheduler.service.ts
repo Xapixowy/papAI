@@ -90,11 +90,41 @@ export class SteamObserverSchedulerService implements OnApplicationBootstrap {
     const ownedGames = gamesResult.value;
     if (!ownedGames.length) return 0;
 
+    const steamUserBeforeSync =
+      await this.steamUsersService.findById(steamUserId);
+    const lastSyncedAt = steamUserBeforeSync.isOk()
+      ? steamUserBeforeSync.value.gamesLastSyncedAt
+      : null;
+    const isStale =
+      !lastSyncedAt ||
+      Date.now() - lastSyncedAt.getTime() > STEAM_CONFIG.staleSyncGapMs;
+
+    if (isStale) {
+      // Never successfully synced, or it's been longer than the stale
+      // threshold since the last successful sync (e.g. profile was private
+      // for months and just became public again). Merge silently instead of
+      // treating a potentially huge backlog as "new" and flooding the
+      // channel with individual notifications.
+      await this.steamGamesService.upsertMany(ownedGames);
+      await this.steamUserGamesService.createMany(
+        steamUserId,
+        ownedGames.map((g) => g.appid),
+      );
+      await this.enrichGames(ownedGames.map((g) => g.appid));
+      await this.steamUsersService.markGamesSynced(steamUserId);
+      this.logger.log(
+        `Silently re-synced ${ownedGames.length} games for Steam user ${steamUserId} (first sync or stale gap since last sync — no notifications sent).`,
+      );
+      return 0;
+    }
+
     const existingGameIds =
       await this.steamUserGamesService.findGameIdsBySteamUserId(steamUserId);
     const existingSet = new Set(existingGameIds);
 
     const newGames = ownedGames.filter((g) => !existingSet.has(g.appid));
+    await this.steamUsersService.markGamesSynced(steamUserId);
+
     if (!newGames.length) return 0;
 
     await this.steamGamesService.upsertMany(newGames);

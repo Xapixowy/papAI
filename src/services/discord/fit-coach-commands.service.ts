@@ -587,12 +587,10 @@ export class FitCoachCommandsService {
       return this.embedBuilderService.mealProposal(pending, proposeArgs.confidence_note);
     };
 
-    // propose_meal directly (no lookup)
     if (functionCall.name === FIT_COACH_PROPOSE_MEAL_TOOL_NAME) {
       return buildProposal(functionCall.args as ProposeMealArgs);
     }
 
-    // single lookup
     if (functionCall.name === FIT_COACH_LOOKUP_NUTRITION_TOOL_NAME) {
       const args = functionCall.args as LookupNutritionArgs;
       const lookupResult = await this.nutritionLookupService.lookup(
@@ -649,7 +647,6 @@ export class FitCoachCommandsService {
       return buildProposal(proposeArgs, [breakdownItem]);
     }
 
-    // batch lookup
     if (functionCall.name === FIT_COACH_LOOKUP_NUTRITION_BATCH_TOOL_NAME) {
       const args = functionCall.args as LookupNutritionBatchArgs;
       const batchResult = await this.nutritionLookupService.lookupBatch(

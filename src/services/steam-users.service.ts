@@ -26,6 +26,10 @@ export class SteamUsersService {
       .getMany();
   }
 
+  async markGamesSynced(id: string): Promise<void> {
+    await this.repository.update(id, { gamesLastSyncedAt: new Date() });
+  }
+
   async upsert(dto: SteamUserDto): Promise<Result<SteamUser, ErrorCode>> {
     const existing = await this.repository.findOne({ where: { id: dto.id } });
 

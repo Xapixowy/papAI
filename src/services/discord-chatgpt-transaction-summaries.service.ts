@@ -44,14 +44,6 @@ export class DiscordChatgptTransactionSummariesService {
   async create(
     dto: DiscordChatgptTransactionSummaryDto,
   ): Promise<Result<DiscordChatgptTransactionSummary, ErrorCode>> {
-    // const existingTransactionSummary = await this.findByUserId(
-    //   dto.discordUserId,
-    // );
-
-    // if (existingTransactionSummary.isOk()) {
-    //   return err(ErrorCode.DISCORD_CHATGPT_TRANSACTION_SUMMARY_EXISTS);
-    // }
-
     const newTransactionSummary = this.repository.create({
       discordUserId: dto.discordUserId,
       amount: dto.amount,

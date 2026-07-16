@@ -217,6 +217,7 @@ export class SteamObserverCommandsService {
         pending.steamId,
         ownedGames.map((g) => g.appid),
       );
+      await this.steamUsersService.markGamesSynced(pending.steamId);
     }
 
     const created = await this.discordSteamObserversService.create(
