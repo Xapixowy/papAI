@@ -12,6 +12,7 @@ import { FitCoachCommandsService } from '@Services/discord/fit-coach-commands.se
 import { FitCoachCommandRegistrationService } from '@Services/discord/fit-coach/fit-coach-command-registration.service';
 import { FitCoachGeminiToolsService } from '@Services/discord/fit-coach/gemini-tools.service';
 import { FitCoachEmbedBuilderService } from '@Services/discord/fit-coach/fit-coach-embed-builder.service';
+import { FitCoachMessageIntentHandlerService } from '@Services/discord/fit-coach/fit-coach-message-intent-handler.service';
 import { GatewayIntentBits } from 'discord.js';
 import { BaseCommandsModule } from './base-commands.module';
 import { EmbedBuilderModule } from './services/embed-builder.module';
@@ -30,11 +31,13 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     FitCoachCommandRegistrationService,
     FitCoachGeminiToolsService,
     FitCoachEmbedBuilderService,
+    FitCoachMessageIntentHandlerService,
     FitCoachCommandsController,
     FitCoachMealCommandsController,
     FitCoachSummaryCommandsController,
     FitCoachSettingsCommandsController,
   ],
+  exports: [FitCoachMessageIntentHandlerService],
 })
 export class FitCoachCommandsModule extends BaseCommandsModule {
   static get botIntents(): GatewayIntentBits[] {

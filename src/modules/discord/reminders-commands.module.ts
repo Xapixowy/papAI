@@ -1,4 +1,3 @@
-import { RemindersMessageCommandsController } from '@Controllers/discord/reminders-commands.controller';
 import { RemindersCommandsController } from '@Controllers/discord/reminders/reminder-commands.controller';
 import { GeminiModule } from '@Modules/api/gemini.module';
 import { DiscordGuildFeatureGuardModule } from '@Modules/guards/discord-guild-feature-guard.module';
@@ -8,6 +7,7 @@ import { Module } from '@nestjs/common';
 import { RemindersCommandsService } from '@Services/discord/reminders-commands.service';
 import { RemindersCommandRegistrationService } from '@Services/discord/reminders/reminders-command-registration.service';
 import { RemindersGeminiToolsService } from '@Services/discord/reminders/gemini-tools.service';
+import { RemindersMessageIntentHandlerService } from '@Services/discord/reminders/reminders-message-intent-handler.service';
 import { RemindersSchedulerService } from '@Services/discord/reminders/reminders-scheduler.service';
 import { GatewayIntentBits } from 'discord.js';
 import { BaseCommandsModule } from './base-commands.module';
@@ -26,15 +26,13 @@ import { EmbedBuilderModule } from './services/embed-builder.module';
     RemindersGeminiToolsService,
     RemindersSchedulerService,
     RemindersCommandRegistrationService,
+    RemindersMessageIntentHandlerService,
     RemindersCommandsController,
-    RemindersMessageCommandsController,
   ],
+  exports: [RemindersMessageIntentHandlerService],
 })
 export class RemindersCommandsModule extends BaseCommandsModule {
   static get botIntents(): GatewayIntentBits[] {
-    return [
-      ...RemindersCommandsController.botIntents,
-      ...RemindersMessageCommandsController.botIntents,
-    ];
+    return [...RemindersCommandsController.botIntents];
   }
 }

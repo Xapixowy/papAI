@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.5.3",
+    "date": "2026-07-16",
+    "changes": [
+      { "type": "fix", "description": "Bot no longer sends duplicate replies when multiple AI features could respond to the same message or DM" },
+      { "type": "improve", "description": "Centralized message routing for chat/DM AI features — cleaner, more consistent handling as more features are added" },
+      { "type": "improve", "description": "Human must be enabled for any AI-driven @mention feature to respond on a server" },
+      { "type": "fix", "description": "Typing indicator now shows while the bot processes a chat or DM reminder request" },
+      { "type": "improve", "description": "Reminder notification embed styling unified with the rest of the bot" }
+    ]
+  },
+  {
     "version": "0.5.2",
     "date": "2026-07-16",
     "changes": [

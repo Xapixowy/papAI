@@ -5,14 +5,7 @@ import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.
 import { DiscordUserRoleGuard } from '@Guards/discord/discord-user-role.guard';
 import { Injectable, UseGuards } from '@nestjs/common';
 import { HumanCommandsService } from '@Services/discord/human-commands.service';
-import { startTypingInterval } from '@Utils/functions/send-typing-interval.function';
-import {
-  Client,
-  EmbedBuilder,
-  GatewayIntentBits,
-  Message,
-  TextChannel,
-} from 'discord.js';
+import { Client, GatewayIntentBits, Message, TextChannel } from 'discord.js';
 import { Context, createCommandGroupDecorator, On } from 'necord';
 import { BaseCommandsController } from './base-commands.controller';
 
@@ -39,57 +32,6 @@ export class HumanCommandsController extends BaseCommandsController {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
     ];
-  }
-
-  @On('messageCreate')
-  async onMentionMessage(@Context() [message]: [Message]): Promise<void> {
-    const isBotMessage = message.author.bot;
-    const isBotMention = message.mentions.users.has(this.client.user!.id);
-    const isMessageTextChannel = message.channel instanceof TextChannel;
-
-    if (isBotMessage || !isBotMention || !isMessageTextChannel) return;
-
-    const guildId = message.guild?.id;
-
-    if (!guildId) {
-      return;
-    }
-
-    const stopTyping = startTypingInterval(message.channel);
-
-    const attachments = message.attachments.map((attachment) => attachment);
-    const userDisplayName =
-      message.member?.displayName ??
-      message.author.globalName ??
-      message.author.username;
-    const embedImageUrls = message.embeds
-      .flatMap((embed) => [embed.image?.url, embed.thumbnail?.url])
-      .filter((url): url is string => !!url);
-
-    const generatedMessage =
-      await this.humanCommandsService.mentionMessageHandler({
-        message: message.content,
-        channelId: message.channel.id,
-        messageId: message.id,
-        guildId,
-        attachments,
-        userDisplayName,
-        userId: message.author.id,
-        embedImageUrls,
-      });
-
-    if (stopTyping) stopTyping();
-
-    if (generatedMessage[0] instanceof EmbedBuilder) {
-      await message.reply({
-        embeds: generatedMessage as EmbedBuilder[],
-      });
-      return;
-    }
-
-    for (const page of generatedMessage as string[]) {
-      await message.reply({ content: page });
-    }
   }
 
   @On('messageCreate')
