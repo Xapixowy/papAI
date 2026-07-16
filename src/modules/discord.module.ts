@@ -14,6 +14,7 @@ import { GuildCommandsModule } from './discord/guild-commands.module';
 import { HumanCommandsModule } from './discord/human-commands.module';
 import { SteamCommandsModule } from './discord/steam-commands.module';
 import { FitCoachCommandsModule } from './discord/fit-coach-commands.module';
+import { RemindersCommandsModule } from './discord/reminders-commands.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { FitCoachCommandsModule } from './discord/fit-coach-commands.module';
     HumanCommandsModule,
     SteamCommandsModule,
     FitCoachCommandsModule,
+    RemindersCommandsModule,
   ],
 })
 export class DiscordModule extends BaseCommandsModule {
@@ -57,6 +59,7 @@ export class DiscordModule extends BaseCommandsModule {
       ...HumanCommandsModule.botIntents,
       ...SteamCommandsModule.botIntents,
       ...FitCoachCommandsModule.botIntents,
+      ...RemindersCommandsModule.botIntents,
     ];
   }
 }

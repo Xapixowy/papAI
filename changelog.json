@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.5.2",
+    "date": "2026-07-16",
+    "changes": [
+      { "type": "feat", "description": "Reminders module — schedule one-off reminders for yourself" },
+      { "type": "feat", "description": "/reminder create, list, and cancel commands — usable in servers and DMs" },
+      { "type": "feat", "description": "Ask the bot in chat or DM to set or cancel a reminder in natural language" },
+      { "type": "feat", "description": "Reminders are delivered back to wherever they were created — DM or server channel" }
+    ]
+  },
+  {
     "version": "0.5.1",
     "date": "2026-07-02",
     "changes": [

@@ -1,6 +1,9 @@
 # Use the official Node.js image as the base image
 FROM node:22
 
+# Prevent pnpm from prompting for confirmation (e.g. modules dir purge) in non-interactive builds
+ENV CI=true
+
 # Install pnpm
 RUN npm install -g pnpm
 

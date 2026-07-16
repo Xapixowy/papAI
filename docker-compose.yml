@@ -10,7 +10,7 @@ services:
     ports:
       - ${POSTGRES_PORT}:5432
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     networks:
       - pap-ai-network
 

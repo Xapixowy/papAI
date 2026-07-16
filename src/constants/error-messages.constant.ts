@@ -57,4 +57,7 @@ export const ERROR_CODE_MESSAGE_MAP: Record<ErrorCode, string> = {
     'Meal proposal expired. Please describe your meal again.',
   [ErrorCode.FIT_COACH_INVALID_TIMEZONE]: 'Invalid timezone.',
   [ErrorCode.FIT_COACH_NO_MEALS_FOR_PERIOD]: 'No meals logged for this period.',
+  [ErrorCode.REMINDER_NOT_FOUND]: 'Reminder not found.',
+  [ErrorCode.REMINDER_INVALID_DATETIME]: "Couldn't understand that date/time.",
+  [ErrorCode.REMINDER_PAST_DATETIME]: 'That date/time is in the past.',
 };

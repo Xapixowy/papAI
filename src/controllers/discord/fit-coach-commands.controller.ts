@@ -1,4 +1,5 @@
 import { FIT_COACH_COMMANDS_CONFIG } from '@Constants/discord/fit-coach-commands.constant';
+import { REMINDER_KEYWORDS } from '@Constants/discord/reminders-commands.constant';
 import { DiscordButtonId } from '@Enums/discord/discord-button-id.enum';
 import { DiscordModalId } from '@Enums/discord/discord-modal-id.enum';
 import { DiscordSelectId } from '@Enums/discord/discord-select-id.enum';
@@ -49,6 +50,12 @@ export class FitCoachCommandsController extends BaseCommandsController {
   async onDmMessage(@Context() [message]: [Message]): Promise<void> {
     if (message.author.bot) return;
     if (!(message.channel instanceof DMChannel)) return;
+
+    // Reminder requests are handled exclusively by RemindersMessageCommandsController.
+    const lowerContent = message.content.toLowerCase();
+    if (REMINDER_KEYWORDS.some((keyword) => lowerContent.includes(keyword))) {
+      return;
+    }
 
     const attachments = message.attachments.map((a) => a);
 
