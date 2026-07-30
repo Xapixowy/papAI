@@ -1,4 +1,4 @@
-import { Content } from '@google/generative-ai';
+import { Content } from '@google/genai';
 import { DiscordHumanConversationHistoryMessage } from '@Types/discord/human/conversation-history-message.type';
 
 export class DiscordHumanConversationHistoryMessageConverter {
@@ -7,7 +7,7 @@ export class DiscordHumanConversationHistoryMessageConverter {
   ): DiscordHumanConversationHistoryMessage {
     return {
       role: content.role === 'user' ? 'user' : 'model',
-      text: content.parts.find((part) => 'text' in part)?.text ?? '',
+      text: content.parts?.find((part) => 'text' in part)?.text ?? '',
       createdAt: new Date().toISOString(),
     };
   }

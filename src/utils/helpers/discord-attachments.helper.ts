@@ -1,6 +1,6 @@
 import { ERROR_CODE_MESSAGE_MAP } from '@Constants/error-messages.constant';
 import { ErrorCode } from '@Enums/error-code.enum';
-import { Part } from '@google/generative-ai';
+import { Part } from '@google/genai';
 import { Logger } from '@nestjs/common';
 import axios from 'axios';
 import { Attachment } from 'discord.js';

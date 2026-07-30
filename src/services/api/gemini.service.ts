@@ -1,12 +1,5 @@
 import { ErrorCode } from '@Enums/error-code.enum';
-import {
-  Content,
-  FunctionCall,
-  GenerateContentRequest,
-  GoogleGenerativeAI,
-  Part,
-  Tool,
-} from '@google/generative-ai';
+import { Content, FunctionCall, GoogleGenAI, Part, Tool } from '@google/genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { err, ok, Result } from 'neverthrow';
@@ -14,7 +7,7 @@ import { err, ok, Result } from 'neverthrow';
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
-  private gemini: GoogleGenerativeAI | null = null;
+  private gemini: GoogleGenAI | null = null;
 
   constructor(private readonly configService: ConfigService) {
     this.gemini = this.initializeGemini();
@@ -41,31 +34,28 @@ export class GeminiService {
         return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
       }
 
-      const model = this.gemini.getGenerativeModel({
-        model: textGenerationModelName,
-        systemInstruction: systemPrompt,
-      });
-
       const contents: Content[] = [
         ...conversationHistory,
         { role: 'user', parts: queryParts },
       ];
 
-      const request: GenerateContentRequest = { contents };
-
       this.logger.log('Generating content from Gemini...');
-      const result = await model.generateContent(request);
-      const response = result.response;
+      const response = await this.gemini.models.generateContent({
+        model: textGenerationModelName,
+        contents,
+        config: { systemInstruction: systemPrompt },
+      });
 
-      if (!response) {
+      if (!response.candidates || response.candidates.length === 0) {
         this.logger.error('Error generating content from Gemini');
         return err(ErrorCode.GEMINI_GENERATION_ERROR);
       }
 
+      const text = response.text ?? '';
       this.logger.log(
-        `Content generated from Gemini: ${response.text().length} characters`,
+        `Content generated from Gemini: ${text.length} characters`,
       );
-      return ok(response.text());
+      return ok(text);
     } catch (error) {
       this.logger.error('Error generating content from Gemini:', error);
       return err(ErrorCode.GEMINI_GENERATION_ERROR);
@@ -99,38 +89,35 @@ export class GeminiService {
         return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
       }
 
-      const model = this.gemini.getGenerativeModel({
-        model: textGenerationModelName,
-        systemInstruction: systemPrompt,
-        tools,
-      });
-
       const contents: Content[] = [{ role: 'user', parts: queryParts }];
-      const request: GenerateContentRequest = { contents };
 
       this.logger.log('Generating content from Gemini (with tools)...');
-      const result = await model.generateContent(request);
-      const response = result.response;
+      const response = await this.gemini.models.generateContent({
+        model: textGenerationModelName,
+        contents,
+        config: { systemInstruction: systemPrompt, tools },
+      });
 
-      if (!response) {
+      if (!response.candidates || response.candidates.length === 0) {
         this.logger.error('Error generating content from Gemini');
         return err(ErrorCode.GEMINI_GENERATION_ERROR);
       }
 
-      const functionCalls = response.functionCalls();
+      const functionCalls = response.functionCalls;
 
       if (functionCalls && functionCalls.length > 0) {
         this.logger.log(
           `Gemini requested function calls: ${functionCalls.map((f) => f.name).join(', ')}`,
         );
-        const modelContent = result.response.candidates![0].content;
+        const modelContent = response.candidates[0].content!;
         return ok({ functionCalls, modelContent });
       }
 
+      const text = response.text ?? '';
       this.logger.log(
-        `Content generated from Gemini: ${response.text().length} characters`,
+        `Content generated from Gemini: ${text.length} characters`,
       );
-      return ok({ text: response.text() });
+      return ok({ text });
     } catch (error) {
       this.logger.error('Error generating content from Gemini:', error);
       return err(ErrorCode.GEMINI_GENERATION_ERROR);
@@ -170,12 +157,6 @@ export class GeminiService {
         return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
       }
 
-      const model = this.gemini.getGenerativeModel({
-        model: textGenerationModelName,
-        systemInstruction: systemPrompt,
-        tools,
-      });
-
       const contents: Content[] = [
         { role: 'user', parts: queryParts },
         modelContent,
@@ -192,29 +173,30 @@ export class GeminiService {
         },
       ];
 
-      const request: GenerateContentRequest = { contents };
-
       this.logger.log(
         'Generating content from Gemini (function response + tools)...',
       );
-      const result = await model.generateContent(request);
-      const response = result.response;
+      const response = await this.gemini.models.generateContent({
+        model: textGenerationModelName,
+        contents,
+        config: { systemInstruction: systemPrompt, tools },
+      });
 
-      if (!response) {
+      if (!response.candidates || response.candidates.length === 0) {
         return err(ErrorCode.GEMINI_GENERATION_ERROR);
       }
 
-      const functionCalls = response.functionCalls();
+      const functionCalls = response.functionCalls;
 
       if (functionCalls && functionCalls.length > 0) {
         this.logger.log(
           `Gemini requested function calls: ${functionCalls.map((f) => f.name).join(', ')}`,
         );
-        const nextModelContent = result.response.candidates![0].content;
+        const nextModelContent = response.candidates[0].content!;
         return ok({ functionCalls, modelContent: nextModelContent });
       }
 
-      return ok({ text: response.text() });
+      return ok({ text: response.text ?? '' });
     } catch (error) {
       this.logger.error(
         'Error generating content from Gemini (function response + tools):',
@@ -249,11 +231,6 @@ export class GeminiService {
         return err(ErrorCode.GEMINI_MODEL_NOT_FOUND);
       }
 
-      const model = this.gemini.getGenerativeModel({
-        model: textGenerationModelName,
-        systemInstruction: systemPrompt,
-      });
-
       const contents: Content[] = [
         { role: 'user', parts: queryParts },
         modelContent,
@@ -270,28 +247,30 @@ export class GeminiService {
         },
       ];
 
-      const request: GenerateContentRequest = { contents };
-
       this.logger.log('Generating content from Gemini (function response)...');
-      const result = await model.generateContent(request);
-      const response = result.response;
+      const response = await this.gemini.models.generateContent({
+        model: textGenerationModelName,
+        contents,
+        config: { systemInstruction: systemPrompt },
+      });
 
-      if (!response) {
+      if (!response.candidates || response.candidates.length === 0) {
         this.logger.error('Error generating content from Gemini');
         return err(ErrorCode.GEMINI_GENERATION_ERROR);
       }
 
+      const text = response.text ?? '';
       this.logger.log(
-        `Content generated from Gemini: ${response.text().length} characters`,
+        `Content generated from Gemini: ${text.length} characters`,
       );
-      return ok(response.text());
+      return ok(text);
     } catch (error) {
       this.logger.error('Error generating content from Gemini:', error);
       return err(ErrorCode.GEMINI_GENERATION_ERROR);
     }
   }
 
-  private initializeGemini(): GoogleGenerativeAI | null {
+  private initializeGemini(): GoogleGenAI | null {
     const apiKey = this.configService.get<string>('gemini.apiKey');
 
     if (!apiKey) {
@@ -302,7 +281,7 @@ export class GeminiService {
     }
 
     try {
-      this.gemini = new GoogleGenerativeAI(apiKey);
+      this.gemini = new GoogleGenAI({ apiKey });
       return this.gemini;
     } catch (error) {
       this.logger.error('Error initializing Gemini:', error);

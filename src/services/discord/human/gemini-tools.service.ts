@@ -1,5 +1,5 @@
 import { ErrorCode } from '@Enums/error-code.enum';
-import { Content, InlineDataPart, Part } from '@google/generative-ai';
+import { Content, Part } from '@google/genai';
 import { Injectable } from '@nestjs/common';
 import { DiscordMessageService } from '@Services/discord-message.service';
 import { DiscordUsersService } from '@Services/discord-users.service';
@@ -195,13 +195,10 @@ export class HumanGeminiToolsService {
           text: message.content,
           authorDisplayName,
           authorId,
-          attachments: allImageParts.map((part) => {
-            const inlinePart = part as InlineDataPart;
-            return {
-              contentType: inlinePart.inlineData.mimeType,
-              data: inlinePart.inlineData.data,
-            };
-          }),
+          attachments: allImageParts.map((part) => ({
+            contentType: part.inlineData!.mimeType!,
+            data: part.inlineData!.data!,
+          })),
           createdAt: message.createdAt.toISOString(),
           messageId: message.id,
         });

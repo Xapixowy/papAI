@@ -1,6 +1,6 @@
 {
   "name": "pap-ai",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "",
   "author": "",
   "private": true,
@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "@google/genai": "^2.15.0",
-    "@google/generative-ai": "^0.24.1",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.28",
     "@nestjs/config": "^4.0.4",

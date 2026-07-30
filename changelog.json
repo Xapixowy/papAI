@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.1",
+    "date": "2026-07-31",
+    "changes": [
+      { "type": "improve", "description": "Migrated Gemini integration from the deprecated @google/generative-ai SDK to the actively maintained @google/genai SDK" }
+    ]
+  },
+  {
     "version": "0.6.0",
     "date": "2026-07-31",
     "changes": [

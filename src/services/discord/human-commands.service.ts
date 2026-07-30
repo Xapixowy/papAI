@@ -7,7 +7,7 @@ import {
 import { REGEX_DISCORD_EMOJI, REGEX_EMOJI } from '@Constants/regex.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
-import { Part } from '@google/generative-ai';
+import { Part } from '@google/genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@Services/api/gemini.service';
