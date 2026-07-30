@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.6.2",
+    "date": "2026-07-31",
+    "changes": [
+      { "type": "fix", "description": "Fixed several commands (bot init, ChatGPT user add/remove, Steam observer add) silently reporting success even when the underlying database write failed" },
+      { "type": "fix", "description": "Message history saving now logs when a save fails instead of failing silently" },
+      { "type": "remove", "description": "Removed the unmaintained eslint-plugin-neverthrow dependency — incompatible with the current ESLint/typescript-eslint setup and was never actually enforcing anything" }
+    ]
+  },
+  {
     "version": "0.6.1",
     "date": "2026-07-31",
     "changes": [

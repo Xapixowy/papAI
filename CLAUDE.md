@@ -58,7 +58,7 @@ Features are stored as rows in `discord_settings` (key/value JSONB, scoped by `d
 
 ### Error handling
 
-Uses [neverthrow](https://github.com/supermacro/neverthrow) (`Result<T, E>`) for explicit error propagation in services. `eslint-plugin-neverthrow` enforces that `Result` values are not ignored.
+Uses [neverthrow](https://github.com/supermacro/neverthrow) (`Result<T, E>`) for explicit error propagation. Consistently applied in the entity-access layer (`src/services/*.ts`) and external API clients (`src/services/api/*.ts`); the Discord command/business-logic layer (`src/services/discord/**/*.ts`) mostly does not use it. There is no automated enforcement that `Result` values aren't ignored — `eslint-plugin-neverthrow` was tried but is unmaintained (last released 2022) and incompatible with this project's ESLint 10 / flat-config / typescript-eslint 8 setup, so it was removed.
 
 ### Path aliases
 

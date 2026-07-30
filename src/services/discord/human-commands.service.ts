@@ -5,6 +5,7 @@ import {
   SEARCH_SAVED_MESSAGES_TOOL_NAME,
 } from '@Constants/discord/human-gemini-tools.constant';
 import { REGEX_DISCORD_EMOJI, REGEX_EMOJI } from '@Constants/regex.constant';
+import { ERROR_CODE_MESSAGE_MAP } from '@Constants/error-messages.constant';
 import { DiscordChannelFeature } from '@Enums/discord/discord-channel-feature.enum';
 import { DiscordSettingKey } from '@Enums/discord/discord-setting-key.enum';
 import { Part } from '@google/genai';
@@ -229,7 +230,7 @@ export class HumanCommandsService {
     );
 
     if (isSaveMessagesFeatureEnabled) {
-      await this.discordMessageService.create({
+      const createdMessage = await this.discordMessageService.create({
         id: messageId,
         message,
         attachments: attachmentUrls,
@@ -238,6 +239,12 @@ export class HumanCommandsService {
         discordGuildId: guildId,
         createdAt: new Date(),
       });
+
+      if (createdMessage.isErr()) {
+        this.logger.error(
+          `Failed to save message ${messageId} to history: ${ERROR_CODE_MESSAGE_MAP[createdMessage.error]}`,
+        );
+      }
     }
 
     const isRandomReplyFeatureOnChannelEnabled =

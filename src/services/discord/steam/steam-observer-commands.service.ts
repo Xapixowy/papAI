@@ -198,7 +198,7 @@ export class SteamObserverCommandsService {
 
     const pending = JSON.parse(pendingRaw) as SteamPendingObserver;
 
-    await this.steamUsersService.upsert(
+    const upsertedSteamUser = await this.steamUsersService.upsert(
       new SteamUserDto({
         id: pending.steamId,
         username: pending.username,
@@ -206,6 +206,13 @@ export class SteamObserverCommandsService {
         profileUrl: pending.profileUrl,
       }),
     );
+
+    if (upsertedSteamUser.isErr()) {
+      return this.generateSimpleEmbed({
+        description: ERROR_CODE_MESSAGE_MAP[upsertedSteamUser.error],
+        variant: 'error',
+      });
+    }
 
     const gamesResult = await this.steamApiService.getOwnedGames(
       pending.steamId,

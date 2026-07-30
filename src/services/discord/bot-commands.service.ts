@@ -1,4 +1,5 @@
 import { BOT_COMMANDS_CONFIG } from '@Constants/discord/bot-commands.constant';
+import { ERROR_CODE_MESSAGE_MAP } from '@Constants/error-messages.constant';
 import { DiscordUserDto } from '@DTOs/discord-user.dto';
 import { DiscordUserRole } from '@Enums/discord/discord-user-role.enum';
 import { ErrorCode } from '@Enums/error-code.enum';
@@ -41,17 +42,29 @@ export class BotCommandsService {
       roles: [DiscordUserRole.SUPER_ADMIN],
     });
 
-    if (
-      newSuperAdminUser.isErr() &&
-      newSuperAdminUser.error === ErrorCode.DISCORD_USER_EXISTS
-    ) {
+    if (newSuperAdminUser.isErr()) {
+      if (newSuperAdminUser.error !== ErrorCode.DISCORD_USER_EXISTS) {
+        return this.generateSimpleEmbed({
+          description: ERROR_CODE_MESSAGE_MAP[newSuperAdminUser.error],
+          variant: 'error',
+        });
+      }
+
       const newSuperAdminUserDto = new DiscordUserDto({
         id: userId,
         username,
         roles: [DiscordUserRole.SUPER_ADMIN],
       });
 
-      await this.discordUsersService.update(newSuperAdminUserDto);
+      const updatedSuperAdminUser =
+        await this.discordUsersService.update(newSuperAdminUserDto);
+
+      if (updatedSuperAdminUser.isErr()) {
+        return this.generateSimpleEmbed({
+          description: ERROR_CODE_MESSAGE_MAP[updatedSuperAdminUser.error],
+          variant: 'error',
+        });
+      }
     }
 
     return this.generateSimpleEmbed({

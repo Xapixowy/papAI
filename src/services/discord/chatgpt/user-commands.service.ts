@@ -38,13 +38,20 @@ export class UserCommandsService {
         });
       }
 
-      await this.discordUsersService.update(
+      const updatedUser = await this.discordUsersService.update(
         new DiscordUserDto({
           id: existingUser.value.id,
           username,
           roles: [...existingUser.value.roles, DiscordUserRole.CHATGPT],
         }),
       );
+
+      if (updatedUser.isErr()) {
+        return this.generateSimpleEmbed({
+          description: ERROR_CODE_MESSAGE_MAP[updatedUser.error],
+          variant: 'error',
+        });
+      }
 
       return this.generateSimpleEmbed({
         description: 'User added to ChatGPT.',
@@ -102,7 +109,7 @@ export class UserCommandsService {
     const hasExistingUserOtherRoles = existingUser.value.roles.length > 1;
 
     if (hasExistingUserOtherRoles) {
-      await this.discordUsersService.update(
+      const updatedUser = await this.discordUsersService.update(
         new DiscordUserDto({
           id: existingUser.value.id,
           username,
@@ -112,13 +119,27 @@ export class UserCommandsService {
         }),
       );
 
+      if (updatedUser.isErr()) {
+        return this.generateSimpleEmbed({
+          description: ERROR_CODE_MESSAGE_MAP[updatedUser.error],
+          variant: 'error',
+        });
+      }
+
       return this.generateSimpleEmbed({
         description: 'User removed from ChatGPT.',
         variant: 'success',
       });
     }
 
-    await this.discordUsersService.deleteByUserId(userId);
+    const deletedUser = await this.discordUsersService.deleteByUserId(userId);
+
+    if (deletedUser.isErr()) {
+      return this.generateSimpleEmbed({
+        description: ERROR_CODE_MESSAGE_MAP[deletedUser.error],
+        variant: 'error',
+      });
+    }
 
     return this.generateSimpleEmbed({
       description: 'User removed from ChatGPT.',
