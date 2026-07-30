@@ -1,5 +1,9 @@
 allowBuilds:
+  '@google/genai': true
   '@nestjs/core': true
   necord: true
+  protobufjs: true
   sharp: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@google/genai@2.15.0'

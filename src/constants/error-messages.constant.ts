@@ -48,15 +48,6 @@ export const ERROR_CODE_MESSAGE_MAP: Record<ErrorCode, string> = {
     'Session expired. Run /steam observer add again.',
   [ErrorCode.STEAM_NO_CHANNELS_WITH_FEATURE]:
     'No channels with Steam feature enabled. Enable it via /channel feature.',
-  [ErrorCode.FIT_COACH_MEAL_NOT_FOUND]: 'Meal not found.',
-  [ErrorCode.FIT_COACH_MEAL_EXISTS]: 'Meal already exists.',
-  [ErrorCode.FIT_COACH_MEAL_MISSING_FIELDS]:
-    'Meal requires name, calories, protein, fat, and carbs.',
-  [ErrorCode.FIT_COACH_USER_SETTINGS_NOT_FOUND]: 'FitCoach settings not found.',
-  [ErrorCode.FIT_COACH_PENDING_MEAL_NOT_FOUND]:
-    'Meal proposal expired. Please describe your meal again.',
-  [ErrorCode.FIT_COACH_INVALID_TIMEZONE]: 'Invalid timezone.',
-  [ErrorCode.FIT_COACH_NO_MEALS_FOR_PERIOD]: 'No meals logged for this period.',
   [ErrorCode.REMINDER_NOT_FOUND]: 'Reminder not found.',
   [ErrorCode.REMINDER_INVALID_DATETIME]: "Couldn't understand that date/time.",
   [ErrorCode.REMINDER_PAST_DATETIME]: 'That date/time is in the past.',

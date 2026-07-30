@@ -1,6 +1,5 @@
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { DiscordGuildService } from '@Services/discord-guild.service';
-import { FitCoachMessageIntentHandlerService } from '@Services/discord/fit-coach/fit-coach-message-intent-handler.service';
 import { HumanMessageIntentHandlerService } from '@Services/discord/human/human-message-intent-handler.service';
 import { RemindersMessageIntentHandlerService } from '@Services/discord/reminders/reminders-message-intent-handler.service';
 import type { MessageIntentHandler } from '@Types/discord/message-intent-handler.type';
@@ -25,12 +24,11 @@ export class MessageRouterController extends BaseCommandsController {
     private readonly client: Client,
     private readonly discordGuildService: DiscordGuildService,
     remindersHandler: RemindersMessageIntentHandlerService,
-    fitCoachHandler: FitCoachMessageIntentHandlerService,
     humanHandler: HumanMessageIntentHandlerService,
   ) {
     super();
     // Ordered — first match wins. Fallback (catch-all) handlers go last.
-    this.dmHandlers = [remindersHandler, fitCoachHandler];
+    this.dmHandlers = [remindersHandler];
     this.mentionHandlers = [remindersHandler, humanHandler];
   }
 

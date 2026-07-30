@@ -1,6 +1,4 @@
-import {
-  CHANGELOG_TYPE_LABELS,
-} from '@Constants/discord/changelog-commands.constant';
+import { CHANGELOG_TYPE_LABELS } from '@Constants/discord/changelog-commands.constant';
 import { Injectable, Logger } from '@nestjs/common';
 import { EmbedBuilder } from 'discord.js';
 import { readFileSync } from 'fs';
@@ -24,7 +22,7 @@ export class ChangelogCommandsService {
   private readonly logger = new Logger(ChangelogCommandsService.name);
 
   buildChangelogEmbeds(): EmbedBuilder[] {
-    let entries: VersionEntry[] = [];
+    let entries: VersionEntry[];
 
     try {
       const raw = readFileSync(join(process.cwd(), 'changelog.json'), 'utf-8');

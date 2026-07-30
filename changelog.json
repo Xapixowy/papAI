@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-07-31",
+    "changes": [
+      { "type": "remove", "description": "FitCoach module removed — meal & nutrition tracking, DM meal logging, and related commands are gone (feature was unused)" },
+      { "type": "improve", "description": "Upgraded TypeScript, ESLint, TypeORM and other core dependencies to their latest major versions" },
+      { "type": "fix", "description": "Resolved breaking changes from the dependency upgrade — build tooling, strict-mode defaults, and a TypeORM query that stopped compiling" },
+      { "type": "fix", "description": "Fixed compiled output silently disappearing after a rebuild — a stale incremental build cache was surviving the dist cleanup step" },
+      { "type": "fix", "description": "Fixed a startup crash in settings lookup caused by TypeORM's new strict handling of undefined values in queries" }
+    ]
+  },
+  {
     "version": "0.5.5",
     "date": "2026-07-16",
     "changes": [

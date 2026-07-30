@@ -5,7 +5,7 @@ import { ErrorCode } from '@Enums/error-code.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { err, ok, Result } from 'neverthrow';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 @Injectable()
 export class DiscordSettingsService {
@@ -27,7 +27,7 @@ export class DiscordSettingsService {
     guildId?: string;
   }): Promise<Result<DiscordSetting, ErrorCode>> {
     const entity = await this.repository.findOne({
-      where: { key, discordGuildId: guildId },
+      where: { key, discordGuildId: guildId ?? IsNull() },
     });
     return entity ? ok(entity) : err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
   }

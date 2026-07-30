@@ -13,7 +13,7 @@ export class SteamUserGamesService {
   async findGameIdsBySteamUserId(steamUserId: string): Promise<number[]> {
     const entities = await this.repository.find({
       where: { steamUserId },
-      select: ['steamGameId'],
+      select: { steamGameId: true },
     });
     return entities.map((e) => e.steamGameId);
   }

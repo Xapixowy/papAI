@@ -264,7 +264,7 @@ export class ChatgptEmbedBuilderService extends EmbedBuilderService {
       debtorsTransactionSummaries.reduce((acc, t) => acc + t.amount, 0),
     );
 
-    let summaryDescription: string = '';
+    let summaryDescription: string;
     if (numberOfDebtors === 0) {
       summaryDescription = `All **${transactionSummaries.length} people** have made their payments.`;
     } else if (numberOfDebtors === 1) {

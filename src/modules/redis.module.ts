@@ -21,7 +21,7 @@ const redisProvider: Provider = {
       await redis.ping();
       return redis;
     } catch (error) {
-      throw new Error(`Could not connect to Redis: ${error}`);
+      throw new Error(`Could not connect to Redis: ${error}`, { cause: error });
     }
   },
   inject: [ConfigService],
