@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.3",
+    "date": "2026-08-10",
+    "changes": [
+      { "type": "fix", "description": "ChatGPT payment summary no longer shows the next payment as ~1 month away when the configured payment day hasn't happened yet this period — next payment date is now the nearest upcoming occurrence of that day after the last summary" }
+    ]
+  },
+  {
     "version": "0.6.2",
     "date": "2026-07-31",
     "changes": [

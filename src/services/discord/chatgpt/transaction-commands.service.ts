@@ -636,14 +636,15 @@ export class TransactionCommandsService {
       }),
     );
 
-    const nextPaymentDate = DateHelper.set(
-      DateHelper.add(fromDate ?? today, {
-        months: 1,
-      }),
-      {
-        day: paymentDate.value,
-      },
-    );
+    const paymentAnchorDate = fromDate ?? today;
+
+    let nextPaymentDate = DateHelper.set(paymentAnchorDate, {
+      day: paymentDate.value,
+    });
+
+    if (nextPaymentDate <= paymentAnchorDate) {
+      nextPaymentDate = DateHelper.add(nextPaymentDate, { months: 1 });
+    }
 
     return ok({
       transactionSummaries: newTransactionSummaries,
