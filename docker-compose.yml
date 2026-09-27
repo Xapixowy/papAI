@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - ${POSTGRES_PORT}:5432
+      - '${BIND_IP:-127.0.0.1}:${POSTGRES_PORT}:5432'
     volumes:
       - db_data:/var/lib/postgresql
     networks:
@@ -17,7 +17,7 @@ services:
   redis:
     image: redis:latest
     ports:
-      - ${REDIS_PORT}:6379
+      - '${BIND_IP:-127.0.0.1}:${REDIS_PORT}:6379'
     networks:
       - pap-ai-network
 
@@ -29,8 +29,8 @@ services:
     restart: always
     depends_on:
       - db
-    ports:
-      - '${APP_PORT}:${APP_PORT}'
+    # ports:
+    #   - "${APP_BIND_IP:-127.0.0.1}:${APP_PORT}:${APP_PORT}"
     environment:
       - TZ=${APP_TIMEZONE}
     env_file:
