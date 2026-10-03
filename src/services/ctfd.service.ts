@@ -105,7 +105,7 @@ export class CtfdService {
 
       const postRes = await axios.post(
         'https://reentry.ctfd.io/login',
-        params,
+        params.toString(),
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

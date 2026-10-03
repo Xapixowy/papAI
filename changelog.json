@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.8",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "fix", "description": "Fixed CTFd login not sending form data correctly due to URLSearchParams missing stringify" }
+    ]
+  },
+  {
     "version": "0.6.7",
     "date": "2026-10-03",
     "changes": [
