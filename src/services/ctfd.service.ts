@@ -78,6 +78,10 @@ export class CtfdService {
     try {
       // 1. Get initial session cookie and CSRF nonce
       const getRes = await axios.get('https://reentry.ctfd.io/login', {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        },
         validateStatus: (status) => status < 500,
       });
 
@@ -109,6 +113,8 @@ export class CtfdService {
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             ...(sessionCookie ? { 'Cookie': sessionCookie } : {})
           },
           maxRedirects: 0,
@@ -151,6 +157,8 @@ export class CtfdService {
         {
           headers: {
             Cookie: this.sessionCookie,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
           },
         },
       );
