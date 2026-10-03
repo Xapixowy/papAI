@@ -56,11 +56,44 @@ export class CtfdCommandsService {
 
     try {
       const cachedPlaceStr = await this.redis.get('ctfd:chromeawesome:place');
+      const cachedScoreboardStr = await this.redis.get('ctfd:chromeawesome:scoreboard');
       const cachedPlace = cachedPlaceStr ? parseInt(cachedPlaceStr, 10) : null;
+      const scoreboard = cachedScoreboardStr ? JSON.parse(cachedScoreboardStr) : null;
 
-      if (cachedPlace) {
+      if (cachedPlace && scoreboard) {
+        const ourIndex = cachedPlace - 1;
+        const score = scoreboard[ourIndex]?.score ?? 0;
+        let description = `Team **ChromeAwesome** is currently in **#${cachedPlace}** place! 🏆 (Score: **${score}**)\n\n**Competition:**\n`;
+
+        const indicesToPrint = new Set<number>();
+        for (let i = 0; i < Math.min(3, scoreboard.length); i++) indicesToPrint.add(i);
+        for (let i = Math.max(0, ourIndex - 2); i <= Math.min(scoreboard.length - 1, ourIndex + 2); i++) indicesToPrint.add(i);
+        indicesToPrint.add(scoreboard.length - 1);
+
+        const sortedIndices = Array.from(indicesToPrint).sort((a, b) => a - b);
+        
+        for (let i = 0; i < sortedIndices.length; i++) {
+           const index = sortedIndices[i];
+           const team = scoreboard[index];
+           const place = index + 1;
+           
+           if (i > 0 && sortedIndices[i - 1] < index - 1) {
+              description += `...\n`;
+           }
+           
+           let prefix = '🔻';
+           if (place === 1) prefix = '🥇';
+           else if (place === 2) prefix = '🥈';
+           else if (place === 3) prefix = '🥉';
+           else if (index === scoreboard.length - 1) prefix = '🏁';
+           
+           if (index === ourIndex) prefix = '🟢';
+           
+           description += `${prefix} **#${place}** **${team.name}** • ${team.score}\n`;
+        }
+
         embed
-          .setDescription(`Team **ChromeAwesome** is currently in **#${cachedPlace}** place! 🏆`)
+          .setDescription(description)
           .setColor('Blue');
       } else {
         embed

@@ -66,6 +66,7 @@ export class CtfdService {
       const cachedPlace = cachedPlaceStr ? parseInt(cachedPlaceStr, 10) : null;
 
       await this.redis.set('ctfd:chromeawesome:place', currentPlace.toString());
+      await this.redis.set('ctfd:chromeawesome:scoreboard', JSON.stringify(scoreboard));
 
       if (cachedPlace && cachedPlace !== currentPlace) {
         this.logger.log(
@@ -180,28 +181,32 @@ export class CtfdService {
     const ourIndex = newPlace - 1;
     let description = `**ChromeAwesome** moved from **#${oldPlace}** to **#${newPlace}**! (Score: **${score}**)\n\n**Competition:**\n`;
 
-    const startIndex = Math.max(0, ourIndex - 2);
-    const endIndex = Math.min(scoreboard.length - 1, ourIndex + 2);
+    const indicesToPrint = new Set<number>();
+    
+    for (let i = 0; i < Math.min(3, scoreboard.length); i++) indicesToPrint.add(i);
+    for (let i = Math.max(0, ourIndex - 2); i <= Math.min(scoreboard.length - 1, ourIndex + 2); i++) indicesToPrint.add(i);
+    indicesToPrint.add(scoreboard.length - 1);
 
-    for (let i = startIndex; i <= endIndex; i++) {
-      const team = scoreboard[i];
-      const place = i + 1;
-      let prefix = '🔻';
-      if (place === 1) prefix = '🥇';
-      else if (place === 2) prefix = '🥈';
-      else if (place === 3) prefix = '🥉';
-      if (i === ourIndex) prefix = '🟢';
-
-      description += `${prefix} **#${place}** **${team.name}** • ${team.score}\n`;
-    }
-
-    if (endIndex < scoreboard.length - 1) {
-      if (endIndex < scoreboard.length - 2) {
-        description += `...\n`;
-      }
-      const lastIndex = scoreboard.length - 1;
-      const lastTeam = scoreboard[lastIndex];
-      description += `🏁 **#${lastIndex + 1}** **${lastTeam.name}** • ${lastTeam.score}\n`;
+    const sortedIndices = Array.from(indicesToPrint).sort((a, b) => a - b);
+    
+    for (let i = 0; i < sortedIndices.length; i++) {
+       const index = sortedIndices[i];
+       const team = scoreboard[index];
+       const place = index + 1;
+       
+       if (i > 0 && sortedIndices[i - 1] < index - 1) {
+          description += `...\n`;
+       }
+       
+       let prefix = '🔻';
+       if (place === 1) prefix = '🥇';
+       else if (place === 2) prefix = '🥈';
+       else if (place === 3) prefix = '🥉';
+       else if (index === scoreboard.length - 1) prefix = '🏁';
+       
+       if (index === ourIndex) prefix = '🟢';
+       
+       description += `${prefix} **#${place}** **${team.name}** • ${team.score}\n`;
     }
 
     const embed = new EmbedBuilder()
