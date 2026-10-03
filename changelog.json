@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.9",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "feat", "description": "Updated CTFd scoreboard embed to show 2 teams above and below, and the last place team" }
+    ]
+  },
+  {
     "version": "0.6.8",
     "date": "2026-10-03",
     "changes": [

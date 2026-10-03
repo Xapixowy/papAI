@@ -65,14 +65,14 @@ export class CtfdService {
       const cachedPlaceStr = await this.redis.get('ctfd:chromeawesome:place');
       const cachedPlace = cachedPlaceStr ? parseInt(cachedPlaceStr, 10) : null;
 
+      await this.redis.set('ctfd:chromeawesome:place', currentPlace.toString());
+
       if (cachedPlace && cachedPlace !== currentPlace) {
         this.logger.log(
           `ChromeAwesome place changed from ${cachedPlace} to ${currentPlace}!`,
         );
-        await this.notifyPlaceChange(cachedPlace, currentPlace, ourTeam.score);
+        await this.notifyPlaceChange(cachedPlace, currentPlace, ourTeam.score, scoreboard);
       }
-
-      await this.redis.set('ctfd:chromeawesome:place', currentPlace.toString());
     } catch (error) {
       this.logger.error('Error during CTFd scoreboard check:', error);
     }
@@ -166,6 +166,7 @@ export class CtfdService {
     oldPlace: number,
     newPlace: number,
     score: number,
+    scoreboard: any[],
   ) {
     const settings = await this.discordSettingsService.findByKeyAllGuilds(
       DiscordSettingKey.CTFD_UPDATES_CHANNEL,
@@ -176,11 +177,36 @@ export class CtfdService {
       return;
     }
 
+    const ourIndex = newPlace - 1;
+    let description = `**ChromeAwesome** moved from **#${oldPlace}** to **#${newPlace}**! (Score: **${score}**)\n\n**Competition:**\n`;
+
+    const startIndex = Math.max(0, ourIndex - 2);
+    const endIndex = Math.min(scoreboard.length - 1, ourIndex + 2);
+
+    for (let i = startIndex; i <= endIndex; i++) {
+      const team = scoreboard[i];
+      const place = i + 1;
+      let prefix = '🔻';
+      if (place === 1) prefix = '🥇';
+      else if (place === 2) prefix = '🥈';
+      else if (place === 3) prefix = '🥉';
+      if (i === ourIndex) prefix = '🟢';
+
+      description += `${prefix} **#${place}** **${team.name}** • ${team.score}\n`;
+    }
+
+    if (endIndex < scoreboard.length - 1) {
+      if (endIndex < scoreboard.length - 2) {
+        description += `...\n`;
+      }
+      const lastIndex = scoreboard.length - 1;
+      const lastTeam = scoreboard[lastIndex];
+      description += `🏁 **#${lastIndex + 1}** **${lastTeam.name}** • ${lastTeam.score}\n`;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle('CTFd Scoreboard Update! 🏆')
-      .setDescription(
-        `**ChromeAwesome** has changed place!\n\nOld Place: **#${oldPlace}**\nNew Place: **#${newPlace}**\nScore: **${score}**`,
-      )
+      .setDescription(description)
       .setColor(newPlace < oldPlace ? 'Green' : 'Red')
       .setTimestamp();
 
