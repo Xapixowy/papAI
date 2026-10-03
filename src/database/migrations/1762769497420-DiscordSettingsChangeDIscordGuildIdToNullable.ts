@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DiscordSettingsChangeDIscordGuildIdToNullable1762769497420
-  implements MigrationInterface
-{
+export class DiscordSettingsChangeDIscordGuildIdToNullable1762769497420 implements MigrationInterface {
   name = 'DiscordSettingsChangeDIscordGuildIdToNullable1762769497420';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

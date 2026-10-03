@@ -32,6 +32,10 @@ export class DiscordSettingsService {
     return entity ? ok(entity) : err(ErrorCode.DISCORD_SETTING_NOT_FOUND);
   }
 
+  async findByKeyAllGuilds(key: DiscordSettingKey): Promise<DiscordSetting[]> {
+    return this.repository.find({ where: { key } });
+  }
+
   async getValueByKey<T = unknown>({
     key,
     guildId,

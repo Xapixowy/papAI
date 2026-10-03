@@ -13,8 +13,7 @@ export type CommandConfigGroup<T extends CommandConfig> = {
 };
 
 type CommandConfig =
-  | CommandConfigGroup<CommandConfigCommand>
-  | CommandConfigCommand;
+  CommandConfigGroup<CommandConfigCommand> | CommandConfigCommand;
 
 export type CommandConfigParentGroup<T extends CommandConfig> =
   CommandConfigGroup<T> & {

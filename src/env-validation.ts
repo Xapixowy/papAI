@@ -19,6 +19,8 @@ const envSchema = z.object({
   [EnvKey.REDIS_HOST]: z.string(),
   [EnvKey.REDIS_PORT]: z.coerce.number().int().positive(),
   [EnvKey.STEAM_API_KEY]: z.string(),
+  [EnvKey.CTFD_USERNAME]: z.string().optional(),
+  [EnvKey.CTFD_PASSWORD]: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

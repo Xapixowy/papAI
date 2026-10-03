@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.4",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "feat", "description": "CTFd integration — new scoreboard place change notifications" }
+    ]
+  },
+  {
     "version": "0.6.3",
     "date": "2026-08-10",
     "changes": [

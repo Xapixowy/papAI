@@ -1,6 +1,6 @@
 {
   "name": "pap-ai",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "NestJS Discord bot backed by PostgreSQL and Redis, with Gemini AI-driven features.",
   "author": "Xapixowy <xapixowy@gmail.com>",
   "private": true,

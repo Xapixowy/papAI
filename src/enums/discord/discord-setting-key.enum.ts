@@ -8,4 +8,5 @@ export enum DiscordSettingKey {
   HUMAN_SYSTEM_PROMPT = 'human_system_prompt',
   HUMAN_RANDOM_REPLY_PERCENTAGE = 'human_random_reply_percentage',
   HUMAN_CONTEXT_SIZE = 'human_context_size',
+  CTFD_UPDATES_CHANNEL = 'ctfd_updates_channel',
 }

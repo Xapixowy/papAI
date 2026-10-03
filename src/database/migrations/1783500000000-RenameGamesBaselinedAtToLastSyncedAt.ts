@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RenameGamesBaselinedAtToLastSyncedAt1783500000000
-  implements MigrationInterface
-{
+export class RenameGamesBaselinedAtToLastSyncedAt1783500000000 implements MigrationInterface {
   name = 'RenameGamesBaselinedAtToLastSyncedAt1783500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

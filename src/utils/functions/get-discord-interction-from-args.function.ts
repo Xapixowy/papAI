@@ -21,9 +21,7 @@ export const getDiscordInteractionFromArgs = (
   }
 
   const commandContext = args[0] as
-    | SlashCommandContext
-    | StringSelectContext
-    | ButtonContext;
+    SlashCommandContext | StringSelectContext | ButtonContext;
 
   const interaction = commandContext.find(
     (arg) =>

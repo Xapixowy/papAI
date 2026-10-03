@@ -1,6 +1,7 @@
 import { EnvKey } from '@Enums/env-key.enum';
 import { DiscordModule } from '@Modules/discord.module';
 import { RedisModule } from '@Modules/redis.module';
+import { CtfdModule } from '@Modules/ctfd.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -37,6 +38,7 @@ import { validateEnv } from './env-validation';
     ScheduleModule.forRoot(),
     RedisModule,
     DiscordModule,
+    CtfdModule,
   ],
   controllers: [],
   providers: [],

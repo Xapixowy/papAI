@@ -7,9 +7,7 @@ import { startTypingInterval } from '@Utils/functions/send-typing-interval.funct
 import { Message, TextChannel } from 'discord.js';
 
 @Injectable()
-export class RemindersMessageIntentHandlerService
-  implements MessageIntentHandler
-{
+export class RemindersMessageIntentHandlerService implements MessageIntentHandler {
   readonly name = 'reminders';
   readonly requiredGuildFeature = DiscordFeature.REMINDERS;
 

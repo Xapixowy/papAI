@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DeleteDiscordMessageChannelRelation1762979223733
-  implements MigrationInterface
-{
+export class DeleteDiscordMessageChannelRelation1762979223733 implements MigrationInterface {
   name = 'DeleteDiscordMessageChannelRelation1762979223733';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

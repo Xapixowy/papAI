@@ -3,9 +3,7 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { CommandsService } from 'necord';
 
 @Injectable()
-export class RemindersCommandRegistrationService
-  implements OnApplicationBootstrap
-{
+export class RemindersCommandRegistrationService implements OnApplicationBootstrap {
   constructor(private readonly commandsService: CommandsService) {}
 
   onApplicationBootstrap(): void {

@@ -15,6 +15,7 @@ import { HumanCommandsModule } from './discord/human-commands.module';
 import { SteamCommandsModule } from './discord/steam-commands.module';
 import { RemindersCommandsModule } from './discord/reminders-commands.module';
 import { MessageRouterModule } from './discord/message-router.module';
+import { CtfdCommandsModule } from './discord/ctfd-commands.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { MessageRouterModule } from './discord/message-router.module';
     SteamCommandsModule,
     RemindersCommandsModule,
     MessageRouterModule,
+    CtfdCommandsModule,
   ],
 })
 export class DiscordModule extends BaseCommandsModule {
@@ -60,6 +62,7 @@ export class DiscordModule extends BaseCommandsModule {
       ...SteamCommandsModule.botIntents,
       ...RemindersCommandsModule.botIntents,
       ...MessageRouterModule.botIntents,
+      ...CtfdCommandsModule.botIntents,
     ];
   }
 }
