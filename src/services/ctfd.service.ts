@@ -23,6 +23,10 @@ export class CtfdService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async checkScoreboard() {
+    const lock = await this.redis.set('ctfd:cron:lock', 'locked', 'EX', 30, 'NX');
+    if (!lock) {
+      return;
+    }
     const username = this.configService.get<string>(EnvKey.CTFD_USERNAME);
     const password = this.configService.get<string>(EnvKey.CTFD_PASSWORD);
 
@@ -215,8 +219,9 @@ export class CtfdService {
       .setColor(newPlace < oldPlace ? 'Green' : 'Red')
       .setTimestamp();
 
-    for (const setting of settings) {
-      const channelId = setting.value as string;
+    const channelIds = [...new Set(settings.map(s => s.value as string))];
+
+    for (const channelId of channelIds) {
       try {
         const channel = await this.client.channels.fetch(channelId);
         if (channel && channel instanceof TextChannel) {

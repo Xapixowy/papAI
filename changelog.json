@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.11",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "fix", "description": "Fixed CTFd place change notifications being sent multiple times due to concurrent cron job executions and duplicate channel settings" }
+    ]
+  },
+  {
     "version": "0.6.10",
     "date": "2026-10-03",
     "changes": [
