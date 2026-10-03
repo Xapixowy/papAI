@@ -76,27 +76,63 @@ export class CtfdService {
 
   private async login(name: string, password: string): Promise<void> {
     try {
-      const response = await axios.post(
-        'https://reentry.ctfd.io/api/v1/login',
-        { name, password },
+      // 1. Get initial session cookie and CSRF nonce
+      const getRes = await axios.get('https://reentry.ctfd.io/login', {
+        validateStatus: (status) => status < 500,
+      });
+
+      const initialCookieHeader = getRes.headers['set-cookie'];
+      let sessionCookie = '';
+      if (initialCookieHeader && initialCookieHeader.length > 0) {
+        const sessionMatch = initialCookieHeader.find((c: string) => c.startsWith('session='));
+        if (sessionMatch) {
+          sessionCookie = sessionMatch.split(';')[0];
+        }
+      }
+
+      const nonceMatch = getRes.data?.match(/<input[^>]*name="nonce"[^>]*value="([^"]+)"/);
+      if (!nonceMatch) {
+        this.logger.error('Failed to extract CSRF nonce from login page.');
+        return;
+      }
+      const nonce = nonceMatch[1];
+
+      // 2. Post login form
+      const params = new URLSearchParams();
+      params.append('name', name);
+      params.append('password', password);
+      params.append('nonce', nonce);
+
+      const postRes = await axios.post(
+        'https://reentry.ctfd.io/login',
+        params,
         {
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            ...(sessionCookie ? { 'Cookie': sessionCookie } : {})
           },
-          validateStatus: (status) => status < 500,
+          maxRedirects: 0,
+          validateStatus: (status) => status >= 200 && status < 400,
         },
       );
 
-      const setCookieHeader = response.headers['set-cookie'];
+      const setCookieHeader = postRes.headers['set-cookie'];
       if (setCookieHeader && setCookieHeader.length > 0) {
-        // Extract session cookie
-        const session = setCookieHeader.find((c) => c.startsWith('session='));
+        const session = setCookieHeader.find((c: string) => c.startsWith('session='));
         if (session) {
           this.sessionCookie = session.split(';')[0];
           this.logger.log('Successfully authenticated to CTFd.');
           return;
         }
       }
+      
+      // If no new cookie but 302, maybe the old cookie got upgraded? Let's save it.
+      if (postRes.status === 302 && sessionCookie) {
+         this.sessionCookie = sessionCookie;
+         this.logger.log('Successfully authenticated to CTFd (reused cookie).');
+         return;
+      }
+
       this.logger.error(
         'Failed to extract session cookie from login response.',
       );
