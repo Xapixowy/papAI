@@ -18,5 +18,10 @@ export const CTFD_COMMANDS_CONFIG: CommandConfigParentGroup<CommandConfigCommand
         description: 'Sets the channel for CTFd place updates.',
         userRoles: [DiscordUserRole.SUPER_ADMIN],
       },
+      check_place: {
+        name: 'check_place',
+        description: 'Checks the current place of team ChromeAwesome in CTFd.',
+        userRoles: [],
+      },
     },
   };

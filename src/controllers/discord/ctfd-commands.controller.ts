@@ -20,6 +20,7 @@ export const CtfdCommandDecorator = createCommandGroupDecorator({
 });
 
 const SET_CHANNEL_CONFIG = CTFD_COMMANDS_CONFIG.commands.set_channel;
+const CHECK_PLACE_CONFIG = CTFD_COMMANDS_CONFIG.commands.check_place;
 
 @Injectable()
 @UseGuards(DiscordUserRoleGuard)
@@ -54,6 +55,17 @@ export class CtfdCommandsController extends BaseCommandsController {
 
     await interaction.reply({
       flags: [MessageFlags.Ephemeral],
+      embeds,
+    });
+  }
+
+  @Subcommand(CHECK_PLACE_CONFIG)
+  public async onCheckPlaceCommand(
+    @Context() [interaction]: SlashCommandContext,
+  ): Promise<void> {
+    const embeds = await this.ctfdCommandsService.checkPlaceHandler();
+
+    await interaction.reply({
       embeds,
     });
   }
