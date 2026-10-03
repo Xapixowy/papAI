@@ -36,13 +36,17 @@ export class CtfdService {
         await this.login(username, password);
       }
 
-      let scoreboard = await this.fetchScoreboard();
-
-      // If we get unauthorized or error, try relogging once
-      if (!scoreboard) {
-        this.logger.log('Scoreboard fetch failed, attempting re-login');
-        await this.login(username, password);
+      let scoreboard: any[] | null = null;
+      try {
         scoreboard = await this.fetchScoreboard();
+      } catch (error: any) {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          this.logger.log('Scoreboard fetch unauthorized, attempting re-login');
+          await this.login(username, password);
+          scoreboard = await this.fetchScoreboard();
+        } else {
+          throw error;
+        }
       }
 
       if (!scoreboard) {
@@ -78,10 +82,6 @@ export class CtfdService {
     try {
       // 1. Get initial session cookie and CSRF nonce
       const getRes = await axios.get('https://reentry.ctfd.io/login', {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        },
         validateStatus: (status) => status < 500,
       });
 
@@ -113,8 +113,6 @@ export class CtfdService {
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             ...(sessionCookie ? { 'Cookie': sessionCookie } : {})
           },
           maxRedirects: 0,
@@ -148,28 +146,20 @@ export class CtfdService {
     }
   }
 
-  private async fetchScoreboard(): Promise<any[] | null> {
-    if (!this.sessionCookie) return null;
-
-    try {
-      const response = await axios.get(
-        'https://reentry.ctfd.io/api/v1/scoreboard',
-        {
-          headers: {
-            Cookie: this.sessionCookie,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
-          },
-        },
-      );
-      return response.data?.data;
-    } catch (error: any) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        return null;
-      }
-      this.logger.error('Error fetching CTFd scoreboard:', error);
-      return null;
+  private async fetchScoreboard(): Promise<any[]> {
+    if (!this.sessionCookie) {
+       throw { response: { status: 401 } };
     }
+
+    const response = await axios.get(
+      'https://reentry.ctfd.io/api/v1/scoreboard',
+      {
+        headers: {
+          Cookie: this.sessionCookie,
+        },
+      },
+    );
+    return response.data?.data;
   }
 
   private async notifyPlaceChange(
