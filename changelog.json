@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.5",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "fix", "description": "Fixed missing DiscordUsersService dependency in CtfdCommandsModule" }
+    ]
+  },
+  {
     "version": "0.6.4",
     "date": "2026-10-03",
     "changes": [
