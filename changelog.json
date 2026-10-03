@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.6.6",
+    "date": "2026-10-03",
+    "changes": [
+      { "type": "fix", "description": "Fixed CtfdCommandsController being incorrectly registered as a web controller instead of a Discord command provider" }
+    ]
+  },
+  {
     "version": "0.6.5",
     "date": "2026-10-03",
     "changes": [
