@@ -27,6 +27,7 @@ import {
 } from '@Services/wow/wow-store.service';
 import {
   characterChanges,
+  characterDifferences,
   forumSignals,
   realmChanges,
 } from '@Services/wow/wow-signals';
@@ -221,7 +222,10 @@ export class WowMonitorService implements OnApplicationBootstrap {
                     Date.parse(before.sourceUpdatedAt)
                 )
                   return { snapshot: before, messages: [] };
-                const changes = before ? characterChanges(before, after) : [];
+                const changes =
+                  before && characterChanges(before, after).length
+                    ? characterDifferences(before, after)
+                    : [];
                 // Keep the last unambiguous tree through a tie or an empty reset.
                 const snapshot = {
                   ...after,
