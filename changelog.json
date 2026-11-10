@@ -1,5 +1,25 @@
 [
   {
+    "version": "0.7.1",
+    "date": "2026-11-10",
+    "changes": [
+      { "type": "improve", "description": "WoW observer creation now asks only for a character name, previews the profile for confirmation, then offers a dropdown of registered channels with character observation enabled" },
+      { "type": "fix", "description": "WoW observation channel selection checks permissions and feature availability again before saving, including when a channel is disabled after opening the menu" },
+      { "type": "improve", "description": "/wow character without a name now lets you select a character observed in the current channel; named lookups and the ephemeral option remain available" },
+      { "type": "improve", "description": "Removed stats from WoW character cards and translated all WoW responses, field labels, notifications and errors into English" }
+    ]
+  },
+  {
+    "version": "0.7.0",
+    "date": "2026-11-10",
+    "changes": [
+      { "type": "feat", "description": "WoW Forever EU integration — check realm status on demand or monitor all EU realm types every 5 minutes, with change notifications sent to a server-configured channel" },
+      { "type": "feat", "description": "Monitor forum reports of login and connection problems alongside official realm status, with separate community-report notifications" },
+      { "type": "feat", "description": "Look up character profiles and manage personal character observations in channels enabled by bot administrators; administrators can manage all observations on their server" },
+      { "type": "feat", "description": "Check observed characters every 15 minutes and notify about level gains, guild changes and specialization changes; initial setup and manual checks do not post automatic channel notifications" }
+    ]
+  },
+  {
     "version": "0.6.3",
     "date": "2026-08-10",
     "changes": [
