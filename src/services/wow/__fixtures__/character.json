@@ -1,0 +1,639 @@
+{
+  "character": {
+    "name": "Judgement",
+    "surname": "Judy",
+    "slug": "judgement-judy",
+    "level": 25,
+    "region": "eu",
+    "guild": {
+      "faction": {
+        "id": 0,
+        "name": "Alliance",
+        "enum": "ALLIANCE",
+        "slug": "alliance"
+      },
+      "name": "Circle of Lore",
+      "region": "eu",
+      "slug": "circle-of-lore"
+    },
+    "faction": {
+      "id": 0,
+      "name": "Alliance",
+      "enum": "ALLIANCE",
+      "slug": "alliance"
+    },
+    "race": {
+      "id": 1,
+      "name": "Human",
+      "enum": "HUMAN",
+      "slug": "human"
+    },
+    "class": {
+      "id": 2,
+      "name": "Paladin",
+      "enum": "PALADIN",
+      "slug": "paladin"
+    },
+    "ruleset": {
+      "name": "Normal",
+      "rulesetId": 2,
+      "slug": "normal"
+    },
+    "specs": [
+      {
+        "id": "holy",
+        "name": "Holy",
+        "spentPoints": 4
+      },
+      {
+        "id": "retribution",
+        "name": "Retribution",
+        "spentPoints": 12
+      }
+    ],
+    "stats": {
+      "groups": [
+        {
+          "name": "General",
+          "stats": [
+            {
+              "enum": "HEALTH",
+              "slug": "health",
+              "value": {
+                "type": "WHOLE",
+                "value": 786
+              }
+            },
+            {
+              "enum": "MANA",
+              "slug": "mana",
+              "value": {
+                "type": "WHOLE",
+                "value": 932
+              }
+            },
+            {
+              "enum": "ITEMLEVEL",
+              "slug": "item-level",
+              "value": {
+                "type": "WHOLE",
+                "value": 17
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "MOVEMENTSPEED",
+              "slug": "movement-speed",
+              "value": {
+                "type": "DECIMAL",
+                "value": 0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attributes",
+          "stats": [
+            {
+              "details": {
+                "base": {
+                  "type": "WHOLE",
+                  "value": 48
+                },
+                "bonus": {
+                  "type": "WHOLE",
+                  "value": 35
+                },
+                "effective": {
+                  "type": "WHOLE",
+                  "value": 83
+                },
+                "rating": {
+                  "type": "WHOLE",
+                  "value": 83
+                },
+                "type": "ENHANCED"
+              },
+              "enum": "STRENGTH",
+              "slug": "strength",
+              "value": {
+                "type": "WHOLE",
+                "value": 83
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "WHOLE",
+                  "value": 34
+                },
+                "bonus": {
+                  "type": "WHOLE",
+                  "value": 8
+                },
+                "effective": {
+                  "type": "WHOLE",
+                  "value": 42
+                },
+                "rating": {
+                  "type": "WHOLE",
+                  "value": 42
+                },
+                "type": "ENHANCED"
+              },
+              "enum": "AGILITY",
+              "slug": "agility",
+              "value": {
+                "type": "WHOLE",
+                "value": 42
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "WHOLE",
+                  "value": 36
+                },
+                "bonus": {
+                  "type": "WHOLE",
+                  "value": 8
+                },
+                "effective": {
+                  "type": "WHOLE",
+                  "value": 44
+                },
+                "rating": {
+                  "type": "WHOLE",
+                  "value": 44
+                },
+                "type": "ENHANCED"
+              },
+              "enum": "INTELLECT",
+              "slug": "intellect",
+              "value": {
+                "type": "WHOLE",
+                "value": 44
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "WHOLE",
+                  "value": 47
+                },
+                "bonus": {
+                  "type": "WHOLE",
+                  "value": 23
+                },
+                "effective": {
+                  "type": "WHOLE",
+                  "value": 70
+                },
+                "rating": {
+                  "type": "WHOLE",
+                  "value": 70
+                },
+                "type": "ENHANCED"
+              },
+              "enum": "STAMINA",
+              "slug": "stamina",
+              "value": {
+                "type": "WHOLE",
+                "value": 70
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enhancements",
+          "stats": [
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "CRITICALSTRIKE",
+              "slug": "critical-strike",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 5.415
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "HASTE",
+              "slug": "haste",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 0
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "MASTERY",
+              "slug": "mastery",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 0
+              }
+            },
+            {
+              "enum": "BONUSARMOR",
+              "slug": "bonus-armor",
+              "value": {
+                "type": "WHOLE",
+                "value": 0
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "LEECH",
+              "slug": "leech",
+              "value": {
+                "type": "DECIMAL"
+              }
+            },
+            {
+              "enum": "VERSATILITY",
+              "slug": "versatility",
+              "value": {
+                "type": "WHOLE",
+                "value": 0
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "AVOIDANCE",
+              "slug": "avoidance",
+              "value": {
+                "type": "DECIMAL",
+                "value": 0
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attack",
+          "stats": [
+            {
+              "enum": "DAMAGE",
+              "slug": "damage",
+              "value": {
+                "max": {
+                  "type": "WHOLE",
+                  "value": 150.42857
+                },
+                "min": {
+                  "type": "WHOLE",
+                  "value": 116.42857
+                },
+                "type": "RANGE"
+              }
+            },
+            {
+              "enum": "ATTACKPOWER",
+              "slug": "attack-power",
+              "value": {
+                "type": "WHOLE",
+                "value": 225
+              }
+            },
+            {
+              "enum": "ATTACKSPEED",
+              "slug": "attack-speed",
+              "value": {
+                "type": "DECIMAL",
+                "value": 2
+              }
+            },
+            {
+              "enum": "ATTACKDPS",
+              "slug": "attack-dps",
+              "value": {
+                "type": "DECIMAL",
+                "value": 41.69643
+              }
+            }
+          ]
+        },
+        {
+          "name": "Spell",
+          "stats": [
+            {
+              "enum": "SPELLPOWER",
+              "slug": "spell-power",
+              "value": {
+                "type": "WHOLE",
+                "value": 5
+              }
+            },
+            {
+              "enum": "MANAREGEN",
+              "slug": "mana-regen",
+              "value": {
+                "type": "DECIMAL",
+                "value": 70
+              }
+            }
+          ]
+        },
+        {
+          "name": "Defense",
+          "stats": [
+            {
+              "details": {
+                "base": {
+                  "type": "WHOLE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "WHOLE",
+                  "value": 978
+                },
+                "effective": {
+                  "type": "WHOLE",
+                  "value": 978
+                },
+                "rating": {
+                  "type": "WHOLE",
+                  "value": 978
+                },
+                "type": "ENHANCED"
+              },
+              "enum": "ARMOR",
+              "slug": "armor",
+              "value": {
+                "type": "WHOLE",
+                "value": 978
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "DODGE",
+              "slug": "dodge",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 5.015
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "PARRY",
+              "slug": "parry",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 4.8
+              }
+            },
+            {
+              "details": {
+                "base": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "bonus": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "effective": {
+                  "type": "PERCENTAGE",
+                  "value": 0
+                },
+                "rating": {
+                  "type": "DECIMAL",
+                  "value": 0
+                },
+                "type": "RATED"
+              },
+              "enum": "BLOCK",
+              "slug": "block",
+              "value": {
+                "type": "PERCENTAGE",
+                "value": 4.8
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "professions": {
+      "primaries": [
+        {
+          "name": "Mining",
+          "tiers": [
+            {
+              "id": 2946,
+              "maxSkillPoints": 150,
+              "name": "Mining",
+              "skillPoints": 116
+            }
+          ]
+        },
+        {
+          "name": "Blacksmithing",
+          "tiers": [
+            {
+              "id": 2938,
+              "maxSkillPoints": 150,
+              "name": "Blacksmithing",
+              "skillPoints": 113
+            }
+          ]
+        }
+      ],
+      "secondaries": [
+        {
+          "name": "Cooking",
+          "tiers": [
+            {
+              "id": 2939,
+              "maxSkillPoints": 150,
+              "name": "Cooking",
+              "skillPoints": 74
+            }
+          ]
+        },
+        {
+          "name": "Fishing",
+          "tiers": [
+            {
+              "id": 2943,
+              "maxSkillPoints": 75,
+              "name": "Fishing",
+              "skillPoints": 75
+            }
+          ]
+        },
+        {
+          "name": "First Aid",
+          "tiers": [
+            {
+              "id": 2942,
+              "maxSkillPoints": 150,
+              "name": "First Aid",
+              "skillPoints": 66
+            }
+          ]
+        }
+      ]
+    },
+    "pvp": {
+      "honorableKills": {
+        "tier": 0,
+        "value": 0
+      },
+      "rank": {
+        "value": 0
+      },
+      "region": "eu"
+    },
+    "lastUpdatedTimestamp": {
+      "epoch": 1794245469000,
+      "iso8601": "2026-11-09T17:31:09Z"
+    },
+    "avatar": {
+      "url": "https://render.worldofwarcraft.com/forever-eu/character/20/3889172-avatar.jpg"
+    }
+  }
+}

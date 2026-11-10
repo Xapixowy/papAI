@@ -55,6 +55,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^10.0.1",
+    "@jest/globals": "30.4.1",
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.28",
@@ -93,6 +94,26 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@Configs/(.*)$": "<rootDir>/configs/$1",
+      "^@Constants/(.*)$": "<rootDir>/constants/$1",
+      "^@Controllers/(.*)$": "<rootDir>/controllers/$1",
+      "^@Database/(.*)$": "<rootDir>/database/$1",
+      "^@Decorators/(.*)$": "<rootDir>/decorators/$1",
+      "^@DTOs/(.*)$": "<rootDir>/dtos/$1",
+      "^@Entities/(.*)$": "<rootDir>/database/entities/$1",
+      "^@Enums/(.*)$": "<rootDir>/enums/$1",
+      "^@Exceptions/(.*)$": "<rootDir>/exceptions/$1",
+      "^@Filters/(.*)$": "<rootDir>/filters/$1",
+      "^@Guards/(.*)$": "<rootDir>/guards/$1",
+      "^@Models/(.*)$": "<rootDir>/models/$1",
+      "^@Modules/(.*)$": "<rootDir>/modules/$1",
+      "^@DiscordBot/(.*)$": "<rootDir>/modules/discord_bot/$1",
+      "^@Options/(.*)$": "<rootDir>/options/$1",
+      "^@Services/(.*)$": "<rootDir>/services/$1",
+      "^@Types/(.*)$": "<rootDir>/types/$1",
+      "^@Utils/(.*)$": "<rootDir>/utils/$1"
+    }
   }
 }

@@ -7,6 +7,7 @@ export const CHANNEL_FEATURE_DEFAULTS: Record<DiscordChannelFeature, boolean> =
     [DiscordChannelFeature.HUMAN_RANDOM_REPLY]: true,
     [DiscordChannelFeature.GOOD_MORNING_MESSAGES]: false,
     [DiscordChannelFeature.STEAM]: false,
+    [DiscordChannelFeature.WOW_FOREVER]: false,
   };
 
 type GLOBAL_SETTINGS =
