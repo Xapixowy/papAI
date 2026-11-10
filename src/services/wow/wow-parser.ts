@@ -38,13 +38,15 @@ const characterSchema = z.object({
     race: label,
     class: label,
     ruleset: label,
-    specs: z.array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        spentPoints: z.number().int().nonnegative(),
-      }),
-    ),
+    specs: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          spentPoints: z.number().int().nonnegative(),
+        }),
+      )
+      .default([]),
     stats: z.object({
       groups: z.array(z.object({ name: z.string(), stats: z.array(stat) })),
     }),
