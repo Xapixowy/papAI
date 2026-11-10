@@ -70,6 +70,7 @@ export class WowSourceError extends Error {
     message: string,
     public readonly notFound = false,
     cause?: unknown,
+    public readonly context?: string,
   ) {
     super(message, { cause });
     this.name = 'WowSourceError';

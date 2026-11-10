@@ -152,6 +152,7 @@ export class WowForumService {
         'The EU forum is unavailable or returned incomplete data.',
         false,
         error,
+        'source=eu-forum',
       );
     } finally {
       clearTimeout(timeout);

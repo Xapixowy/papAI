@@ -23,6 +23,7 @@ export class WowSourceService {
   character(input: string): Promise<WowCharacter> {
     const slug = characterSlug(input);
     return this.once(`character:${slug}`, async () => {
+      let stage = 'request';
       try {
         const response = await firstValueFrom(
           this.http.get<string>(
@@ -30,17 +31,30 @@ export class WowSourceService {
             { responseType: 'text', maxRedirects: 0 },
           ),
         );
+        stage = 'parse';
         return parseCharacterHtml(response.data, slug);
       } catch (error) {
-        if (error instanceof WowSourceError) throw error;
+        const context = `source=armory character=${slug} stage=${stage}`;
+        if (error instanceof WowSourceError)
+          throw new WowSourceError(
+            error.message,
+            error.notFound,
+            error,
+            context,
+          );
         if (isAxiosError(error) && error.response?.status === 404) {
           throw new WowSourceError(
             'No EU Armory profile found. Characters must be at least level 10; try again once the profile is available.',
             true,
+            error,
+            context,
           );
         }
         throw new WowSourceError(
           'Armory is temporarily unavailable. Please try again later.',
+          false,
+          error,
+          context,
         );
       }
     });
@@ -48,6 +62,7 @@ export class WowSourceService {
 
   realms(): Promise<WowRealm[]> {
     return this.once('realms', async () => {
+      let stage = 'request';
       try {
         const response = await firstValueFrom(
           this.http.post<unknown>(
@@ -76,11 +91,22 @@ export class WowSourceService {
             },
           ),
         );
+        stage = 'parse';
         return parseRealmStatus(response.data);
       } catch (error) {
-        if (error instanceof WowSourceError) throw error;
+        const context = `source=realm-status region=eu stage=${stage}`;
+        if (error instanceof WowSourceError)
+          throw new WowSourceError(
+            error.message,
+            error.notFound,
+            error,
+            context,
+          );
         throw new WowSourceError(
           'Official EU realm status is temporarily unavailable.',
+          false,
+          error,
+          context,
         );
       }
     });

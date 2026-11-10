@@ -10,6 +10,7 @@ import { WowNotification } from '@Database/entities/wow-notification.entity';
 import { WowMonitorState } from '@Database/entities/wow-monitor-state.entity';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { CronjobName } from '@Enums/cronjob-name.enum';
+import { wowErrorDetails } from '@Services/wow/wow-error-details';
 import {
   WowCharacter,
   WowForumSnapshot,
@@ -268,7 +269,9 @@ export class WowMonitorService implements OnApplicationBootstrap {
             ),
           );
         }
-        this.logger.warn(`Source read failed: ${key}`);
+        this.logger.warn(
+          `Source read failed: ${key}; ${wowErrorDetails(result.reason)}`,
+        );
         return;
       }
       const interrupted = state.failures > 0;
@@ -341,7 +344,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
               enforceNonce: true,
             });
             await repository.update(n.id, { sentAt: new Date() });
-          } catch {
+          } catch (error) {
             await repository.update(n.id, {
               attempts: n.attempts + 1,
               nextAttemptAt: new Date(
@@ -350,7 +353,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
               ),
             });
             this.logger.warn(
-              `Notification delivery failed: ${n.id}; queued for retry`,
+              `Notification delivery failed: ${n.id}; channel=${n.channelId}; queued for retry; ${wowErrorDetails(error)}`,
             );
           }
         }
