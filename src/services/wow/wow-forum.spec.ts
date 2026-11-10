@@ -123,6 +123,6 @@ describe('Public forum reads', () => {
     });
     await expect(
       new WowForumService(new HttpService(adapter)).read(),
-    ).rejects.toThrow('niekompletne');
+    ).rejects.toThrow('incomplete');
   });
 });

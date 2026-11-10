@@ -49,6 +49,14 @@ describe('WoW command contract', () => {
     const character = root.getSubcommand('character');
     const options = character.getOptions() as { name: string }[];
     expect(options.map((o) => o.name)).toEqual(['character', 'ephemeral']);
+    expect(character.getRawOptions().character.required).toBe(false);
+    const addOptions = root
+      .getSubcommand('observer')
+      .getSubcommand('add')
+      .getOptions() as { name: string; required?: boolean }[];
+    expect(
+      addOptions.map((o) => ({ name: o.name, required: o.required })),
+    ).toEqual([{ name: 'character', required: true }]);
     expect(
       root
         .getSubcommand('observer')

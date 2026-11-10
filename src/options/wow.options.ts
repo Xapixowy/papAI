@@ -6,10 +6,10 @@ export class WowCharacterOption extends EphemeralOption {
   @StringOption({
     name: 'character',
     description: 'Name Surname or a Forever EU Armory profile URL',
-    required: true,
+    required: false,
     max_length: 300,
   })
-  character: string;
+  character: string | null;
 }
 
 export class WowAddObserverOption {
@@ -20,14 +20,6 @@ export class WowAddObserverOption {
     max_length: 300,
   })
   character: string;
-
-  @ChannelOption({
-    name: 'channel',
-    description: 'A channel allowed for character notifications',
-    required: true,
-    channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
-  })
-  channel: GuildChannel;
 }
 
 export class WowRemoveObserverOption {

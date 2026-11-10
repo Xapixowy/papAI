@@ -116,9 +116,9 @@ describe('WoW Forever data and notification semantics', () => {
     after.guild = null;
     after.specialization = 'holy';
     expect(characterChanges(before, after)).toEqual([
-      'Poziom: **25 → 28**',
-      'Gildia: **Circle of Lore → brak**',
-      'Specjalizacja: **Retribution → Holy**',
+      'Level: **25 → 28**',
+      'Guild: **Circle of Lore → None**',
+      'Specialization: **Retribution → Holy**',
     ]);
     after.sourceUpdatedAt = '2026-11-08T00:00:00Z';
     expect(characterChanges(before, after)).toEqual([]);

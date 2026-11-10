@@ -37,48 +37,41 @@ export class WowEmbedService extends EmbedBuilderService {
       .setTitle(fit(c.name, 256))
       .setURL(c.url)
       .addFields(
-        { name: 'Poziom', value: String(c.level), inline: true },
-        { name: 'Gildia', value: fit(text(c.guild ?? 'Brak')), inline: true },
+        { name: 'Level', value: String(c.level), inline: true },
+        { name: 'Guild', value: fit(text(c.guild ?? 'None')), inline: true },
         {
-          name: 'Postać',
+          name: 'Character',
           value: fit(
             `${text(c.race)} · ${text(c.class)} · ${text(c.faction)}\nEU · ${text(c.ruleset)}`,
           ),
           inline: false,
         },
         {
-          name: 'Specjalizacja / talenty',
+          name: 'Specialization / talents',
           value: fit(
             c.talents
               .map(
                 (s) =>
                   `${text(s.name)}: **${s.points}**${s.id === c.specialization ? ' ★' : ''}`,
               )
-              .join(' · ') || 'Brak rozłożonych talentów',
+              .join(' · ') || 'No talent points assigned',
           ),
         },
         {
-          name: 'Statystyki',
-          value: fit(
-            c.stats.map((s) => `${text(s.name)}: **${s.value}**`).join(' · ') ||
-              'Brak danych',
-          ),
-        },
-        {
-          name: 'Profesje',
+          name: 'Professions',
           value: fit(
             c.professions
               .map((p) => `${text(p.name)}: **${p.points}/${p.max}**`)
-              .join('\n') || 'Brak profesji',
+              .join('\n') || 'No professions',
           ),
         },
         {
           name: 'PvP',
-          value: `Ranga: **${c.pvp.rank ?? 'brak danych'}**\nHonorowe zabójstwa: **${c.pvp.honorableKills ?? 'brak danych'}**`,
+          value: `Rank: **${c.pvp.rank ?? 'no data'}**\nHonorable kills: **${c.pvp.honorableKills ?? 'no data'}**`,
         },
         {
-          name: 'Aktualność',
-          value: `Dane Armory: <t:${Math.floor(Date.parse(c.sourceUpdatedAt) / 1000)}:f>\nSprawdzono: <t:${Math.floor(Date.parse(c.checkedAt) / 1000)}:f>`,
+          name: 'Data freshness',
+          value: `Armory updated: <t:${Math.floor(Date.parse(c.sourceUpdatedAt) / 1000)}:f>\nChecked: <t:${Math.floor(Date.parse(c.checkedAt) / 1000)}:f>`,
         },
       );
     if (c.avatar) embed.setThumbnail(c.avatar);
@@ -94,17 +87,17 @@ export class WowEmbedService extends EmbedBuilderService {
             `${r.online ? '🟢' : '🔴'} **${text(r.name)}** — ${r.online ? 'online' : 'offline'}`,
         ),
         '',
-        `[Oficjalny status EU](${WOW_EU_BASE}/server-status)`,
-        'Status realmów nie potwierdza działania logowania.',
+        `[Official EU realm status](${WOW_EU_BASE}/server-status)`,
+        'Realm status does not confirm that login is working.',
       ].join('\n'),
     );
   }
 
   forum(event: WowForumEvent): EmbedBuilder[] {
     const titles = {
-      reports: 'Gracze zgłaszają problemy z logowaniem w EU',
-      confirmed: 'Blizzard potwierdza problem z logowaniem',
-      resolved: 'Blizzard informuje o usunięciu problemu',
+      reports: 'Players report login issues in EU',
+      confirmed: 'Blizzard confirms a login issue',
+      resolved: 'Blizzard reports that the issue is resolved',
     };
     const links = [...new Map(event.posts.map((p) => [p.topicId, p])).values()]
       .slice(0, 5)
@@ -113,8 +106,8 @@ export class WowEmbedService extends EmbedBuilderService {
       [
         `**${titles[event.kind]}**`,
         event.kind === 'reports'
-          ? 'Niepotwierdzony sygnał od co najmniej 3 różnych graczy w ciągu 15 minut. Nie oznacza, że wszystkie realmy są offline.'
-          : 'Komunikat pracownika Blizzard w temacie dotyczącym obserwowanej fali zgłoszeń.',
+          ? 'Unconfirmed reports from at least 3 different players within 15 minutes. This does not mean all realms are offline.'
+          : 'A Blizzard staff update in a topic related to the monitored wave of reports.',
         '',
         ...links,
       ].join('\n'),
@@ -125,16 +118,16 @@ export class WowEmbedService extends EmbedBuilderService {
   forumSummary(state: WowHealthState<WowForumState> | null): EmbedBuilder[] {
     if (!state?.snapshot || state.unavailable)
       return this.message(
-        'Sygnał zgłoszeń graczy: brak aktualnych danych monitoringu.',
+        'Player reports: current monitoring data is unavailable.',
         'warning',
       );
     const wave = state.snapshot;
     return this.message(
       wave.alerted
         ? wave.resolved
-          ? 'Blizzard potwierdził usunięcie problemu z obserwowanej fali zgłoszeń.'
-          : `${wave.confirmed ? 'Blizzard potwierdził problem' : 'Gracze zgłosili problemy (niepotwierdzone)'}. Ostatnie pasujące zgłoszenie: <t:${Math.floor(Date.parse(wave.lastReportAt!) / 1000)}:f>.`
-        : 'Brak aktywnego alertu ze zgłoszeń graczy. Nie stanowi to potwierdzenia sprawności logowania.',
+          ? 'Blizzard has confirmed that the issue from the monitored wave of reports is resolved.'
+          : `${wave.confirmed ? 'Blizzard has confirmed the issue' : 'Players have reported issues (unconfirmed)'}. Latest matching report: <t:${Math.floor(Date.parse(wave.lastReportAt!) / 1000)}:f>.`
+        : 'No active alert from player reports. This does not confirm that login is working.',
     );
   }
 }

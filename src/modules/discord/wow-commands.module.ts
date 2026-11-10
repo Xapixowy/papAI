@@ -4,6 +4,8 @@ import { GatewayIntentBits } from 'discord.js';
 import { WowCommandsController } from '@Controllers/discord/wow-commands.controller';
 import { WowObserverCommandsController } from '@Controllers/discord/wow/wow-observer-commands.controller';
 import { WowConfigCommandsController } from '@Controllers/discord/wow/wow-config-commands.controller';
+import { WowInteractionController } from '@Controllers/discord/wow/wow-interaction.controller';
+import { WowInteractionService } from '@Services/wow/wow-interaction.service';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
 import { WowMonitorService } from '@Services/wow/wow-monitor.service';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
@@ -28,6 +30,8 @@ import { BaseCommandsModule } from '@Modules/discord/base-commands.module';
     WowCommandsController,
     WowObserverCommandsController,
     WowConfigCommandsController,
+    WowInteractionController,
+    WowInteractionService,
     WowCommandsService,
     WowMonitorService,
     WowEmbedService,

@@ -5,4 +5,6 @@ export enum DiscordSelectId {
   CHANNELS_TO_SET_FEATURE = 'channels-to-set-feature-select-menu',
   STEAM_OBSERVER_CHANNEL = 'steam-observer-channel-select-menu',
   STEAM_OBSERVER_REMOVE = 'steam-observer-remove-select-menu',
+  WOW_OBSERVER_CHANNEL = 'wow-observer-channel',
+  WOW_CHARACTER = 'wow-character',
 }

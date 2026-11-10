@@ -70,7 +70,7 @@ export function characterSlug(input: string): string {
       !/^\/[^/]+\/forever\/eu\/armory\/character\/[^/]+\/?$/.test(url.pathname)
     ) {
       throw new WowSourceError(
-        'Podaj nazwę postaci lub link do Armory Forever EU.',
+        'Enter a character name or a Forever EU Armory profile URL.',
       );
     }
     value = decodeURIComponent(url.pathname.split('/').filter(Boolean).at(-1)!);
@@ -78,7 +78,7 @@ export function characterSlug(input: string): string {
   value = value.normalize('NFKC').toLowerCase().replace(/\s+/g, '-');
   if (!/^[\p{L}][\p{L}'-]{1,100}$/u.test(value) || !value.includes('-')) {
     throw new WowSourceError(
-      'Podaj imię i nazwisko postaci, np. Judgement Judy.',
+      "Enter the character's first and last name, for example Judgement Judy.",
     );
   }
   return value;
@@ -97,21 +97,25 @@ export function parseCharacterHtml(
     .replace(/^var characterProfileInitialState\s*=\s*/, '')
     .replace(/;\s*$/, '');
   if (!json || !script?.trim().startsWith('var characterProfileInitialState')) {
-    throw new WowSourceError('Armory nie zwróciło poprawnego profilu.');
+    throw new WowSourceError(
+      'Armory did not return a valid character profile.',
+    );
   }
   let data: unknown;
   try {
     data = JSON.parse(json);
   } catch {
-    throw new WowSourceError('Nie udało się odczytać danych Armory.');
+    throw new WowSourceError('Could not read the Armory data.');
   }
   const result = characterSchema.safeParse(data);
   if (!result.success) {
-    throw new WowSourceError('Struktura danych Armory uległa zmianie.');
+    throw new WowSourceError('The Armory data format has changed.');
   }
   const c = result.data.character;
   if (c.slug !== expectedSlug) {
-    throw new WowSourceError('Armory zwróciło inną postać niż żądana.');
+    throw new WowSourceError(
+      'Armory returned a different character than requested.',
+    );
   }
   const talents = c.specs.map((s) => ({
     id: s.id,
@@ -184,7 +188,7 @@ export function parseRealmStatus(data: unknown): WowRealm[] {
     })
     .safeParse(data);
   if (!result.success || result.data.errors?.length) {
-    throw new WowSourceError('Nie udało się odczytać oficjalnego statusu EU.');
+    throw new WowSourceError('Could not read the official EU realm status.');
   }
   const realms = result.data.data.Realms;
   const expected = ['normal', 'pvp', 'roleplay', 'roleplay-pvp'];
@@ -194,7 +198,7 @@ export function parseRealmStatus(data: unknown): WowRealm[] {
       (slug) => realms.filter((r) => r.slug === slug).length === 1,
     )
   ) {
-    throw new WowSourceError('Oficjalny status EU jest niekompletny.');
+    throw new WowSourceError('Official EU realm status data is incomplete.');
   }
   return realms
     .map(({ slug, name, online }) => ({ slug, name, online }))
