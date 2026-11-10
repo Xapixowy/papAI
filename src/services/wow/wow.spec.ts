@@ -8,6 +8,7 @@ import {
 } from '@Services/wow/wow-parser';
 import {
   characterChanges,
+  characterDifferences,
   forumSignals,
   realmChanges,
 } from '@Services/wow/wow-signals';
@@ -182,6 +183,58 @@ describe('WoW Forever data and notification semantics', () => {
     ]);
     after.sourceUpdatedAt = '2026-11-08T00:00:00Z';
     expect(characterChanges(before, after)).toEqual([]);
+  });
+
+  it('lists all changed card values, including professions, alongside notification reasons', () => {
+    const before = character();
+    const after = structuredClone(before);
+    after.level++;
+    after.guild = null;
+    after.professions = before.professions.map((p) =>
+      p.name === 'Mining' ? { ...p, points: p.points + 2, max: 225 } : p,
+    );
+    after.talents[0].points++;
+    after.pvp.rank = 1;
+    after.pvp.honorableKills = 5;
+    after.faction = 'Horde';
+    after.race = 'Orc';
+    after.class = 'Shaman';
+    after.ruleset = 'PvP';
+    const differences = characterDifferences(before, after);
+    expect(differences).toEqual(
+      expect.arrayContaining([
+        'Level: **25 → 26**',
+        'Guild: **Circle of Lore → None**',
+        'Profession (Mining): **116/150 → 118/225**',
+        'Talent points (Holy): **4 → 5**',
+        'PvP rank: **0 → 1**',
+        'Honorable kills: **0 → 5**',
+        'Faction: **Alliance → Horde**',
+        'Race: **Human → Orc**',
+        'Class: **Paladin → Shaman**',
+        'Ruleset: **Normal → PvP**',
+      ]),
+    );
+    expect(differences).toHaveLength(10);
+  });
+
+  it('compares learned and removed professions by name, not their array position', () => {
+    const before = character();
+    const after = structuredClone(before);
+    after.professions = [...after.professions].reverse();
+    after.talents = [...after.talents].reverse();
+    after.stats = [{ name: 'health', value: '900' }];
+    after.checkedAt = '2026-11-10T18:00:00Z';
+    after.sourceUpdatedAt = after.checkedAt;
+    expect(characterDifferences(before, after)).toEqual([]);
+    after.professions = after.professions.filter((p) => p.name !== 'Mining');
+    after.professions.push({ name: 'Alchemy', points: 1, max: 75 });
+    expect(characterDifferences(before, after)).toEqual([
+      'Profession (Alchemy): **Not learned → 1/75**',
+      'Profession (Mining): **116/150 → Not learned**',
+    ]);
+    after.sourceUpdatedAt = '2026-11-08T00:00:00Z';
+    expect(characterDifferences(before, after)).toEqual([]);
   });
 
   it('does not announce ties or an empty talent reset as a specialization', () => {

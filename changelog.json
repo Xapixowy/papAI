@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.7.4",
+    "date": "2026-11-10",
+    "changes": [
+      { "type": "improve", "description": "WoW character notifications now show before/after values for all changed card data, including profession skills and caps, learned or removed professions, talent points, PvP and character details; notifications are still triggered only by level gains, guild changes or specialization changes" }
+    ]
+  },
+  {
     "version": "0.7.3",
     "date": "2026-11-10",
     "changes": [

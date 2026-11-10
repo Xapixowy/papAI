@@ -27,9 +27,87 @@ export function characterChanges(
   ) {
     const name = (c: WowCharacter) =>
       c.talents.find((s) => s.id === c.specialization)?.name ??
-      c.specialization;
-    changes.push(`Specialization: **${name(before)} → ${name(after)}**`);
+      c.specialization ??
+      'No data';
+    changes.push(
+      `Specialization: **${escapeMarkdown(name(before))} → ${escapeMarkdown(name(after))}**`,
+    );
   }
+  return changes;
+}
+
+export function characterDifferences(
+  before: WowCharacter,
+  after: WowCharacter,
+): string[] {
+  if (Date.parse(after.sourceUpdatedAt) < Date.parse(before.sourceUpdatedAt))
+    return [];
+  const changes = characterChanges(before, after);
+  const add = (label: string, oldValue: string, newValue: string) => {
+    if (oldValue !== newValue)
+      changes.push(
+        `${escapeMarkdown(label)}: **${escapeMarkdown(oldValue)} → ${escapeMarkdown(newValue)}**`,
+      );
+  };
+  if (after.level < before.level)
+    add('Level', String(before.level), String(after.level));
+  for (const [field, label] of [
+    ['name', 'Name'],
+    ['faction', 'Faction'],
+    ['race', 'Race'],
+    ['class', 'Class'],
+    ['ruleset', 'Ruleset'],
+  ] as const)
+    add(label, before[field], after[field]);
+
+  const professions = (c: WowCharacter) => {
+    const grouped = new Map<string, WowCharacter['professions']>();
+    for (const p of c.professions)
+      grouped.set(p.name, [...(grouped.get(p.name) ?? []), p]);
+    return new Map(
+      [...grouped].map(([name, tiers]) => [
+        name,
+        tiers
+          .sort((a, b) => a.max - b.max || a.points - b.points)
+          .map((p) => `${p.points}/${p.max}`)
+          .join(', '),
+      ]),
+    );
+  };
+  const oldProfessions = professions(before);
+  const newProfessions = professions(after);
+  for (const name of [
+    ...new Set([...oldProfessions.keys(), ...newProfessions.keys()]),
+  ].sort())
+    add(
+      `Profession (${name})`,
+      oldProfessions.get(name) ?? 'Not learned',
+      newProfessions.get(name) ?? 'Not learned',
+    );
+
+  const oldTalents = new Map(before.talents.map((t) => [t.id, t]));
+  const newTalents = new Map(after.talents.map((t) => [t.id, t]));
+  for (const id of [
+    ...new Set([...oldTalents.keys(), ...newTalents.keys()]),
+  ].sort()) {
+    const old = oldTalents.get(id);
+    const next = newTalents.get(id);
+    add(
+      `Talent points (${next?.name ?? old?.name ?? id})`,
+      old?.points.toString() ?? 'No data',
+      next?.points.toString() ?? 'No data',
+    );
+  }
+  add(
+    'PvP rank',
+    before.pvp.rank?.toString() ?? 'No data',
+    after.pvp.rank?.toString() ?? 'No data',
+  );
+  add(
+    'Honorable kills',
+    before.pvp.honorableKills?.toString() ?? 'No data',
+    after.pvp.honorableKills?.toString() ?? 'No data',
+  );
   return changes;
 }
 

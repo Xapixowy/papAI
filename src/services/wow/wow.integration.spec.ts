@@ -269,6 +269,38 @@ integration(
       expect(characterRead).toHaveBeenCalledTimes(6); // add twice, three polls, one manual read
     });
 
+    it('keeps secondary-only updates silent, then includes all simultaneous before/after differences in one notification', async () => {
+      await commands.add(guildId, userId, channelId, current.slug);
+      const mining = current.professions.find((p) => p.name === 'Mining')!;
+      mining.points = 118;
+      current.talents[0].points = 5;
+      current.pvp.honorableKills = 3;
+      current.sourceUpdatedAt = new Date().toISOString();
+      await monitor.pollCharacters();
+      expect(send).not.toHaveBeenCalled();
+
+      current.level = 26;
+      current.guild = null;
+      mining.points = 120;
+      mining.max = 225;
+      current.talents[0].points = 6;
+      current.pvp.honorableKills = 7;
+      current.sourceUpdatedAt = new Date().toISOString();
+      await monitor.pollCharacters();
+      expect(send).toHaveBeenCalledTimes(1);
+      const message = JSON.stringify(send.mock.calls[0][0]);
+      for (const difference of [
+        'Level: **25 → 26**',
+        'Guild: **Circle of Lore → None**',
+        'Profession (Mining): **118/150 → 120/225**',
+        'Talent points (Holy): **5 → 6**',
+        'Honorable kills: **3 → 7**',
+      ])
+        expect(message).toContain(difference);
+      await newMonitor().pollCharacters();
+      expect(send).toHaveBeenCalledTimes(1);
+    });
+
     it('retries a durable notification after transport failure and a new service instance', async () => {
       await commands.add(guildId, userId, channelId, current.slug);
       current.guild = null;
