@@ -104,6 +104,37 @@ describe('WoW Forever data and notification semantics', () => {
       expect(() => characterSlug(input)).toThrow();
   });
 
+  it('reads profiles whose Armory response omits talent data', () => {
+    // Nytheris Moonwhisper's level-12 profile omits specs entirely.
+    const data = {
+      ...profile,
+      character: {
+        ...profile.character,
+        name: 'Nytheris',
+        surname: 'Moonwhisper',
+        slug: 'nytheris-moonwhisper',
+        level: 12,
+        specs: undefined,
+      },
+    };
+    const c = parseCharacterHtml(html(data), 'nytheris-moonwhisper');
+    expect(c).toMatchObject({
+      name: 'Nytheris Moonwhisper',
+      level: 12,
+      talents: [],
+      specialization: null,
+    });
+    expect(characterChanges(character(), c)).not.toContainEqual(
+      expect.stringContaining('Specialization:'),
+    );
+    expect(() =>
+      parseCharacterHtml(
+        html({ ...data, character: { ...data.character, specs: 'invalid' } }),
+        'nytheris-moonwhisper',
+      ),
+    ).toThrow('The Armory data format has changed.');
+  });
+
   it('reports only level, guild and dominant specialization changes', () => {
     const before = character();
     const after = structuredClone(before);

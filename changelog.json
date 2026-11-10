@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.7.2",
+    "date": "2026-11-10",
+    "changes": [
+      { "type": "fix", "description": "WoW character lookup and observer creation now accept Armory profiles without talent data, such as Nytheris Moonwhisper, instead of reporting that the data format has changed" }
+    ]
+  },
+  {
     "version": "0.7.1",
     "date": "2026-11-10",
     "changes": [

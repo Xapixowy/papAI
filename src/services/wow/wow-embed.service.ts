@@ -54,7 +54,7 @@ export class WowEmbedService extends EmbedBuilderService {
                 (s) =>
                   `${text(s.name)}: **${s.points}**${s.id === c.specialization ? ' ★' : ''}`,
               )
-              .join(' · ') || 'No talent points assigned',
+              .join(' · ') || 'No talent data available',
           ),
         },
         {
