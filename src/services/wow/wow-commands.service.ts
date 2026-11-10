@@ -24,6 +24,7 @@ import {
   WowSourceError,
 } from '@Types/wow/wow.type';
 import { WowSourceService } from '@Services/wow/wow-source.service';
+import { wowErrorDetails } from '@Services/wow/wow-error-details';
 import { WowForumService } from '@Services/wow/wow-forum.service';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import {
@@ -57,8 +58,10 @@ export class WowCommandsService {
     try {
       return await action();
     } catch (error) {
-      if (error instanceof WowSourceError)
+      if (error instanceof WowSourceError) {
+        this.logger.warn(`WoW command failed: ${wowErrorDetails(error)}`);
         return this.embeds.message(error.message, 'error');
+      }
       this.logger.error(
         'WoW command failed',
         error instanceof Error ? error.stack : String(error),

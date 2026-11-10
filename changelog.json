@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.7.3",
+    "date": "2026-11-10",
+    "changes": [
+      { "type": "fix", "description": "WoW character lookup and observer creation now accept profiles without a guild, such as Lepidoptera Viridis, when Armory omits the guild field" },
+      { "type": "fix", "description": "WoW command errors and monitoring failures now log diagnostic causes to the console, including character, request or parsing stage, HTTP status and invalid data fields, without dumping HTTP headers, response bodies or URL credentials" }
+    ]
+  },
+  {
     "version": "0.7.2",
     "date": "2026-11-10",
     "changes": [

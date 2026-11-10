@@ -135,6 +135,35 @@ describe('WoW Forever data and notification semantics', () => {
     ).toThrow('The Armory data format has changed.');
   });
 
+  it('reads unguilded profiles whose Armory response omits the guild field', () => {
+    const data = {
+      ...profile,
+      character: {
+        ...profile.character,
+        name: 'Lepidoptera',
+        surname: 'Viridis',
+        slug: 'lepidoptera-viridis',
+        level: 26,
+        guild: undefined,
+      },
+    };
+    const c = parseCharacterHtml(html(data), 'lepidoptera-viridis');
+    expect(c).toMatchObject({
+      name: 'Lepidoptera Viridis',
+      level: 26,
+      guild: null,
+    });
+    expect(characterChanges(character(), c)).toContain(
+      'Guild: **Circle of Lore → None**',
+    );
+    expect(() =>
+      parseCharacterHtml(
+        html({ ...data, character: { ...data.character, guild: {} } }),
+        'lepidoptera-viridis',
+      ),
+    ).toThrow('The Armory data format has changed.');
+  });
+
   it('reports only level, guild and dominant specialization changes', () => {
     const before = character();
     const after = structuredClone(before);

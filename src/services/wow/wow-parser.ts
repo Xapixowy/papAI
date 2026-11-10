@@ -33,7 +33,7 @@ const characterSchema = z.object({
     slug: z.string().min(1),
     level: z.number().int().min(10),
     region: z.literal('eu'),
-    guild: label.nullable(),
+    guild: label.nullable().default(null),
     faction: label,
     race: label,
     class: label,
@@ -106,12 +106,16 @@ export function parseCharacterHtml(
   let data: unknown;
   try {
     data = JSON.parse(json);
-  } catch {
-    throw new WowSourceError('Could not read the Armory data.');
+  } catch (error) {
+    throw new WowSourceError('Could not read the Armory data.', false, error);
   }
   const result = characterSchema.safeParse(data);
   if (!result.success) {
-    throw new WowSourceError('The Armory data format has changed.');
+    throw new WowSourceError(
+      'The Armory data format has changed.',
+      false,
+      result.error,
+    );
   }
   const c = result.data.character;
   if (c.slug !== expectedSlug) {
@@ -190,7 +194,11 @@ export function parseRealmStatus(data: unknown): WowRealm[] {
     })
     .safeParse(data);
   if (!result.success || result.data.errors?.length) {
-    throw new WowSourceError('Could not read the official EU realm status.');
+    throw new WowSourceError(
+      'Could not read the official EU realm status.',
+      false,
+      result.success ? undefined : result.error,
+    );
   }
   const realms = result.data.data.Realms;
   const expected = ['normal', 'pvp', 'roleplay', 'roleplay-pvp'];
