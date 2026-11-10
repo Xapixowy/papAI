@@ -149,7 +149,7 @@ export class WowForumService {
       return { posts, checkedAt: now.toISOString() };
     } catch (error) {
       throw new WowSourceError(
-        'Forum EU jest niedostępne lub zwróciło niekompletne dane.',
+        'The EU forum is unavailable or returned incomplete data.',
         false,
         error,
       );

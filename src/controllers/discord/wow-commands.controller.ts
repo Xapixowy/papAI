@@ -17,6 +17,11 @@ import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.
 import { EphemeralOption } from '@Options/ephemeral.option';
 import { WowCharacterOption } from '@Options/wow.options';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
+import { WowInteractionService } from '@Services/wow/wow-interaction.service';
+import {
+  replyWowFlow,
+  wowFlowContext,
+} from '@Controllers/discord/wow/wow-interaction-replies';
 
 export const WowCommand = createCommandGroupDecorator({
   name: 'wow',
@@ -31,7 +36,7 @@ export async function replyWow(
 ): Promise<void> {
   if (!interaction.guildId) {
     await interaction.reply({
-      content: 'Użyj tego polecenia na serwerze Discorda.',
+      content: 'Use this command in a Discord server.',
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -77,7 +82,10 @@ export async function replyWow(
 @UseGuards(DiscordGuildFeatureGuard)
 @RequiresDiscordGuildFeature(DiscordFeature.WOW_FOREVER)
 export class WowCommandsController {
-  constructor(private readonly commands: WowCommandsService) {}
+  constructor(
+    private readonly commands: WowCommandsService,
+    private readonly flows: WowInteractionService,
+  ) {}
 
   @Subcommand({
     name: 'status',
@@ -103,10 +111,10 @@ export class WowCommandsController {
     @Context() [interaction]: SlashCommandContext,
     @Options() options: WowCharacterOption,
   ): Promise<void> {
-    await replyWow(
-      this.commands,
+    await replyWowFlow(
+      this.flows,
       interaction,
-      () => this.commands.character(options.character),
+      () => this.flows.lookup(wowFlowContext(interaction), options.character),
       options.ephemeral ?? true,
     );
   }

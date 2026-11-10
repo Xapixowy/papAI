@@ -8,6 +8,11 @@ import {
   WowRemoveObserverOption,
 } from '@Options/wow.options';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
+import { WowInteractionService } from '@Services/wow/wow-interaction.service';
+import {
+  replyWowFlow,
+  wowFlowContext,
+} from '@Controllers/discord/wow/wow-interaction-replies';
 import {
   replyWow,
   WowCommand,
@@ -18,7 +23,10 @@ import {
 @UseGuards(DiscordGuildFeatureGuard)
 @RequiresDiscordGuildFeature(DiscordFeature.WOW_FOREVER)
 export class WowObserverCommandsController {
-  constructor(private readonly commands: WowCommandsService) {}
+  constructor(
+    private readonly commands: WowCommandsService,
+    private readonly flows: WowInteractionService,
+  ) {}
 
   @Subcommand({
     name: 'add',
@@ -28,8 +36,8 @@ export class WowObserverCommandsController {
     @Context() [i]: SlashCommandContext,
     @Options() o: WowAddObserverOption,
   ): Promise<void> {
-    await replyWow(this.commands, i, () =>
-      this.commands.add(i.guildId!, i.user.id, o.channel.id, o.character),
+    await replyWowFlow(this.flows, i, () =>
+      this.flows.startObservation(wowFlowContext(i), o.character),
     );
   }
 

@@ -35,12 +35,12 @@ export class WowSourceService {
         if (error instanceof WowSourceError) throw error;
         if (isAxiosError(error) && error.response?.status === 404) {
           throw new WowSourceError(
-            'Brak profilu w Armory EU. Postać musi mieć co najmniej 10. poziom; spróbuj po pojawieniu się profilu.',
+            'No EU Armory profile found. Characters must be at least level 10; try again once the profile is available.',
             true,
           );
         }
         throw new WowSourceError(
-          'Armory jest chwilowo niedostępne. Spróbuj ponownie później.',
+          'Armory is temporarily unavailable. Please try again later.',
         );
       }
     });
@@ -80,7 +80,7 @@ export class WowSourceService {
       } catch (error) {
         if (error instanceof WowSourceError) throw error;
         throw new WowSourceError(
-          'Oficjalny status EU jest chwilowo niedostępny.',
+          'Official EU realm status is temporarily unavailable.',
         );
       }
     });

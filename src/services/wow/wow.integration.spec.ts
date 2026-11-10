@@ -9,7 +9,16 @@ import {
 } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Client, TextChannel } from 'discord.js';
+import {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  Client,
+  ComponentType,
+  MessageFlags,
+  StringSelectMenuInteraction,
+  TextChannel,
+} from 'discord.js';
+import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { DataSource, IsNull } from 'typeorm';
@@ -34,9 +43,17 @@ import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import { WowStoreService } from '@Services/wow/wow-store.service';
 import { WowMonitorService } from '@Services/wow/wow-monitor.service';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
+import { WowObserverCommandsController } from '@Controllers/discord/wow/wow-observer-commands.controller';
+import { WowInteractionController } from '@Controllers/discord/wow/wow-interaction.controller';
+import {
+  WowFlowReply,
+  WowInteractionService,
+} from '@Services/wow/wow-interaction.service';
 
 const url = process.env.WOW_TEST_POSTGRES_URL;
 const integration = url ? describe : describe.skip;
+const redisUrl = process.env.WOW_TEST_REDIS_URL;
+const flowTests = redisUrl ? describe : describe.skip;
 
 integration(
   'WoW workflows with PostgreSQL and a simulated Discord transport',
@@ -58,6 +75,8 @@ integration(
     let forumRead: jest.SpiedFunction<WowForumService['read']>;
     let current: WowCharacter;
     let currentRealms: ReturnType<typeof parseRealmStatus>;
+    let redis: Redis | undefined;
+    let flows: WowInteractionService;
     const send = jest
       .fn<(options: unknown) => Promise<object>>()
       .mockResolvedValue({});
@@ -146,11 +165,29 @@ integration(
         embeds,
         client,
       );
+      if (redisUrl) {
+        const target = new URL(redisUrl);
+        if (
+          !['127.0.0.1', 'localhost'].includes(target.hostname) ||
+          target.port !== '56380' ||
+          target.pathname !== '/15'
+        )
+          throw new Error(
+            'Flow tests require the dedicated local Redis on port 56380, database 15',
+          );
+        redis = new Redis(redisUrl, {
+          lazyConnect: true,
+          maxRetriesPerRequest: 0,
+        });
+        await redis.connect();
+        flows = new WowInteractionService(commands, source, embeds, redis);
+      }
     }, 30_000);
 
     beforeEach(async () => {
       jest.clearAllMocks();
       send.mockResolvedValue({});
+      if (redis) await redis.flushdb();
       await db.query(
         'TRUNCATE wow_notifications, wow_monitor_states, wow_status_watches, wow_observers, discord_guilds, discord_channels, discord_users CASCADE',
       );
@@ -205,6 +242,7 @@ integration(
     });
 
     afterAll(async () => {
+      if (redis) await redis.quit();
       await client?.destroy();
       if (db?.isInitialized) await db.destroy();
     });
@@ -254,7 +292,7 @@ integration(
         ).sentAt,
       ).not.toBeNull();
       expect(JSON.stringify(send.mock.calls[1][0])).toContain(
-        'Circle of Lore → brak',
+        'Circle of Lore → None',
       );
     });
 
@@ -272,7 +310,7 @@ integration(
       characterRead.mockResolvedValue(current);
       await newMonitor().pollCharacters();
       expect(send).toHaveBeenCalledTimes(2);
-      expect(JSON.stringify(send.mock.calls[1][0])).toContain('wznowiony');
+      expect(JSON.stringify(send.mock.calls[1][0])).toContain('resumed');
     });
 
     it('scopes regular/admin lists and removals to the current guild and enforces configuration roles', async () => {
@@ -352,9 +390,7 @@ integration(
       forumRead.mockResolvedValue(snapshot);
       await monitor.pollStatus();
       expect(send).toHaveBeenCalledTimes(1);
-      expect(JSON.stringify(send.mock.calls[0][0])).toContain(
-        'Niepotwierdzony',
-      );
+      expect(JSON.stringify(send.mock.calls[0][0])).toContain('Unconfirmed');
       await monitor.pollStatus();
       expect(send).toHaveBeenCalledTimes(1);
     });
@@ -368,6 +404,213 @@ integration(
       expect(rows.every((r) => !r.features.includes('wow_forever'))).toBe(true);
       await db.runMigrations();
       expect(await db.getRepository(WowObserver).count()).toBe(0);
+    });
+
+    flowTests('interactive character flows with Redis', () => {
+      const context = { guildId, channelId, userId };
+      const tokenFrom = (reply: WowFlowReply) => {
+        const component = reply.components[0].components[0].toJSON();
+        if (!('custom_id' in component)) throw new Error('Missing flow token');
+        return component.custom_id.split('/')[1];
+      };
+      const optionsFrom = (reply: WowFlowReply) => {
+        const component = reply.components[0].components[0].toJSON();
+        if (component.type !== ComponentType.StringSelect)
+          throw new Error('Expected string select');
+        return component.options;
+      };
+
+      it('previews without stats, requires confirmation, and saves only after an enabled channel is selected', async () => {
+        const interaction = () => ({
+          guildId,
+          channelId,
+          user: { id: userId },
+          deferReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          reply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+        });
+        const slash = interaction();
+        await new WowObserverCommandsController(commands, flows).add(
+          [slash as unknown as ChatInputCommandInteraction],
+          { character: current.slug },
+        );
+        expect(slash.deferReply).toHaveBeenCalledWith({
+          flags: MessageFlags.Ephemeral,
+        });
+        const preview = slash.editReply.mock.calls[0][0] as WowFlowReply;
+        const token = tokenFrom(preview);
+        expect(
+          preview.embeds
+            .flatMap((e) => e.toJSON().fields ?? [])
+            .map((f) => f.name),
+        ).not.toContain('Stats');
+        expect(await db.getRepository(WowObserver).count()).toBe(0);
+        await expect(
+          flows.chooseChannel(token, context, channelId),
+        ).rejects.toThrow('no longer available');
+        const controller = new WowInteractionController(flows);
+        const outsider = { ...interaction(), user: { id: adminId } };
+        await controller.confirm(
+          [outsider as unknown as ButtonInteraction],
+          token,
+        );
+        expect(outsider.reply).toHaveBeenCalledWith(
+          expect.objectContaining({ flags: MessageFlags.Ephemeral }),
+        );
+        expect(outsider.editReply).not.toHaveBeenCalled();
+        const button = interaction();
+        await controller.confirm(
+          [button as unknown as ButtonInteraction],
+          token,
+        );
+        expect(button.deferUpdate).toHaveBeenCalled();
+        const selection = button.editReply.mock.calls[0][0] as WowFlowReply;
+        expect(optionsFrom(selection).map((o) => o.value)).toEqual([channelId]);
+        expect(await db.getRepository(WowObserver).count()).toBe(0);
+        expect(await redis!.ttl(`wow:flow:${token}`)).toBeGreaterThan(0);
+        const select = interaction();
+        await controller.channel(
+          [select as unknown as StringSelectMenuInteraction],
+          token,
+          [channelId],
+        );
+        const saved = select.editReply.mock.calls[0][0] as WowFlowReply;
+        expect(saved.components).toEqual([]);
+        expect(
+          await db.getRepository(WowObserver).countBy({
+            guildId,
+            channelId,
+            userId,
+            characterSlug: current.slug,
+          }),
+        ).toBe(1);
+        await expect(
+          flows.chooseChannel(token, context, channelId),
+        ).rejects.toThrow('expired');
+        expect(send).not.toHaveBeenCalled();
+      });
+
+      it('excludes disabled/foreign channels and rechecks a channel disabled after opening the menu', async () => {
+        const disabledId = '110000000000000002';
+        const foreignId = '110000000000000003';
+        await db.getRepository(DiscordChannel).save([
+          {
+            id: disabledId,
+            discordGuildId: guildId,
+            name: 'disabled',
+            features: { [DiscordChannelFeature.WOW_FOREVER]: false },
+          },
+          {
+            id: foreignId,
+            discordGuildId: otherGuildId,
+            name: 'foreign',
+            features: { [DiscordChannelFeature.WOW_FOREVER]: true },
+          },
+        ]);
+        const first = tokenFrom(
+          await flows.startObservation(context, current.slug),
+        );
+        expect(
+          optionsFrom(await flows.confirm(first, context)).map((o) => o.value),
+        ).toEqual([channelId]);
+        await expect(
+          flows.chooseChannel(first, context, disabledId),
+        ).rejects.toThrow('not enabled');
+        const second = tokenFrom(
+          await flows.startObservation(context, current.slug),
+        );
+        await flows.confirm(second, context);
+        await commands.allowChannel(guildId, adminId, channelId, false);
+        await expect(
+          flows.chooseChannel(second, context, channelId),
+        ).rejects.toThrow('not enabled');
+        expect(await db.getRepository(WowObserver).count()).toBe(0);
+      });
+
+      it('binds a flow to its owner/channel and handles cancellation or expiry without saving', async () => {
+        const token = tokenFrom(
+          await flows.startObservation(context, current.slug),
+        );
+        await expect(
+          flows.confirm(token, { ...context, userId: adminId }),
+        ).rejects.toThrow('another user');
+        await expect(
+          flows.confirm(token, { ...context, channelId: 'elsewhere' }),
+        ).rejects.toThrow('another user');
+        await flows.cancel(token, context);
+        await expect(flows.confirm(token, context)).rejects.toThrow('expired');
+        const expired = tokenFrom(
+          await flows.startObservation(context, current.slug),
+        );
+        await redis!.expire(`wow:flow:${expired}`, -1);
+        await expect(flows.confirm(expired, context)).rejects.toThrow(
+          'expired',
+        );
+        expect(await db.getRepository(WowObserver).count()).toBe(0);
+      });
+
+      it('offers distinct characters observed by anyone in the current channel, not other channels', async () => {
+        await commands.add(guildId, adminId, channelId, current.slug);
+        await commands.add(guildId, userId, channelId, current.slug);
+        const otherChannel = '110000000000000004';
+        await db.getRepository(DiscordChannel).save({
+          id: otherChannel,
+          discordGuildId: guildId,
+          name: 'other',
+          features: { [DiscordChannelFeature.WOW_FOREVER]: true },
+        });
+        await db.getRepository(WowObserver).save({
+          guildId,
+          channelId: otherChannel,
+          userId,
+          characterSlug: 'someone-else',
+        });
+        const choice = await flows.lookup(context);
+        expect(optionsFrom(choice)).toMatchObject([
+          { label: current.name, value: current.slug },
+        ]);
+        const token = tokenFrom(choice);
+        const result = await flows.chooseCharacter(
+          token,
+          context,
+          current.slug,
+        );
+        expect(result.embeds[0].toJSON().title).toBe(current.name);
+        expect(
+          result.embeds[0].toJSON().fields?.map((f) => f.name),
+        ).not.toContain('Stats');
+        expect(result.components).toEqual([]);
+        const forged = tokenFrom(await flows.lookup(context));
+        await expect(
+          flows.chooseCharacter(forged, context, 'someone-else'),
+        ).rejects.toThrow('no longer observed');
+      });
+
+      it('handles empty lookup channels and paginates more than 25 observed characters', async () => {
+        await expect(flows.lookup(context)).rejects.toThrow('No characters');
+        expect(
+          (await flows.lookup(context, current.slug)).embeds[0].toJSON().title,
+        ).toBe(current.name);
+        await db.getRepository(WowObserver).save(
+          Array.from({ length: 26 }, (_, i) => ({
+            guildId,
+            channelId,
+            userId,
+            characterSlug: `player-${String.fromCharCode(97 + i)}`,
+          })),
+        );
+        const first = await flows.lookup(context);
+        expect(optionsFrom(first)).toHaveLength(25);
+        const last = await flows.page(tokenFrom(first), context, '1');
+        expect(optionsFrom(last)).toHaveLength(1);
+      });
     });
   },
 );

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   Client,
+  DiscordAPIError,
   EmbedBuilder,
   GuildTextBasedChannel,
   PermissionFlagsBits,
@@ -63,7 +64,7 @@ export class WowCommandsService {
         error instanceof Error ? error.stack : String(error),
       );
       return this.embeds.message(
-        'Nie udało się wykonać polecenia. Spróbuj ponownie później.',
+        'Could not run the command. Please try again later.',
         'error',
       );
     }
@@ -71,6 +72,87 @@ export class WowCommandsService {
 
   async character(input: string): Promise<EmbedBuilder[]> {
     return this.embeds.character(await this.source.character(input));
+  }
+
+  async allowedObservationChannels(
+    guildId: string,
+    userId: string,
+  ): Promise<{ value: string; label: string }[]> {
+    const channels = await this.dataSource
+      .getRepository(DiscordChannel)
+      .findBy({ discordGuildId: guildId });
+    const options: { value: string; label: string }[] = [];
+    for (const row of channels) {
+      if (row.features[DiscordChannelFeature.WOW_FOREVER] !== true) continue;
+      try {
+        const channel = await this.channel(guildId, row.id, userId);
+        options.push({ value: row.id, label: `#${channel.name}` });
+      } catch (error) {
+        if (
+          error instanceof WowSourceError ||
+          (error instanceof DiscordAPIError &&
+            [10003, 10007, 50001, 50013].includes(Number(error.code)))
+        )
+          continue;
+        throw error;
+      }
+    }
+    return options.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  async observedCharacters(
+    guildId: string,
+    channelId: string,
+  ): Promise<{ value: string; label: string }[]> {
+    const observations = await this.dataSource
+      .getRepository(WowObserver)
+      .createQueryBuilder('o')
+      .select('o.characterSlug', 'slug')
+      .distinct()
+      .where('o.guildId = :guildId AND o.channelId = :channelId', {
+        guildId,
+        channelId,
+      })
+      .orderBy('o.characterSlug', 'ASC')
+      .getRawMany<{ slug: string }>();
+    if (!observations.length) return [];
+    const states = await this.dataSource.getRepository(WowMonitorState).findBy(
+      observations.map((o) => ({
+        key: characterStateKey(guildId, channelId, o.slug),
+      })),
+    );
+    const names = new Map(
+      states.map((s) => [
+        s.key,
+        (s.data as WowHealthState<WowCharacter>).snapshot?.name,
+      ]),
+    );
+    return observations.map(({ slug }) => ({
+      value: slug,
+      label:
+        names.get(characterStateKey(guildId, channelId, slug)) ??
+        slug
+          .split('-')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' '),
+    }));
+  }
+
+  async observedCharacter(
+    guildId: string,
+    channelId: string,
+    slug: string,
+  ): Promise<EmbedBuilder[]> {
+    if (
+      !(await this.dataSource
+        .getRepository(WowObserver)
+        .existsBy({ guildId, channelId, characterSlug: slug }))
+    ) {
+      throw new WowSourceError(
+        'This character is no longer observed in this channel. Run /wow character again.',
+      );
+    }
+    return this.character(slug);
   }
 
   async status(guildId: string): Promise<EmbedBuilder[]> {
@@ -91,7 +173,7 @@ export class WowCommandsService {
       realms.status === 'fulfilled'
         ? this.embeds.realms(realms.value)
         : this.embeds.message(
-            'Brak aktualnych danych oficjalnego statusu EU. Nie oznacza to, że realmy są offline.',
+            'Current official EU status data is unavailable. This does not mean the realms are offline.',
             'warning',
           );
     if (forum.status === 'fulfilled') {
@@ -112,7 +194,7 @@ export class WowCommandsService {
     } else
       result.push(
         ...this.embeds.message(
-          'Brak aktualnych danych zgłoszeń graczy na forum EU.',
+          'Current player report data from the EU forum is unavailable.',
           'warning',
         ),
       );
@@ -131,7 +213,7 @@ export class WowCommandsService {
       .findOneBy({ id: channelId, discordGuildId: guildId });
     if (!allowed?.features[DiscordChannelFeature.WOW_FOREVER])
       throw new WowSourceError(
-        'Ten kanał nie jest dozwolony dla obserwacji postaci. Administrator bota może włączyć go przez /wow config character-channel.',
+        'This channel is not enabled for character observations. A bot administrator can enable it with /wow config character-channel.',
       );
     const character = await this.source.character(input);
     const key = characterStateKey(guildId, channelId, character.slug);
@@ -145,7 +227,9 @@ export class WowCommandsService {
           discordGuildId: guildId,
         });
         if (!current?.features[DiscordChannelFeature.WOW_FOREVER])
-          throw new WowSourceError('Kanał nie jest już dozwolony.');
+          throw new WowSourceError(
+            'This channel is no longer enabled for character observations.',
+          );
         const repository = manager.getRepository(WowObserver);
         const count = await repository.countBy({
           guildId,
@@ -172,7 +256,7 @@ export class WowCommandsService {
     );
     return [
       ...this.embeds.message(
-        `Obserwacja **${character.name}** zapisana dla <#${channelId}>. Powiadomienia: poziom, gildia i specjalizacja.`,
+        `Observation saved for **${character.name}** in <#${channelId}>. Alerts: level, guild and specialization changes.`,
         'success',
       ),
       ...this.embeds.character(character),
@@ -193,7 +277,7 @@ export class WowCommandsService {
                 `**${o.characterSlug}** · <#${o.channelId}>${admin ? ` · <@${o.userId}>` : ''}\nID: \`${o.id}\``,
             )
             .join('\n\n')
-        : 'Brak obserwacji postaci na tym serwerze.',
+        : 'No character observations to display on this server.',
     );
   }
 
@@ -203,7 +287,9 @@ export class WowCommandsService {
     id: string,
   ): Promise<EmbedBuilder[]> {
     if (!/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id))
-      throw new WowSourceError('Podaj ID obserwacji z /wow observer list.');
+      throw new WowSourceError(
+        'Enter an observation ID from /wow observer list.',
+      );
     const admin = await this.isAdmin(userId);
     const repository = this.dataSource.getRepository(WowObserver);
     const observation = await repository.findOneBy(
@@ -211,7 +297,7 @@ export class WowCommandsService {
     );
     if (!observation)
       throw new WowSourceError(
-        'Nie znaleziono obserwacji, którą możesz usunąć na tym serwerze.',
+        'Observation not found, or you do not have permission to remove it on this server.',
       );
     await this.store.state(
       characterStateKey(
@@ -237,7 +323,7 @@ export class WowCommandsService {
           });
       },
     );
-    return this.embeds.message('Obserwacja usunięta.', 'success');
+    return this.embeds.message('Observation removed.', 'success');
   }
 
   async allowChannel(
@@ -264,7 +350,7 @@ export class WowCommandsService {
       })
       .execute();
     return this.embeds.message(
-      `Obserwacje postaci na <#${channelId}>: **${enabled ? 'dozwolone' : 'wyłączone'}**.`,
+      `Character observations in <#${channelId}>: **${enabled ? 'enabled' : 'disabled'}**.`,
       'success',
     );
   }
@@ -281,7 +367,7 @@ export class WowCommandsService {
     const existing = await repository.findOneBy({ guildId });
     if (existing?.channelId === channelId)
       return this.embeds.message(
-        `Status EU jest już monitorowany na <#${channelId}>.`,
+        `EU status is already monitored in <#${channelId}>.`,
         'info',
       );
     const [realms] = await Promise.allSettled([this.source.realms()]);
@@ -311,13 +397,13 @@ export class WowCommandsService {
     });
     return [
       ...this.embeds.message(
-        `Status wszystkich realmów EU i sygnały problemów z logowaniem będą sprawdzane co 5 minut. Kanał: <#${channelId}>. Stan początkowy nie jest ogłaszany na kanale.`,
+        `EU realm status and login reports will be checked every 5 minutes. Channel: <#${channelId}>. The initial state will not be posted to the channel.`,
         'success',
       ),
       ...(realms.status === 'fulfilled'
         ? this.embeds.realms(realms.value)
         : this.embeds.message(
-            'Kanał zapisany; źródło statusu jest teraz niedostępne. Pierwszy poprawny odczyt ustali stan początkowy.',
+            'Channel saved. The status source is currently unavailable. The first successful check will establish the initial state.',
             'warning',
           )),
     ];
@@ -339,7 +425,7 @@ export class WowCommandsService {
         .delete({ guildId, kind: 'status' });
     });
     return this.embeds.message(
-      'Automatyczny monitoring statusu i zgłoszeń logowania wyłączony na tym serwerze.',
+      'Automatic realm status and login report monitoring is disabled on this server.',
       'success',
     );
   }
@@ -355,7 +441,9 @@ export class WowCommandsService {
 
   private async requireAdmin(userId: string): Promise<void> {
     if (!(await this.isAdmin(userId)))
-      throw new WowSourceError('Konfiguracja wymaga roli administratora bota.');
+      throw new WowSourceError(
+        'Configuration requires a bot administrator role.',
+      );
   }
 
   private async channel(
@@ -373,7 +461,7 @@ export class WowCommandsService {
       !channel.isSendable()
     )
       throw new WowSourceError(
-        'Wybierz kanał tekstowy na bieżącym serwerze Discorda.',
+        'Select a text channel in the current Discord server.',
       );
     const me = await channel.guild.members.fetchMe();
     if (
@@ -386,12 +474,14 @@ export class WowCommandsService {
         ])
     )
       throw new WowSourceError(
-        'Bot potrzebuje na tym kanale uprawnień View Channel, Send Messages i Embed Links.',
+        'The bot needs View Channel, Send Messages and Embed Links permissions in this channel.',
       );
     if (viewerId) {
       const member = await channel.guild.members.fetch(viewerId);
       if (!channel.permissionsFor(member)?.has(PermissionFlagsBits.ViewChannel))
-        throw new WowSourceError('Nie masz dostępu do wybranego kanału.');
+        throw new WowSourceError(
+          'You do not have access to the selected channel.',
+        );
     }
     return channel;
   }
@@ -406,7 +496,7 @@ export class WowCommandsService {
         .existsBy({ id: guildId }))
     )
       throw new WowSourceError(
-        'Najpierw zainicjalizuj serwer przez /guild initialize.',
+        'Initialize this server first with /guild initialize.',
       );
     // New WoW channels must not opt into unrelated conversational features.
     const features = Object.fromEntries(

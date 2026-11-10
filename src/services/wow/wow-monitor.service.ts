@@ -263,7 +263,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
           state.unavailable = true;
           await queue(
             this.embeds.message(
-              `Przerwa monitoringu ${this.sourceLabel(key, target)}: 3 kolejne odczyty nie powiodły się. Ostatni poprawny stan pozostaje zapisany. To nie oznacza awarii gry.`,
+              `Monitoring interrupted for ${this.sourceLabel(key, target)}: 3 consecutive checks failed. The last successful state is retained. This does not confirm a game outage.`,
               'warning',
             ),
           );
@@ -275,7 +275,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
       if (state.unavailable)
         await queue(
           this.embeds.message(
-            `Monitoring ${this.sourceLabel(key, target)} wznowiony. Ponownie otrzymujemy dane ze źródła.`,
+            `Monitoring resumed for ${this.sourceLabel(key, target)}. Source data is available again.`,
             'success',
           ),
         );
@@ -363,10 +363,10 @@ export class WowMonitorService implements OnApplicationBootstrap {
 
   private sourceLabel(key: string, target: Target): string {
     return key.startsWith('forum:')
-      ? 'zgłoszeń graczy na forum EU'
+      ? 'player reports on the EU forum'
       : target.kind === 'character'
-        ? `postaci ${target.characterSlug}`
-        : 'statusu realmów EU';
+        ? `character ${target.characterSlug}`
+        : 'EU realm status';
   }
 
   private async safely(

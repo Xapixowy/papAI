@@ -15,10 +15,10 @@ export function characterChanges(
     return [];
   const changes: string[] = [];
   if (after.level > before.level)
-    changes.push(`Poziom: **${before.level} → ${after.level}**`);
+    changes.push(`Level: **${before.level} → ${after.level}**`);
   if (after.guild !== before.guild)
     changes.push(
-      `Gildia: **${escapeMarkdown(before.guild ?? 'brak')} → ${escapeMarkdown(after.guild ?? 'brak')}**`,
+      `Guild: **${escapeMarkdown(before.guild ?? 'None')} → ${escapeMarkdown(after.guild ?? 'None')}**`,
     );
   if (
     before.specialization &&
@@ -28,7 +28,7 @@ export function characterChanges(
     const name = (c: WowCharacter) =>
       c.talents.find((s) => s.id === c.specialization)?.name ??
       c.specialization;
-    changes.push(`Specjalizacja: **${name(before)} → ${name(after)}**`);
+    changes.push(`Specialization: **${name(before)} → ${name(after)}**`);
   }
   return changes;
 }
