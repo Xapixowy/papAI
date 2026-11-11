@@ -29,7 +29,7 @@
 
 Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with a dropdown for marking cells and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
 
-Before enabling bingo, apply the database migrations using `npm run migration:run` in the configured deployment environment. A bot super administrator then enables `BINGO` with `/guild feature add`, registers the channel with `/channel add` if necessary, and enables `BINGO` through `/channel feature set` with `value: true`.
+The main-branch deployment builds the app image, applies database migrations with `npm run migration:run`, then restarts the bot only if migration succeeds. For manual deployments, apply migrations before starting the updated bot. A bot super administrator then enables `BINGO` with `/guild feature add`, registers the channel with `/channel add` if necessary, and enables `BINGO` through `/channel feature set` with `value: true`.
 
 The bot needs **View Channel**, **Send Messages**, **Attach Files**, and **Read Message History** in each bingo channel. Bingo does not require message-content or reaction intents.
 

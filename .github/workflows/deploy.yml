@@ -21,7 +21,7 @@ jobs:
       - name: Get package version
         run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
-      - name: Connect, Pull and Restart Docker
+      - name: Build, migrate and restart the bot
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -32,4 +32,6 @@ jobs:
           script: |
             cd ${{ secrets.SSH_PROJECT_PATH }} && \
             git pull && \
-            APP_VERSION=${{ env.PACKAGE_VERSION }} docker compose up -d --build --force-recreate app
+            APP_VERSION=${{ env.PACKAGE_VERSION }} docker compose build app && \
+            APP_VERSION=${{ env.PACKAGE_VERSION }} docker compose run --rm --no-deps app npm run migration:run && \
+            APP_VERSION=${{ env.PACKAGE_VERSION }} docker compose up -d --no-build --no-deps --force-recreate app
