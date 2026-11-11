@@ -658,7 +658,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       .findOneByOrFail({ name: 'Complete workflow' });
     const selected = { set: set.id };
     const list = slash(player);
-    await sets.list(list, {});
+    await sets.list(list, { page: null, includeArchived: null });
     check(list);
     const addContributor = slash();
     await contributors.add(addContributor, {
@@ -680,8 +680,13 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     });
     check(edit);
     const show = slash(player);
-    await sets.show(show, selected);
+    await sets.show(show, { ...selected, page: null });
     check(show);
+    expect(
+      JSON.stringify(
+        (show[0].editReply as ReturnType<typeof jest.fn>).mock.calls,
+      ),
+    ).toContain('10 phrase(s)');
     const remove = slash(contributor);
     await phrases.remove(remove, { ...selected, phrase: phrase.id });
     check(remove);

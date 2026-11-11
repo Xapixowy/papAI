@@ -14,7 +14,7 @@ export class BingoPageOptions {
     min_value: 1,
     max_value: 100000,
   })
-  page?: number;
+  page?: number | null;
 }
 export class BingoListOptions extends BingoPageOptions {
   @BooleanOption({
@@ -22,7 +22,7 @@ export class BingoListOptions extends BingoPageOptions {
     description: 'Include archived sets',
     required: false,
   })
-  includeArchived?: boolean;
+  includeArchived?: boolean | null;
 }
 export class BingoCreateOptions {
   @StringOption({

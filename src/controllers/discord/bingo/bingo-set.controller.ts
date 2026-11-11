@@ -48,7 +48,7 @@ export class BingoSetController {
       const [sets, total] = await this.store.list(
         actor,
         o.page ?? 1,
-        o.includeArchived,
+        o.includeArchived ?? false,
       );
       return (
         `Page ${o.page ?? 1}/${Math.max(1, Math.ceil(total / 10))} · ${total} set(s)\n\n` +
@@ -71,7 +71,7 @@ export class BingoSetController {
       const { set, phrases, total, contributors } = await this.store.show(
         actor,
         o.set,
-        o.page,
+        o.page ?? 1,
       );
       return (
         `**${escapeMarkdown(set.name)}**${set.archived ? ' · Archived' : ''}\nSet ID: \`${set.id}\`\nOwner: <@${set.ownerId}> · Contributors: ${contributors}\nPage ${o.page ?? 1}/${Math.max(1, Math.ceil(total / 10))} · ${total} phrase(s)\n\n` +
