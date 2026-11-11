@@ -4,4 +4,5 @@ export enum DiscordChannelFeature {
   GOOD_MORNING_MESSAGES = 'good_morning_messages',
   STEAM = 'steam',
   WOW_FOREVER = 'wow_forever',
+  BINGO = 'bingo',
 }

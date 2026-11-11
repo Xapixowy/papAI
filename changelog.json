@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-11-11",
+    "changes": [
+      {
+        "type": "feat",
+        "description": "Create shared bingo sets with contributor access, phrase pools, ownership transfer and archiving; run independent 3×3, 4×4 or 5×5 games per channel"
+      },
+      {
+        "type": "feat",
+        "description": "Mark and unmark cells through Discord dropdowns, announce the first bingo, preserve progress across restarts and restore deleted board messages"
+      },
+      {
+        "type": "improve",
+        "description": "Bingo failures include contextual console diagnostics without dumping Discord payloads or database parameters; failed board updates retain saved progress"
+      }
+    ]
+  },
+  {
     "version": "0.7.5",
     "date": "2026-11-11",
     "changes": [

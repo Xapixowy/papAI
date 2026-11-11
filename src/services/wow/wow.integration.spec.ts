@@ -539,7 +539,12 @@ integration(
 
     it('reverses and reapplies the migration with configured data', async () => {
       await commands.add(guildId, userId, channelId, current.slug);
-      await db.undoLastMigration();
+      const wowMigration = db.migrations.findIndex((migration) =>
+        migration.name?.startsWith('AddWowForever'),
+      );
+      expect(wowMigration).toBeGreaterThanOrEqual(0);
+      for (let i = db.migrations.length - 1; i >= wowMigration; i--)
+        await db.undoLastMigration();
       const rows: { features: string[] }[] = await db.query(
         'SELECT features FROM discord_guilds',
       );

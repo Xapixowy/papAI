@@ -8,6 +8,7 @@ export const CHANNEL_FEATURE_DEFAULTS: Record<DiscordChannelFeature, boolean> =
     [DiscordChannelFeature.GOOD_MORNING_MESSAGES]: false,
     [DiscordChannelFeature.STEAM]: false,
     [DiscordChannelFeature.WOW_FOREVER]: false,
+    [DiscordChannelFeature.BINGO]: false,
   };
 
 type GLOBAL_SETTINGS =

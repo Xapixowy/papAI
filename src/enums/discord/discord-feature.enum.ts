@@ -4,4 +4,5 @@ export enum DiscordFeature {
   STEAM = 'steam',
   REMINDERS = 'reminders',
   WOW_FOREVER = 'wow_forever',
+  BINGO = 'bingo',
 }
