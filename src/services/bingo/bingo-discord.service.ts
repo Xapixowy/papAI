@@ -77,6 +77,29 @@ export class BingoDiscordService {
     requireBingo(!member.user.bot, 'Choose a server member who is not a bot.');
   }
 
+  markMenu(
+    game: BingoGame,
+    userId: string,
+  ): ActionRowBuilder<StringSelectMenuBuilder> {
+    const available = game.cells.flatMap((cell, index) =>
+      cell.markedBy ? [] : [index],
+    );
+    requireBingo(available.length, 'All cells are already marked.');
+    return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`bingo/mark-pick/${game.id}/${userId}/${game.messageId}`)
+        .setPlaceholder('Select a cell to mark')
+        .addOptions(
+          available.map((index) => ({
+            label: bingoLabel(
+              `${cellLabel(index, game.size)} — ${game.cells[index].text}`,
+            ),
+            value: String(index),
+          })),
+        ),
+    );
+  }
+
   undoMenu(
     game: BingoGame,
     eligible: number[],
@@ -148,29 +171,24 @@ export class BingoDiscordService {
       }
       if (!message || refresh || game.syncedRevision < game.revision) {
         const image = await this.renderer.render(game);
-        const menu = new StringSelectMenuBuilder()
-          .setCustomId(`bingo/mark/${game.id}`)
-          .setPlaceholder(
-            game.endedAt ? 'This game has ended' : 'Select a cell to mark',
-          )
-          .setDisabled(!!game.endedAt)
-          .addOptions(
-            game.cells.map((cell, i) => ({
-              label: bingoLabel(`${cellLabel(i, game.size)} — ${cell.text}`),
-              description: cell.markedBy ? 'Already marked' : 'Not marked',
-              value: String(i),
-            })),
-          );
         const components = [
-          new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu),
           new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`bingo/mark-menu/${game.id}`)
+              .setLabel('Mark a cell')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(
+                !!game.endedAt || game.cells.every((cell) => cell.markedBy),
+              ),
             new ButtonBuilder()
               .setCustomId(`bingo/unmark/${game.id}`)
               .setLabel('Unmark a cell')
               .setStyle(ButtonStyle.Secondary)
               .setDisabled(
-                !!game.endedAt || !game.cells.some((c) => c.markedBy),
+                !!game.endedAt || !game.cells.some((cell) => cell.markedBy),
               ),
+          ),
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder()
               .setCustomId(`bingo/add-phrase/${game.id}`)
               .setLabel('Add phrase')
@@ -179,18 +197,6 @@ export class BingoDiscordService {
               .setCustomId(`bingo/phrases/${game.id}`)
               .setLabel('Phrases')
               .setStyle(ButtonStyle.Secondary),
-          ),
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`bingo/new-game/${game.id}`)
-              .setLabel('New game')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(!game.endedAt),
-            new ButtonBuilder()
-              .setCustomId(`bingo/end-game/${game.id}`)
-              .setLabel('End game')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(!!game.endedAt),
           ),
         ];
         const payload: MessageEditOptions = {

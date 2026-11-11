@@ -25,21 +25,20 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Discord Bingo (0.8.2)
+## Discord Bingo (0.8.3)
 
-Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a dropdown for marking cells, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
+Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a primary Mark a cell button opening a private dropdown, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
 
 The main-branch deployment builds the app image, applies database migrations with `npm run migration:run`, then restarts the bot only if migration succeeds. For manual deployments, apply migrations before starting the updated bot. A bot super administrator then enables `BINGO` with `/guild feature add`, registers the channel with `/channel add` if necessary, and enables `BINGO` through `/channel feature set` with `value: true`.
 
 Once a board is posted, use its buttons for everyday actions:
 
+- **Mark a cell** is the primary button and opens a private selector containing unmarked cells.
 - **Add phrase** opens a private form for this board's set; owner/contributor access still applies.
 - **Phrases** opens the paginated phrase pool directly.
-- **End game** asks for private confirmation. **Keep playing** cancels it.
-- **New game** becomes available after ending; choose a size and a named set.
 - **Unmark a cell** opens the existing private undo selector.
 
-These controls work after restarts. Form submissions recheck access; old confirmations cannot end a newer game. Slash commands remain available for initial setup and set/contributor administration.
+These controls work after restarts. Form submissions recheck access; old confirmations cannot end a newer game. New games and ending games use `/bingo game start` and `/bingo game end`; lifecycle management is not displayed under the image. Other slash commands remain available for initial setup and set/contributor administration.
 
 The bot needs **View Channel**, **Send Messages**, **Attach Files**, and **Read Message History** in each bingo channel. Bingo does not require message-content or reaction intents.
 

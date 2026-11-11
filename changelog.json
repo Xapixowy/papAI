@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.8.3",
+    "date": "2026-11-11",
+    "changes": [
+      {
+        "type": "improve",
+        "description": "Make Mark a cell the primary board button and open its cell selector privately; keep only marking, unmarking, adding phrases and browsing phrases below the image"
+      },
+      {
+        "type": "improve",
+        "description": "Keep new-game and end-game management in slash commands while preserving compatibility with previously posted controls"
+      }
+    ]
+  },
+  {
     "version": "0.8.2",
     "date": "2026-11-11",
     "changes": [

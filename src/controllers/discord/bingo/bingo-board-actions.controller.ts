@@ -92,6 +92,8 @@ export class BingoBoardActionsController {
     });
   }
 
+  // Legacy lifecycle controls remain routable on messages posted before 0.8.3.
+  // New and refreshed boards expose only the four everyday actions.
   @Button('bingo/new-game/:game')
   async newGame(
     @Context() [i]: ButtonContext,

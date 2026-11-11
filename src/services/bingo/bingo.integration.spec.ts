@@ -709,6 +709,86 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     );
   };
 
+  it('marks from a primary button through a private user-bound cell selector', async () => {
+    const { board } = await game();
+    const controls = new BingoInteractionController(
+      store,
+      discord,
+      new BingoRepliesService(discord),
+    );
+    const open = boardInteraction(player, board.messageId!);
+    await controls.markMenu(button(open), board.id);
+    expect(open.deferReply).toHaveBeenCalledWith({
+      flags: MessageFlags.Ephemeral,
+    });
+    const payload = JSON.parse(
+      JSON.stringify(open.editReply.mock.calls[0][0]),
+    ) as {
+      components: {
+        components: { custom_id: string; options: { value: string }[] }[];
+      }[];
+    };
+    const menu = payload.components[0].components[0];
+    expect(menu.custom_id.length).toBeLessThanOrEqual(100);
+    expect(menu.options).toHaveLength(9);
+    const stolen = boardInteraction(owner);
+    await controls.markPick(
+      selected(stolen),
+      board.id,
+      player.userId,
+      board.messageId!,
+      ['0'],
+    );
+    expect(JSON.stringify(stolen.followUp.mock.calls)).toContain(
+      'another user',
+    );
+    expect((await store.active(owner)).game.cells[0].markedBy).toBeNull();
+    const pick = boardInteraction(player);
+    await controls.markPick(
+      selected(pick),
+      board.id,
+      player.userId,
+      board.messageId!,
+      ['0'],
+    );
+    expect(pick.followUp).not.toHaveBeenCalled();
+    expect(JSON.stringify(pick.editReply.mock.calls)).toContain('A1 is marked');
+    expect((await store.active(owner)).game.cells[0].markedBy).toBe(
+      player.userId,
+    );
+    const nextOpen = boardInteraction(player, board.messageId!);
+    await controls.markMenu(button(nextOpen), board.id);
+    expect(JSON.stringify(nextOpen.editReply.mock.calls)).not.toContain(
+      '"value":"0"',
+    );
+    const published = JSON.parse(
+      JSON.stringify(
+        messages.get(board.messageId!)!.edit.mock.calls.at(-1)![0],
+      ),
+    ) as {
+      components: {
+        components: { label: string; style: number; disabled: boolean }[];
+      }[];
+    };
+    expect(published.components[0].components[0]).toMatchObject({
+      label: 'Mark a cell',
+      style: 1,
+      disabled: false,
+    });
+    await store.end(owner);
+    const stale = boardInteraction(player);
+    await controls.markPick(
+      selected(stale),
+      board.id,
+      player.userId,
+      board.messageId!,
+      ['1'],
+    );
+    expect(JSON.stringify(stale.followUp.mock.calls)).toContain(
+      'no longer active',
+    );
+  });
+
   selectionTest(
     'adds and browses phrases from board buttons without changing its snapshot',
     async () => {
@@ -735,18 +815,15 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       expect(data.embeds[0].description).toContain('26 phrase(s)');
       expect(JSON.stringify(data.embeds)).not.toContain(set.id);
       const published = boardPayload(send.mock.calls[0][0]);
-      const buttons = published.components
-        .slice(1)
-        .flatMap(
-          (row: { components: { label: string; custom_id: string }[] }) =>
-            row.components,
-        );
+      const buttons = published.components.flatMap(
+        (row: { components: { label: string; custom_id: string }[] }) =>
+          row.components,
+      );
       expect(buttons.map((b: { label: string }) => b.label)).toEqual([
+        'Mark a cell',
         'Unmark a cell',
         'Add phrase',
         'Phrases',
-        'New game',
-        'End game',
       ]);
       for (const row of published.components) {
         expect(row.components.length).toBeLessThanOrEqual(3);
@@ -757,7 +834,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
   );
 
   selectionTest(
-    'confirms or cancels ending and starts another game entirely through board controls',
+    'keeps legacy lifecycle interactions safe on previously posted boards',
     async () => {
       const { set, board } = await game();
       const actions = boardActions();
