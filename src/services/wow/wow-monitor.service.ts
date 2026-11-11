@@ -123,11 +123,25 @@ export class WowMonitorService implements OnApplicationBootstrap {
     waitForCompletion: true,
   })
   async pollStatus(): Promise<void> {
-    if (!this.client.isReady()) return;
+    if (!this.client.isReady()) {
+      this.logger.log(
+        'Skipping WoW status check: Discord client is not ready.',
+      );
+      return;
+    }
+    this.logger.log('Running WoW status check...');
     await this.safely('status', async () =>
       this.store.lock('wow:status-poll', async () => {
         const watches = await this.activeWatches();
-        if (!watches.length) return;
+        if (!watches.length) {
+          this.logger.log(
+            'Finished WoW status check: watches=0; no active status watches.',
+          );
+          return;
+        }
+        this.logger.log(`Checking WoW status: watches=${watches.length}.`);
+        let realmUpdates = 0;
+        let forumEvents = 0;
         const states = await this.dataSource
           .getRepository(WowMonitorState)
           .findBy(
@@ -156,6 +170,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
             realms,
             (before, after) => {
               const changes = before ? realmChanges(before, after) : [];
+              if (changes.length) realmUpdates++;
               return {
                 snapshot: after,
                 messages: changes.length
@@ -174,6 +189,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
                 after,
                 interrupted,
               );
+              forumEvents += result.events.length;
               return {
                 snapshot: result.state,
                 messages: result.events.map((e) => this.embeds.forum(e)),
@@ -181,6 +197,9 @@ export class WowMonitorService implements OnApplicationBootstrap {
             },
           );
         }
+        this.logger.log(
+          `Finished WoW status check: watches=${watches.length}, realmRead=${realms.status === 'fulfilled' ? 'ok' : 'failed'}, forumRead=${reports.status === 'fulfilled' ? 'ok' : 'failed'}, realmUpdates=${realmUpdates}, forumEvents=${forumEvents}.`,
+        );
       }),
     );
     await this.dispatch();
@@ -191,15 +210,27 @@ export class WowMonitorService implements OnApplicationBootstrap {
     waitForCompletion: true,
   })
   async pollCharacters(): Promise<void> {
-    if (!this.client.isReady()) return;
+    if (!this.client.isReady()) {
+      this.logger.log(
+        'Skipping WoW character check: Discord client is not ready.',
+      );
+      return;
+    }
+    this.logger.log('Running WoW character check...');
     await this.safely('characters', async () =>
       this.store.lock('wow:character-poll', async () => {
         const observers = await this.activeObservers();
         const slugs = [...new Set(observers.map((o) => o.characterSlug))];
+        this.logger.log(
+          `Checking WoW characters: observers=${observers.length}, uniqueCharacters=${slugs.length}.`,
+        );
+        let failedReads = 0;
+        let changedTargets = 0;
         for (const slug of slugs) {
           const [result] = await Promise.allSettled([
             this.source.character(slug),
           ]);
+          if (result.status === 'rejected') failedReads++;
           const groups = new Map(
             observers
               .filter((o) => o.characterSlug === slug)
@@ -226,6 +257,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
                   before && characterChanges(before, after).length
                     ? characterDifferences(before, after)
                     : [];
+                if (changes.length) changedTargets++;
                 // Keep the last unambiguous tree through a tie or an empty reset.
                 const snapshot = {
                   ...after,
@@ -242,6 +274,9 @@ export class WowMonitorService implements OnApplicationBootstrap {
             );
           }
         }
+        this.logger.log(
+          `Finished WoW character check: observers=${observers.length}, characters=${slugs.length}, failedReads=${failedReads}, changedTargets=${changedTargets}.`,
+        );
       }),
     );
     await this.dispatch();
@@ -313,6 +348,13 @@ export class WowMonitorService implements OnApplicationBootstrap {
           .addOrderBy('n.id', 'ASC')
           .take(100)
           .getMany();
+        if (notifications.length)
+          this.logger.log(
+            `Dispatching WoW notifications: pending=${notifications.length}.`,
+          );
+        let sent = 0;
+        let retry = 0;
+        let removed = 0;
         const watches = await this.activeWatches();
         const observers = await this.activeObservers();
         for (const n of notifications) {
@@ -329,6 +371,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
                 );
           if (!active) {
             await repository.delete(n.id);
+            removed++;
             continue;
           }
           try {
@@ -348,6 +391,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
               enforceNonce: true,
             });
             await repository.update(n.id, { sentAt: new Date() });
+            sent++;
           } catch (error) {
             await repository.update(n.id, {
               attempts: n.attempts + 1,
@@ -356,6 +400,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
                   Math.min(30, 2 ** Math.min(n.attempts, 5)) * 60_000,
               ),
             });
+            retry++;
             this.logger.warn(
               `Notification delivery failed: ${n.id}; channel=${n.channelId}; queued for retry; ${wowErrorDetails(error)}`,
             );
@@ -364,6 +409,10 @@ export class WowMonitorService implements OnApplicationBootstrap {
         await repository.delete({
           sentAt: LessThan(new Date(Date.now() - 7 * 86400_000)),
         });
+        if (notifications.length)
+          this.logger.log(
+            `Finished WoW notification dispatch: sent=${sent}, retry=${retry}, removed=${removed}.`,
+          );
       }),
     );
   }

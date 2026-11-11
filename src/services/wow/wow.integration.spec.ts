@@ -21,6 +21,7 @@ import {
 import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { Logger } from '@nestjs/common';
 import { DataSource, IsNull } from 'typeorm';
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
 import { DiscordChannel } from '@Database/entities/discord-channel.entity';
@@ -245,6 +246,115 @@ integration(
       if (redis) await redis.quit();
       await client?.destroy();
       if (db?.isInitialized) await db.destroy();
+    });
+
+    it('logs empty checks and readiness skips without reading external sources', async () => {
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
+      try {
+        await monitor.pollCharacters();
+        await monitor.pollStatus();
+        expect(log).toHaveBeenCalledWith('Running WoW character check...');
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW character check: observers=0, characters=0, failedReads=0, changedTargets=0.',
+        );
+        expect(log).toHaveBeenCalledWith('Running WoW status check...');
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW status check: watches=0; no active status watches.',
+        );
+        jest
+          .spyOn(client, 'isReady')
+          .mockReturnValueOnce(false)
+          .mockReturnValueOnce(false);
+        await monitor.pollCharacters();
+        await monitor.pollStatus();
+        expect(log).toHaveBeenCalledWith(
+          'Skipping WoW character check: Discord client is not ready.',
+        );
+        expect(log).toHaveBeenCalledWith(
+          'Skipping WoW status check: Discord client is not ready.',
+        );
+        expect(characterRead).not.toHaveBeenCalled();
+        expect(realmRead).not.toHaveBeenCalled();
+        expect(forumRead).not.toHaveBeenCalled();
+      } finally {
+        log.mockRestore();
+      }
+    });
+
+    it('logs unchanged, changed and failed checks and notification delivery totals', async () => {
+      await commands.add(guildId, userId, channelId, current.slug);
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
+      try {
+        await monitor.pollCharacters();
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW character check: observers=1, characters=1, failedReads=0, changedTargets=0.',
+        );
+        current.level++;
+        current.sourceUpdatedAt = new Date().toISOString();
+        await monitor.pollCharacters();
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW character check: observers=1, characters=1, failedReads=0, changedTargets=1.',
+        );
+        expect(log).toHaveBeenCalledWith(
+          'Dispatching WoW notifications: pending=1.',
+        );
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW notification dispatch: sent=1, retry=0, removed=0.',
+        );
+        characterRead.mockRejectedValueOnce(new Error('Armory unavailable'));
+        await monitor.pollCharacters();
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW character check: observers=1, characters=1, failedReads=1, changedTargets=0.',
+        );
+        await monitor.pollStatus();
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW status check: watches=1, realmRead=ok, forumRead=ok, realmUpdates=0, forumEvents=0.',
+        );
+        currentRealms[0].online = false;
+        await monitor.pollStatus();
+        expect(log).toHaveBeenCalledWith(
+          'Finished WoW status check: watches=1, realmRead=ok, forumRead=ok, realmUpdates=1, forumEvents=0.',
+        );
+      } finally {
+        log.mockRestore();
+      }
+    });
+
+    it('logs a held scheduler lock without claiming the check completed', async () => {
+      await commands.add(guildId, userId, channelId, current.slug);
+      characterRead.mockClear();
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => {});
+      const runner = db.createQueryRunner();
+      await runner.connect();
+      try {
+        await runner.query('SELECT pg_advisory_lock(hashtextextended($1, 0))', [
+          'wow:character-poll',
+        ]);
+        await monitor.pollCharacters();
+        expect(log).toHaveBeenCalledWith(
+          'Skipping WoW scheduled task wow:character-poll: another run holds the lock.',
+        );
+        expect(
+          log.mock.calls.some(([message]) =>
+            String(message).startsWith('Finished WoW character check:'),
+          ),
+        ).toBe(false);
+        expect(characterRead).not.toHaveBeenCalled();
+      } finally {
+        await runner.query(
+          'SELECT pg_advisory_unlock(hashtextextended($1, 0))',
+          ['wow:character-poll'],
+        );
+        await runner.release();
+        log.mockRestore();
+      }
     });
 
     it('baselines silently, keeps a manual read independent, and sends one level change per channel for two subscribers', async () => {

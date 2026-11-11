@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { WowMonitorState } from '@Database/entities/wow-monitor-state.entity';
 import { WowNotification } from '@Database/entities/wow-notification.entity';
@@ -10,6 +10,7 @@ export function initialHealth<T>(): WowHealthState<T> {
 
 @Injectable()
 export class WowStoreService {
+  private readonly logger = new Logger(WowStoreService.name);
   constructor(private readonly dataSource: DataSource) {}
 
   async state<T extends object>(
@@ -65,6 +66,10 @@ export class WowStoreService {
       )) as { locked: boolean }[];
       locked = rows[0]?.locked === true;
       if (locked) await run();
+      else
+        this.logger.log(
+          `Skipping WoW scheduled task ${name}: another run holds the lock.`,
+        );
     } finally {
       try {
         if (locked)
