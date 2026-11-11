@@ -1,4 +1,4 @@
-import { Injectable, UseInterceptors } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Context, Options, Subcommand } from 'necord';
 import type { SlashCommandContext } from 'necord';
 import { BingoStartOptions } from '@Options/bingo.options';
@@ -6,19 +6,19 @@ import { BingoStoreService } from '@Services/bingo/bingo-store.service';
 import { BingoDiscordService } from '@Services/bingo/bingo-discord.service';
 import { BingoCommand } from './bingo-command';
 import { BingoRepliesService } from './bingo-replies.service';
-import { BingoAutocompleteInterceptor } from './bingo-autocomplete.interceptor';
+import { BingoSelectionService } from '@Services/bingo/bingo-selection.service';
 
 @Injectable()
 @BingoCommand({
   name: 'game',
   description: 'Start and manage bingo on this channel',
 })
-@UseInterceptors(BingoAutocompleteInterceptor)
 export class BingoGameController {
   constructor(
     private readonly store: BingoStoreService,
     private readonly discord: BingoDiscordService,
     private readonly replies: BingoRepliesService,
+    private readonly selections: BingoSelectionService,
   ) {}
 
   @Subcommand({
@@ -29,10 +29,9 @@ export class BingoGameController {
     @Context() [i]: SlashCommandContext,
     @Options() o: BingoStartOptions,
   ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      const game = await this.store.start(actor, o.set, o.size);
-      return `Game started.\n${await this.discord.publish(game.id)}`;
-    });
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'start', { size: o.size }),
+    );
   }
 
   @Subcommand({
@@ -53,7 +52,7 @@ export class BingoGameController {
   async show(@Context() [i]: SlashCommandContext): Promise<void> {
     await this.replies.run(i, async (actor) => {
       const { game, canManage } = await this.store.active(actor);
-      return await this.discord.publish(game.id, canManage);
+      return await this.discord.publish(game.id, canManage, true);
     });
   }
 }

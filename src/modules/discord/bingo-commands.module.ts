@@ -5,7 +5,8 @@ import { BingoContributorController } from '@Controllers/discord/bingo/bingo-con
 import { BingoPhraseController } from '@Controllers/discord/bingo/bingo-phrase.controller';
 import { BingoGameController } from '@Controllers/discord/bingo/bingo-game.controller';
 import { BingoInteractionController } from '@Controllers/discord/bingo/bingo-interaction.controller';
-import { BingoAutocompleteInterceptor } from '@Controllers/discord/bingo/bingo-autocomplete.interceptor';
+import { BingoSelectionService } from '@Services/bingo/bingo-selection.service';
+import { BingoSelectionController } from '@Controllers/discord/bingo/bingo-selection.controller';
 import { BingoRepliesService } from '@Controllers/discord/bingo/bingo-replies.service';
 import { BingoStoreService } from '@Services/bingo/bingo-store.service';
 import { BingoRendererService } from '@Services/bingo/bingo-renderer.service';
@@ -19,7 +20,8 @@ import { BaseCommandsModule } from './base-commands.module';
     BingoPhraseController,
     BingoGameController,
     BingoInteractionController,
-    BingoAutocompleteInterceptor,
+    BingoSelectionService,
+    BingoSelectionController,
     BingoRepliesService,
     BingoStoreService,
     BingoRendererService,

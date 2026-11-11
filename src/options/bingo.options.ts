@@ -6,20 +6,10 @@ import {
 } from 'necord';
 import type { GuildMember } from 'discord.js';
 
-export class BingoPageOptions {
-  @IntegerOption({
-    name: 'page',
-    description: 'Page number',
-    required: false,
-    min_value: 1,
-    max_value: 100000,
-  })
-  page?: number | null;
-}
-export class BingoListOptions extends BingoPageOptions {
+export class BingoListOptions {
   @BooleanOption({
     name: 'include-archived',
-    description: 'Include archived sets',
+    description: 'Include archived sets in the selection menu',
     required: false,
   })
   includeArchived?: boolean | null;
@@ -34,32 +24,7 @@ export class BingoCreateOptions {
   })
   name: string;
 }
-export class BingoSetOptions {
-  @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
-}
-export class BingoShowOptions extends BingoPageOptions {
-  @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
-}
 export class BingoMemberOptions {
-  @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
   @MemberOption({
     name: 'user',
     description: 'A member of this server',
@@ -69,55 +34,18 @@ export class BingoMemberOptions {
 }
 export class BingoAddPhraseOptions {
   @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
-  @StringOption({
     name: 'text',
-    description: 'Phrase to add to the pool',
+    description: 'Phrase to add to the selected set',
     required: true,
     min_length: 1,
     max_length: 80,
   })
   text: string;
 }
-export class BingoPhraseOptions {
-  @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
-  @StringOption({
-    name: 'phrase',
-    description: 'Choose a phrase or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  phrase: string;
-}
 export class BingoEditPhraseOptions {
   @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
-  @StringOption({
-    name: 'phrase',
-    description: 'Choose a phrase or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  phrase: string;
-  @StringOption({
     name: 'text',
-    description: 'New phrase text',
+    description: 'New text for the selected phrase',
     required: true,
     min_length: 1,
     max_length: 80,
@@ -125,13 +53,6 @@ export class BingoEditPhraseOptions {
   text: string;
 }
 export class BingoStartOptions {
-  @StringOption({
-    name: 'set',
-    description: 'Choose a bingo set or enter its ID',
-    required: true,
-    autocomplete: true,
-  })
-  set: string;
   @IntegerOption({
     name: 'size',
     description: 'Board size',

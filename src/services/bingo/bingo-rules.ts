@@ -13,7 +13,7 @@ export function requireBingo(
 export function bingoId(value: string): string {
   requireBingo(
     /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value),
-    'Choose a valid ID from the bingo catalog.',
+    'This selection is no longer available. Run the command again.',
   );
   return value;
 }

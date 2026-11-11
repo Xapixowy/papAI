@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
-import { Client, ApplicationCommandOptionType } from 'discord.js';
+import { Client } from 'discord.js';
 import { NecordModule, SlashCommandsService } from 'necord';
 import { BingoCommandsModule } from '@Modules/discord/bingo-commands.module';
 import { BingoStoreService } from './bingo-store.service';
 import { BingoDiscordService } from './bingo-discord.service';
+import { BingoSelectionService } from './bingo-selection.service';
 
 describe('Bingo Discord command registration', () => {
   let module: TestingModule;
@@ -22,6 +23,8 @@ describe('Bingo Discord command registration', () => {
       .overrideProvider(BingoStoreService)
       .useValue({})
       .overrideProvider(BingoDiscordService)
+      .useValue({})
+      .overrideProvider(BingoSelectionService)
       .useValue({})
       .compile();
     await module.init();
@@ -55,23 +58,15 @@ describe('Bingo Discord command registration', () => {
         for (const option of options) {
           if (!option.required) optionalSeen = true;
           else expect(optionalSeen).toBe(false);
-          if (['set', 'phrase'].includes(option.name)) {
-            expect(option.type).toBe(ApplicationCommandOptionType.String);
-            expect(option.autocomplete).toBe(true);
-          }
+          expect(['set', 'phrase', 'id']).not.toContain(option.name);
         }
       }
     }
     expect(commands).toBe(14);
     const show = groups.get('set')!.getSubcommand('show').toJSON();
-    expect((show.options as { name: string }[]).map((o) => o.name)).toEqual([
-      'set',
-      'page',
-    ]);
+    expect((show.options as { name: string }[]).map((o) => o.name)).toEqual([]);
     const edit = groups.get('phrase')!.getSubcommand('edit').toJSON();
     expect((edit.options as { name: string }[]).map((o) => o.name)).toEqual([
-      'set',
-      'phrase',
       'text',
     ]);
   });

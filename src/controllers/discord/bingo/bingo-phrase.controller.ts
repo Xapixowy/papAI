@@ -1,58 +1,46 @@
-import { Injectable, UseInterceptors } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Context, Options, Subcommand } from 'necord';
 import type { SlashCommandContext } from 'necord';
 import {
   BingoAddPhraseOptions,
   BingoEditPhraseOptions,
-  BingoPhraseOptions,
 } from '@Options/bingo.options';
-import { BingoStoreService } from '@Services/bingo/bingo-store.service';
+import { BingoSelectionService } from '@Services/bingo/bingo-selection.service';
 import { BingoCommand } from './bingo-command';
 import { BingoRepliesService } from './bingo-replies.service';
-import { BingoAutocompleteInterceptor } from './bingo-autocomplete.interceptor';
 
 @Injectable()
 @BingoCommand({ name: 'phrase', description: 'Add and maintain bingo phrases' })
-@UseInterceptors(BingoAutocompleteInterceptor)
 export class BingoPhraseController {
   constructor(
-    private readonly store: BingoStoreService,
     private readonly replies: BingoRepliesService,
+    private readonly selections: BingoSelectionService,
   ) {}
-
-  @Subcommand({ name: 'add', description: 'Add a phrase to a bingo set' })
+  @Subcommand({ name: 'add', description: 'Choose a set and add your phrase' })
   async add(
     @Context() [i]: SlashCommandContext,
     @Options() o: BingoAddPhraseOptions,
   ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      const phrase = await this.store.phrase(actor, o.set, 'add', o.text);
-      return `Phrase added.\nPhrase ID: \`${phrase!.id}\``;
-    });
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'phrase-add', { text: o.text }),
+    );
   }
-
-  @Subcommand({ name: 'edit', description: 'Edit a phrase you own or manage' })
+  @Subcommand({ name: 'edit', description: 'Choose a set and phrase to edit' })
   async edit(
     @Context() [i]: SlashCommandContext,
     @Options() o: BingoEditPhraseOptions,
   ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      await this.store.phrase(actor, o.set, 'edit', o.text, o.phrase);
-      return 'Phrase updated. Existing boards have not changed.';
-    });
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'phrase-edit', { text: o.text }),
+    );
   }
-
   @Subcommand({
     name: 'remove',
-    description: 'Remove a phrase you own or manage',
+    description: 'Choose a set and phrase to remove',
   })
-  async remove(
-    @Context() [i]: SlashCommandContext,
-    @Options() o: BingoPhraseOptions,
-  ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      await this.store.phrase(actor, o.set, 'remove', undefined, o.phrase);
-      return 'Phrase removed. Existing boards have not changed.';
-    });
+  async remove(@Context() [i]: SlashCommandContext): Promise<void> {
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'phrase-remove'),
+    );
   }
 }

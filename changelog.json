@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.8.1",
+    "date": "2026-11-11",
+    "changes": [
+      {
+        "type": "improve",
+        "description": "Bingo images now contain only the tiles, with no title, status header, footer or outer frame"
+      },
+      {
+        "type": "improve",
+        "description": "Bingo commands now use private, paginated set and phrase selection menus; users no longer need or see database IDs"
+      },
+      {
+        "type": "improve",
+        "description": "Selection menus check current permissions and expire after ten minutes; game show refreshes existing boards with the current renderer"
+      }
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-11-11",
     "changes": [

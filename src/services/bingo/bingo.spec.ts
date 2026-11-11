@@ -79,19 +79,30 @@ describe('Bingo rules and rendering', () => {
       const image = await new BingoRendererService().render(game);
       const metadata = await sharp(image).metadata();
       expect(metadata.format).toBe('png');
-      expect(metadata.width).toBeGreaterThan(size * 200);
-      expect(metadata.height).toBeGreaterThan(size * 200);
-      const gutter = await sharp(image)
-        .extract({
-          left: metadata.width - 28,
-          top: 442,
-          width: 24,
-          height: 150,
-        })
-        .removeAlpha()
-        .raw()
-        .toBuffer();
-      expect([...gutter].some((channel) => channel > 100)).toBe(false);
+      const side = size * 230 + (size - 1) * 10 + 2;
+      expect(metadata.width).toBe(side);
+      expect(metadata.height).toBe(side);
+      expect(metadata.hasAlpha).toBe(true);
+      for (let column = 1; column < size; column++) {
+        const gap = await sharp(image)
+          .extract({ left: column * 240 - 5, top: 0, width: 2, height: side })
+          .ensureAlpha()
+          .raw()
+          .toBuffer();
+        expect(
+          [...gap]
+            .filter((_, index) => index % 4 === 3)
+            .every((alpha) => alpha === 0),
+        ).toBe(true);
+      }
+      const changedMetadata = Object.assign(new BingoGame(), game, {
+        setName: 'Different title',
+        endedAt: new Date(),
+        revision: 99,
+      });
+      expect(await new BingoRendererService().render(changedMetadata)).toEqual(
+        image,
+      );
     });
   }
 

@@ -25,25 +25,27 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Discord Bingo (0.8.0)
+## Discord Bingo (0.8.1)
 
-Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with a dropdown for marking cells and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
+Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a dropdown for marking cells, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
 
 The main-branch deployment builds the app image, applies database migrations with `npm run migration:run`, then restarts the bot only if migration succeeds. For manual deployments, apply migrations before starting the updated bot. A bot super administrator then enables `BINGO` with `/guild feature add`, registers the channel with `/channel add` if necessary, and enables `BINGO` through `/channel feature set` with `value: true`.
 
 The bot needs **View Channel**, **Send Messages**, **Attach Files**, and **Read Message History** in each bingo channel. Bingo does not require message-content or reaction intents.
 
-- `/bingo set create`, `list`, `show`, `archive`, `restore`, `transfer`: manage sets and recover ownership as a Discord server administrator.
-- `/bingo contributor add` and `remove`: the owner controls who can contribute phrases.
-- `/bingo phrase add`, `edit`, and `remove`: contributors maintain their own phrases; the owner can maintain every phrase.
-- `/bingo game start`: choose a set and size. The set owner or a user with **Manage Channels** can start or end games.
+- `/bingo set create name`: create a set. Other set commands open a private menu of named sets; `list`/`show` let you browse phrases with Previous/Next buttons. Database IDs are never displayed or entered.
+- `/bingo contributor add user` and `remove user`: select a server member, then choose the set from a private menu.
+- `/bingo phrase add text`: choose the destination set. `/bingo phrase edit text` and `/bingo phrase remove` ask you to choose a set and then a phrase. Contributors maintain their own phrases; the owner can maintain every phrase.
+- `/bingo game start size`: choose a size, then select the set from a menu. The set owner or a user with **Manage Channels** can start or end games.
 - `/bingo game show`: display the active board; the owner or a channel manager can restore a deleted board message without losing progress.
+
+Private selection menus expire after ten minutes and are bound to the invoking user and channel. Menus paginate beyond 25 entries and recheck permissions before applying a choice.
 
 Any channel member can mark cells. Unmarking requires authorship of the mark, set ownership, or **Manage Channels**. Only the first bingo is announced in each game, without mentions. Archiving a set prevents new games but leaves existing games playable.
 
 All bot-authored bingo content is in English; user-entered names and phrases are not translated. Errors are logged to the console with operation and Discord identifiers plus diagnostic codes and stack locations, without dumping tokens, request payloads, or SQL parameters. Failed board updates keep their persisted progress and are retried every 30 seconds; a deleted board requires an authorized `/bingo game show`.
 
-Run unit and command-registration checks with `npm test -- --runInBand`. Database workflow checks additionally require `BINGO_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_bingo_test`; this suite clears its test data and exercises migration rollback. The database must never contain production data. Simulated Discord transport tests must be followed by live acceptance checks on a test server.
+Run unit and command-registration checks with `npm test -- --runInBand`. Database workflow checks additionally require `BINGO_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_bingo_test`; this suite clears its test data and exercises migration rollback. Selection-flow checks also require `BINGO_TEST_REDIS_URL` pointing to a dedicated local Redis on port 56380, database 14. The database must never contain production data. Simulated Discord transport tests must be followed by live acceptance checks on a test server.
 
 ## Project setup
 

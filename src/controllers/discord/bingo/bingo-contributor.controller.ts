@@ -1,52 +1,43 @@
-import { Injectable, UseInterceptors } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Context, Options, Subcommand } from 'necord';
 import type { SlashCommandContext } from 'necord';
 import { BingoMemberOptions } from '@Options/bingo.options';
-import { BingoStoreService } from '@Services/bingo/bingo-store.service';
-import { BingoDiscordService } from '@Services/bingo/bingo-discord.service';
+import { BingoSelectionService } from '@Services/bingo/bingo-selection.service';
 import { BingoCommand } from './bingo-command';
 import { BingoRepliesService } from './bingo-replies.service';
-import { BingoAutocompleteInterceptor } from './bingo-autocomplete.interceptor';
 
 @Injectable()
 @BingoCommand({
   name: 'contributor',
   description: 'Grant or revoke access to add phrases',
 })
-@UseInterceptors(BingoAutocompleteInterceptor)
 export class BingoContributorController {
   constructor(
-    private readonly store: BingoStoreService,
-    private readonly discord: BingoDiscordService,
     private readonly replies: BingoRepliesService,
+    private readonly selections: BingoSelectionService,
   ) {}
-
   @Subcommand({
     name: 'add',
-    description: 'Invite a contributor to your bingo set',
+    description: 'Choose a set and invite a contributor',
   })
   async add(
     @Context() [i]: SlashCommandContext,
     @Options() o: BingoMemberOptions,
   ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      await this.discord.member(actor.guildId, o.user.id);
-      await this.store.contributor(actor, o.set, o.user.id, true);
-      return `Contributor access granted to <@${o.user.id}>.`;
-    });
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'contributor-add', { userId: o.user.id }),
+    );
   }
-
   @Subcommand({
     name: 'remove',
-    description: 'Revoke contributor access to your bingo set',
+    description: 'Choose a set and revoke contributor access',
   })
   async remove(
     @Context() [i]: SlashCommandContext,
     @Options() o: BingoMemberOptions,
   ): Promise<void> {
-    await this.replies.run(i, async (actor) => {
-      await this.store.contributor(actor, o.set, o.user.id, false);
-      return `Contributor access revoked for <@${o.user.id}>.`;
-    });
+    await this.replies.run(i, (actor) =>
+      this.selections.open(actor, 'contributor-remove', { userId: o.user.id }),
+    );
   }
 }

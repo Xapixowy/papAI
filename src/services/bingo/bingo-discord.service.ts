@@ -8,6 +8,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   Client,
+  escapeMarkdown,
   PermissionFlagsBits,
   StringSelectMenuBuilder,
 } from 'discord.js';
@@ -95,7 +96,11 @@ export class BingoDiscordService {
   }
 
   /** A cross-process lock orders Discord updates; mutations remain committed if delivery fails. */
-  async publish(gameId: string, restore = false): Promise<string> {
+  async publish(
+    gameId: string,
+    restore = false,
+    refresh = false,
+  ): Promise<string> {
     const runner = this.db.createQueryRunner();
     let locked = false;
     try {
@@ -138,7 +143,7 @@ export class BingoDiscordService {
           if (!this.unknownMessage(error) || !restore) throw error;
         }
       }
-      if (!message || game.syncedRevision < game.revision) {
+      if (!message || refresh || game.syncedRevision < game.revision) {
         const image = await this.renderer.render(game);
         const menu = new StringSelectMenuBuilder()
           .setCustomId(`bingo/mark/${game.id}`)
@@ -166,7 +171,7 @@ export class BingoDiscordService {
           ),
         ];
         const payload: MessageEditOptions = {
-          content: `**Bingo · ${game.size}×${game.size}**${game.endedAt ? ' · Game ended' : ''}\nGame ID: \`${game.id}\``,
+          content: `**${escapeMarkdown(game.setName)} · ${game.size}×${game.size}**${game.endedAt ? ' · Game ended' : ''}`,
           files: [
             new AttachmentBuilder(image, {
               name: `bingo-${game.revision}.png`,
@@ -195,7 +200,7 @@ export class BingoDiscordService {
         );
       }
       if (game.bingoAt && !game.announcedAt) {
-        const marker = `Bingo announcement: \`${game.id}\``;
+        const marker = `https://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}`;
         // Recover the send/commit crash window using an immutable, bot-authored marker.
         const alreadySent = await this.findAnnouncement(
           channel,
@@ -205,7 +210,7 @@ export class BingoDiscordService {
         );
         if (!alreadySent)
           await channel.send({
-            content: `**BINGO!** The first row, column, or main diagonal has been completed.\nhttps://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}\n${marker}`,
+            content: `**BINGO!** The first row, column, or main diagonal has been completed.\nhttps://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}`,
             allowedMentions: { parse: [] },
             nonce: `a${game.id.replaceAll('-', '').slice(0, 24)}`,
             enforceNonce: true,
@@ -306,7 +311,12 @@ export class BingoDiscordService {
           (message) =>
             message.author.id === botId &&
             message.content.startsWith('**BINGO!**') &&
-            message.content.includes(marker),
+            (message.content.includes(marker) ||
+              message.content.includes(`Bingo announcement: \`${game.id}\``) ||
+              (!!game.messageId &&
+                message.content.includes(
+                  `https://discord.com/channels/${game.guildId}/${game.channelId}/${game.messageId}`,
+                ))),
         )
       )
         return true;

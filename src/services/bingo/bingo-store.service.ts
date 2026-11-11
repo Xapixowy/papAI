@@ -370,46 +370,90 @@ export class BingoStoreService {
     });
   }
 
-  async suggestions(
+  async selectionItems(
     actor: BingoActor,
-    query: string,
+    action: import('./bingo-selection.service').BingoSelectionAction,
+    page: number,
     setId?: string,
-  ): Promise<{ name: string; value: string }[]> {
-    await this.gate(actor);
-    if (setId) {
-      const set = await this.findSet(this.db.manager, actor, setId);
-      return (
-        await this.db
-          .getRepository(BingoPhrase)
-          .createQueryBuilder('p')
-          .where('p.set_id = :set', { set: set.id })
-          .andWhere('(p.text ILIKE :q OR p.id::text ILIKE :q)', {
-            q: `%${query.slice(0, 80)}%`,
-          })
-          .orderBy('p.created_at', 'ASC')
-          .limit(25)
-          .getMany()
-      ).map((p) => ({
-        name: `${bingoLabel(p.text, 60)} · ${p.id}`,
-        value: p.id,
-      }));
+    phrases = false,
+    includeArchived = true,
+  ): Promise<{
+    items: { label: string; description: string; value: string }[];
+    total: number;
+  }> {
+    await this.gate(actor, this.db.manager, action === 'start');
+    if (phrases) {
+      const set = await this.findSet(this.db.manager, actor, setId!);
+      const contributor = await this.db
+        .getRepository(BingoContributor)
+        .existsBy({ setId: set.id, userId: actor.userId });
+      requireBingo(
+        !set.archived && (set.ownerId === actor.userId || contributor),
+        'You no longer have access to change phrases in this set.',
+      );
+      const query = this.db
+        .getRepository(BingoPhrase)
+        .createQueryBuilder('p')
+        .where('p.set_id = :set', { set: set.id });
+      if (set.ownerId !== actor.userId)
+        query.andWhere('p.author_id = :user', { user: actor.userId });
+      const [rows, total] = await query
+        .orderBy('p.created_at', 'ASC')
+        .addOrderBy('p.id', 'ASC')
+        .skip(this.offset(page, 25))
+        .take(25)
+        .getManyAndCount();
+      return {
+        total,
+        items: rows.map((row) => ({
+          label: row.text,
+          description:
+            row.text.length > 100
+              ? row.text.slice(bingoLabel(row.text).length)
+              : row.authorId === actor.userId
+                ? 'Your phrase'
+                : 'Shared phrase',
+          value: row.id,
+        })),
+      };
     }
-    return (
-      await this.db
-        .getRepository(BingoSet)
-        .createQueryBuilder('s')
-        .where('s.guild_id = :guild', { guild: actor.guildId })
-        .andWhere('(s.name ILIKE :q OR s.id::text ILIKE :q)', {
-          q: `%${query.slice(0, 80)}%`,
-        })
-        .orderBy('s.archived', 'ASC')
-        .addOrderBy('s.created_at', 'DESC')
-        .limit(25)
-        .getMany()
-    ).map((s) => ({
-      name: `${bingoLabel(`${s.archived ? '[Archived] ' : ''}${s.name}`, 60)} · ${s.id}`,
-      value: s.id,
-    }));
+    const query = this.db
+      .getRepository(BingoSet)
+      .createQueryBuilder('s')
+      .where('s.guild_id = :guild', { guild: actor.guildId });
+    const owner = 's.owner_id = :user';
+    query.setParameter('user', actor.userId);
+    if (action === 'show') {
+      if (!includeArchived) query.andWhere('s.archived = false');
+    } else if (action === 'restore') query.andWhere('s.archived = true');
+    else if (action !== 'transfer') query.andWhere('s.archived = false');
+    if (['phrase-add', 'phrase-edit', 'phrase-remove'].includes(action))
+      query.andWhere(
+        `(${owner} OR EXISTS (SELECT 1 FROM bingo_contributors c WHERE c.set_id = s.id AND c.user_id = :user))`,
+      );
+    else if (action === 'start') {
+      if (!actor.manageChannels) query.andWhere(owner);
+    } else if (action !== 'show') {
+      if (!(
+        ['archive', 'restore', 'transfer'].includes(action) &&
+        actor.administrator
+      ))
+        query.andWhere(owner);
+    }
+    const [rows, total] = await query
+      .orderBy('s.created_at', 'DESC')
+      .addOrderBy('s.id', 'ASC')
+      .skip(this.offset(page, 25))
+      .take(25)
+      .getManyAndCount();
+    return {
+      total,
+      items: rows.map((row) => ({
+        label: row.name,
+        description: `${row.archived ? 'Archived · ' : ''}${row.ownerId === actor.userId ? 'Your set' : 'Shared set'} · ${row.createdAt.toISOString().slice(0, 19).replace('T', ' ')} UTC`,
+        value: row.id,
+      })),
+    };
   }
 
   private async editSet<T>(
@@ -481,11 +525,11 @@ export class BingoStoreService {
     );
   }
 
-  private offset(page: number): number {
+  private offset(page: number, size = 10): number {
     requireBingo(
       Number.isInteger(page) && page >= 1 && page <= 100000,
       'Choose a valid page number.',
     );
-    return (page - 1) * 10;
+    return (page - 1) * size;
   }
 }

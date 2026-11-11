@@ -68,6 +68,39 @@ export class BingoRepliesService {
     }
   }
 
+  async update(
+    interaction: ButtonInteraction | StringSelectMenuInteraction,
+    action: (actor: BingoActor) => Promise<InteractionEditReplyOptions>,
+  ): Promise<void> {
+    const context = {
+      guild: interaction.guildId,
+      channel: interaction.channelId,
+      user: interaction.user.id,
+    };
+    try {
+      await interaction.deferUpdate();
+      const actor = await this.discord.actor(interaction);
+      await interaction.editReply({
+        ...(await action(actor)),
+        allowedMentions: { parse: [] },
+      });
+    } catch (error) {
+      this.discord.logFailure('selection', context, error);
+      const message =
+        error instanceof BingoError
+          ? error.message
+          : 'Bingo could not complete this selection. Please try again. The error has been logged.';
+      try {
+        await interaction.followUp({
+          ...this.text(message),
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (replyError) {
+        this.discord.logFailure('selection-error-reply', context, replyError);
+      }
+    }
+  }
+
   text(description: string) {
     return {
       embeds: [

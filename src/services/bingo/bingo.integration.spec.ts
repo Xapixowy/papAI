@@ -8,6 +8,9 @@ import {
   jest,
 } from '@jest/globals';
 import { join } from 'node:path';
+import Redis from 'ioredis';
+import { BingoSelectionService } from './bingo-selection.service';
+import { BingoSelectionController } from '@Controllers/discord/bingo/bingo-selection.controller';
 import { DataSource } from 'typeorm';
 import {
   Client,
@@ -45,6 +48,8 @@ import type {
 
 const url = process.env.BINGO_TEST_POSTGRES_URL;
 const integration = url ? describe : describe.skip;
+const redisUrl = process.env.BINGO_TEST_REDIS_URL;
+const selectionTest = redisUrl ? it : it.skip;
 
 integration('Bingo with PostgreSQL and simulated Discord transport', () => {
   const guildId = '100000000000000001',
@@ -70,6 +75,8 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     store: BingoStoreService,
     discord: BingoDiscordService,
     client: Client;
+  let redis: Redis | undefined;
+  let selections: BingoSelectionService;
   let messages: Map<string, { id: string; edit: ReturnType<typeof jest.fn> }>;
   let nextMessage: number;
   const send =
@@ -144,6 +151,20 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       new BingoRendererService(),
       client,
     );
+    if (redisUrl) {
+      const target = new URL(redisUrl);
+      if (
+        !['localhost', '127.0.0.1'].includes(target.hostname) ||
+        target.port !== '56380' ||
+        target.pathname !== '/14'
+      )
+        throw new Error(
+          'Selection tests require dedicated local Redis on port 56380, database 14',
+        );
+      redis = new Redis(redisUrl, { maxRetriesPerRequest: 0 });
+      await redis.ping();
+    }
+    selections = new BingoSelectionService(store, discord, redis!);
   });
 
   beforeEach(async () => {
@@ -161,6 +182,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
         discordGuildId: guildId,
         features: { [DiscordChannelFeature.BINGO]: true },
       });
+    if (redis) await redis.flushdb();
     messages = new Map();
     nextMessage = 2000;
     send.mockReset().mockImplementation((payload) => {
@@ -199,6 +221,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
   afterAll(async () => {
     if (db?.isInitialized) await db.destroy();
     await client?.destroy();
+    if (redis) await redis.quit();
   });
 
   async function ready(count = 25) {
@@ -245,18 +268,21 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
   it('scopes catalogs, suggestions and mutations to the current server', async () => {
     const set = await ready(1);
     expect((await store.list(foreign, 1))[1]).toBe(0);
-    expect(await store.suggestions(foreign, '')).toEqual([]);
+    expect((await store.selectionItems(foreign, 'show', 1)).items).toEqual([]);
     for (const action of [
       () => store.show(foreign, set.id),
       () => store.archive(foreign, set.id, true),
       () => store.phrase(foreign, set.id, 'add', 'Foreign'),
-      () => store.suggestions(foreign, '', set.id),
+      () => store.selectionItems(foreign, 'phrase-edit', 1, set.id, true),
     ])
       await expect(action()).rejects.toThrow('not found');
-    expect((await store.suggestions(player, 'Raid'))[0].value).toBe(set.id);
     expect(
-      (await store.suggestions(player, 'Phrase', set.id))[0].value,
-    ).toBeDefined();
+      (await store.selectionItems(player, 'show', 1)).items[0],
+    ).toMatchObject({ label: 'Raid Bingo', value: set.id });
+    expect(
+      (await store.selectionItems(owner, 'phrase-edit', 1, set.id, true))
+        .items[0].label,
+    ).toBe('Phrase 0');
   });
 
   it('rejects too-small pools and permits only one concurrent active game per channel, even from different sets', async () => {
@@ -532,8 +558,8 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     };
     await new BingoSetController(
       store,
-      discord,
       new BingoRepliesService(discord),
+      selections,
     ).create([interaction as unknown as ChatInputCommandInteraction], {
       name: 'Controller set',
     });
@@ -586,8 +612,8 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     try {
       await new BingoSetController(
         store,
-        discord,
         new BingoRepliesService(discord),
+        selections,
       ).create([i as unknown as ChatInputCommandInteraction], { name: 'Test' });
       const output = stderr.mock.calls.map(([chunk]) => String(chunk)).join('');
       expect(output).toContain('Bingo bingo set create failed');
@@ -603,146 +629,293 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     }
   });
 
-  it('runs all command groups and mark/unmark controls through real handlers', async () => {
-    const replies = new BingoRepliesService(discord);
-    const sets = new BingoSetController(store, discord, replies);
-    const contributors = new BingoContributorController(
-      store,
-      discord,
-      replies,
-    );
-    const phrases = new BingoPhraseController(store, replies);
-    const games = new BingoGameController(store, discord, replies);
-    const controls = new BingoInteractionController(store, discord, replies);
-    const interaction = (actor = owner, messageId?: string) => {
-      const i = {
-        guildId: actor.guildId,
-        channelId: actor.channelId,
-        user: { id: actor.userId },
-        message: { id: messageId ?? '' },
-        deferred: false,
-        replied: false,
-        customId: 'bingo/test',
-        isChatInputCommand: () => !messageId,
-        commandName: 'bingo',
-        options: {
-          getSubcommandGroup: () => 'test',
-          getSubcommand: () => 'test',
-        },
-        deferReply: jest.fn<() => Promise<void>>().mockImplementation(() => {
-          i.deferred = true;
-          return Promise.resolve();
-        }),
-        editReply: jest
-          .fn<(payload: unknown) => Promise<void>>()
-          .mockResolvedValue(),
-        reply: jest.fn<() => Promise<void>>().mockResolvedValue(),
+  selectionTest(
+    'runs all command groups through private selects without displaying identifiers',
+    async () => {
+      const replies = new BingoRepliesService(discord);
+      const sets = new BingoSetController(store, replies, selections);
+      const contributors = new BingoContributorController(replies, selections);
+      const phrases = new BingoPhraseController(replies, selections);
+      const games = new BingoGameController(
+        store,
+        discord,
+        replies,
+        selections,
+      );
+      const controls = new BingoInteractionController(store, discord, replies);
+      const picker = new BingoSelectionController(selections, replies);
+      const interaction = (actor = owner, messageId?: string) => {
+        const i = {
+          guildId: actor.guildId,
+          channelId: actor.channelId,
+          user: { id: actor.userId },
+          message: { id: messageId ?? '' },
+          deferred: false,
+          replied: false,
+          customId: 'bingo/pick/test',
+          isChatInputCommand: () => !messageId,
+          commandName: 'bingo',
+          options: {
+            getSubcommandGroup: () => 'test',
+            getSubcommand: () => 'test',
+          },
+          deferReply: jest.fn<() => Promise<void>>().mockImplementation(() => {
+            i.deferred = true;
+            return Promise.resolve();
+          }),
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+          followUp: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          reply: jest.fn<() => Promise<void>>().mockResolvedValue(),
+        };
+        return i;
       };
-      return i;
-    };
-    const slash = (actor = owner) =>
-      [interaction(actor) as unknown as ChatInputCommandInteraction] as [
-        ChatInputCommandInteraction,
-      ];
-    const check = (context: [ChatInputCommandInteraction]) =>
-      expect(
-        JSON.stringify(
-          (context[0].editReply as ReturnType<typeof jest.fn>).mock.calls,
+      const slash = (actor = owner) =>
+        [interaction(actor) as unknown as ChatInputCommandInteraction] as [
+          ChatInputCommandInteraction,
+        ];
+      const payload = (context: [ChatInputCommandInteraction]): unknown =>
+        (context[0].editReply as ReturnType<typeof jest.fn>).mock.calls.at(
+          -1,
+        )![0];
+      const visible = (value: unknown) => {
+        const data = JSON.parse(JSON.stringify(value)) as {
+          content?: string;
+          embeds?: unknown[];
+          components?: {
+            components: {
+              label?: string;
+              options?: { label: string; description?: string }[];
+            }[];
+          }[];
+        };
+        return JSON.stringify({
+          content: data.content,
+          embeds: data.embeds,
+          labels: data.components?.flatMap((row) =>
+            row.components.flatMap((component) => [
+              component.label,
+              ...(component.options ?? []).flatMap((o) => [
+                o.label,
+                o.description,
+              ]),
+            ]),
+          ),
+        });
+      };
+      const select = async (
+        context: [ChatInputCommandInteraction],
+        choice: string,
+        actor = owner,
+      ) => {
+        const data = JSON.parse(JSON.stringify(payload(context))) as {
+          components: { components: { custom_id: string }[] }[];
+        };
+        const token = data.components[0].components[0].custom_id.split('/')[2];
+        const i = interaction(actor, 'selection-message');
+        await picker.choose(
+          [i as unknown as StringSelectMenuInteraction],
+          token,
+          [choice],
+        );
+        expect(i.followUp).not.toHaveBeenCalled();
+        const value = i.editReply.mock.calls.at(-1)![0];
+        expect(visible(value)).not.toMatch(
+          /[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}/i,
+        );
+        return [i as unknown as ChatInputCommandInteraction] as [
+          ChatInputCommandInteraction,
+        ];
+      };
+      const created = slash();
+      await sets.create(created, { name: 'Complete workflow' });
+      expect(visible(payload(created))).not.toContain('Set ID');
+      const set = await db
+        .getRepository(BingoSet)
+        .findOneByOrFail({ name: 'Complete workflow' });
+      const list = slash(player);
+      await sets.list(list, { includeArchived: null });
+      await select(list, set.id, player);
+      const invited = slash();
+      await contributors.add(invited, {
+        user: { id: contributor.userId } as import('discord.js').GuildMember,
+      });
+      await select(invited, set.id);
+      for (let n = 0; n < 10; n++) {
+        const add = slash(contributor);
+        await phrases.add(add, { text: `Workflow phrase ${n}` });
+        await select(add, set.id, contributor);
+      }
+      const phrase = (await store.show(owner, set.id)).phrases[0];
+      const edit = slash(contributor);
+      await phrases.edit(edit, { text: 'A revised phrase' });
+      const editPhrases = await select(edit, set.id, contributor);
+      await select(editPhrases, phrase.id, contributor);
+      const show = slash(player);
+      await sets.show(show);
+      const shown = await select(show, set.id, player);
+      expect(visible(payload(shown))).toContain('10 phrase(s)');
+      const remove = slash(contributor);
+      await phrases.remove(remove);
+      const removePhrases = await select(remove, set.id, contributor);
+      await select(removePhrases, phrase.id, contributor);
+      const start = slash();
+      await games.start(start, { size: 3 });
+      await select(start, set.id);
+      const board = (await store.active(owner)).game;
+      const mark = interaction(player, board.messageId!);
+      await controls.mark(
+        [mark as unknown as StringSelectMenuInteraction],
+        board.id,
+        ['0'],
+      );
+      expect(JSON.stringify(mark.editReply.mock.calls)).toContain(
+        'A1 is marked',
+      );
+      const unmark = interaction(player, board.messageId!);
+      await controls.unmark([unmark as unknown as ButtonInteraction], board.id);
+      expect(JSON.stringify(unmark.editReply.mock.calls)).toContain(
+        'Select a cell to unmark',
+      );
+      const undo = interaction(player, 'private-message');
+      await controls.undo(
+        [undo as unknown as StringSelectMenuInteraction],
+        board.id,
+        player.userId,
+        board.messageId!,
+        ['0'],
+      );
+      expect(JSON.stringify(undo.editReply.mock.calls)).toContain(
+        'A1 is no longer marked',
+      );
+      const gameShow = slash(player);
+      await games.show(gameShow);
+      const end = slash();
+      await games.end(end);
+      const revoke = slash();
+      await contributors.remove(revoke, {
+        user: { id: contributor.userId } as import('discord.js').GuildMember,
+      });
+      await select(revoke, set.id);
+      const archive = slash();
+      await sets.archive(archive);
+      await select(archive, set.id);
+      const restore = slash();
+      await sets.restore(restore);
+      await select(restore, set.id);
+      const transfer = slash();
+      await sets.transfer(transfer, {
+        user: { id: player.userId } as import('discord.js').GuildMember,
+      });
+      await select(transfer, set.id);
+      expect((await store.show(player, set.id)).set.ownerId).toBe(
+        player.userId,
+      );
+    },
+  );
+
+  selectionTest(
+    'binds menus to their owner/channel, rechecks access, and prevents forged or repeated choices',
+    async () => {
+      const set = await ready(1);
+      const tokenFrom = (reply: unknown) =>
+        (
+          JSON.parse(JSON.stringify(reply)) as {
+            components: { components: { custom_id: string }[] }[];
+          }
+        ).components[0].components[0].custom_id.split('/')[2];
+      const token = tokenFrom(
+        await selections.open(contributor, 'phrase-add', {
+          text: 'New phrase',
+        }),
+      );
+      await expect(selections.choose(player, token, set.id)).rejects.toThrow(
+        'another user',
+      );
+      await expect(
+        selections.choose(
+          { ...contributor, channelId: otherChannel.channelId },
+          token,
+          set.id,
         ),
-      ).not.toMatch(/could not|Only the|not found/);
-    const created = slash();
-    await sets.create(created, { name: 'Complete workflow' });
-    check(created);
-    const set = await db
-      .getRepository(BingoSet)
-      .findOneByOrFail({ name: 'Complete workflow' });
-    const selected = { set: set.id };
-    const list = slash(player);
-    await sets.list(list, { page: null, includeArchived: null });
-    check(list);
-    const addContributor = slash();
-    await contributors.add(addContributor, {
-      ...selected,
-      user: { id: contributor.userId } as import('discord.js').GuildMember,
-    });
-    check(addContributor);
-    for (let n = 0; n < 10; n++) {
-      const add = slash(contributor);
-      await phrases.add(add, { ...selected, text: `Workflow phrase ${n}` });
-      check(add);
-    }
-    const phrase = (await store.show(owner, set.id)).phrases[0];
-    const edit = slash(contributor);
-    await phrases.edit(edit, {
-      ...selected,
-      phrase: phrase.id,
-      text: 'A revised phrase',
-    });
-    check(edit);
-    const show = slash(player);
-    await sets.show(show, { ...selected, page: null });
-    check(show);
-    expect(
-      JSON.stringify(
-        (show[0].editReply as ReturnType<typeof jest.fn>).mock.calls,
-      ),
-    ).toContain('10 phrase(s)');
-    const remove = slash(contributor);
-    await phrases.remove(remove, { ...selected, phrase: phrase.id });
-    check(remove);
-    const start = slash();
-    await games.start(start, { ...selected, size: 3 });
-    check(start);
-    const board = (await store.active(owner)).game;
-    const mark = interaction(player, board.messageId!);
-    await controls.mark(
-      [mark as unknown as StringSelectMenuInteraction],
-      board.id,
-      ['0'],
-    );
-    expect(JSON.stringify(mark.editReply.mock.calls)).toContain('A1 is marked');
-    const unmark = interaction(player, board.messageId!);
-    await controls.unmark([unmark as unknown as ButtonInteraction], board.id);
-    expect(JSON.stringify(unmark.editReply.mock.calls)).toContain(
-      'Select a cell to unmark',
-    );
-    const undo = interaction(player, 'private-message');
-    await controls.undo(
-      [undo as unknown as StringSelectMenuInteraction],
-      board.id,
-      player.userId,
-      board.messageId!,
-      ['0'],
-    );
-    expect(JSON.stringify(undo.editReply.mock.calls)).toContain(
-      'A1 is no longer marked',
-    );
-    const gameShow = slash(player);
-    await games.show(gameShow);
-    check(gameShow);
-    const end = slash();
-    await games.end(end);
-    check(end);
-    const revoke = slash();
-    await contributors.remove(revoke, {
-      ...selected,
-      user: { id: contributor.userId } as import('discord.js').GuildMember,
-    });
-    check(revoke);
-    const archive = slash();
-    await sets.archive(archive, selected);
-    check(archive);
-    const restore = slash();
-    await sets.restore(restore, selected);
-    check(restore);
-    const transfer = slash();
-    await sets.transfer(transfer, {
-      ...selected,
-      user: { id: player.userId } as import('discord.js').GuildMember,
-    });
-    check(transfer);
-    expect((await store.show(player, set.id)).set.ownerId).toBe(player.userId);
-  });
+      ).rejects.toThrow('another user');
+      await expect(
+        selections.choose(
+          contributor,
+          token,
+          '00000000-0000-4000-8000-000000000001',
+        ),
+      ).rejects.toThrow('from this menu');
+      await store.contributor(owner, set.id, contributor.userId, false);
+      await expect(
+        selections.choose(contributor, token, set.id),
+      ).rejects.toThrow('invited');
+      const good = tokenFrom(
+        await selections.open(owner, 'phrase-add', { text: 'Saved once' }),
+      );
+      await selections.choose(owner, good, set.id);
+      await expect(selections.choose(owner, good, set.id)).rejects.toThrow(
+        'expired',
+      );
+      const expired = tokenFrom(await selections.open(owner, 'show'));
+      await redis!.del(`bingo:selection:${expired}`);
+      await expect(selections.choose(owner, expired, set.id)).rejects.toThrow(
+        'expired',
+      );
+    },
+  );
+
+  selectionTest(
+    'paginates named sets and phrases beyond 25 choices and filters phrases by author',
+    async () => {
+      const set = await ready(30);
+      const tokenFrom = (reply: unknown) =>
+        (
+          JSON.parse(JSON.stringify(reply)) as {
+            components: { components: { custom_id: string }[] }[];
+          }
+        ).components[0].components[0].custom_id.split('/')[2];
+      const optionsFrom = (reply: unknown) =>
+        (
+          JSON.parse(JSON.stringify(reply)) as {
+            components: {
+              components: { options: { label: string; value: string }[] }[];
+            }[];
+          }
+        ).components[0].components[0].options;
+      const opened = await selections.open(contributor, 'phrase-edit', {
+        text: 'Updated',
+      });
+      const token = tokenFrom(opened);
+      const first = await selections.choose(contributor, token, set.id);
+      expect(optionsFrom(first)).toHaveLength(25);
+      const second = await selections.page(contributor, token, '2');
+      expect(optionsFrom(second)).toHaveLength(5);
+      expect(
+        optionsFrom(second).every((item) => !item.label.includes(item.value)),
+      ).toBe(true);
+      await selections.cancel(contributor, token);
+      await expect(selections.page(contributor, token, '1')).rejects.toThrow(
+        'expired',
+      );
+      await store.contributor(owner, set.id, player.userId, true);
+      await store.phrase(player, set.id, 'add', 'Own phrase');
+      expect(
+        (await store.selectionItems(player, 'phrase-edit', 1, set.id, true))
+          .items,
+      ).toHaveLength(1);
+      for (let i = 0; i < 26; i++) await store.create(owner, `Set ${i}`);
+      const sets = await selections.open(owner, 'show');
+      expect(optionsFrom(sets)).toHaveLength(25);
+      expect(
+        optionsFrom(await selections.page(owner, tokenFrom(sets), '2')),
+      ).toHaveLength(2);
+    },
+  );
 
   it('reverses and reapplies the bingo migration without removing other feature configuration', async () => {
     await ready(1);
