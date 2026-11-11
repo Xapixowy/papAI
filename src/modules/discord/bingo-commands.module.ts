@@ -1,3 +1,4 @@
+import { BingoBoardActionsController } from '@Controllers/discord/bingo/bingo-board-actions.controller';
 import { Module } from '@nestjs/common';
 import { GatewayIntentBits } from 'discord.js';
 import { BingoSetController } from '@Controllers/discord/bingo/bingo-set.controller';
@@ -20,6 +21,7 @@ import { BaseCommandsModule } from './base-commands.module';
     BingoPhraseController,
     BingoGameController,
     BingoInteractionController,
+    BingoBoardActionsController,
     BingoSelectionService,
     BingoSelectionController,
     BingoRepliesService,

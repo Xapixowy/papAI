@@ -31,7 +31,7 @@ import {
 
 export interface BingoIdentity {
   guildId: string | null;
-  channelId: string;
+  channelId: string | null;
   user: { id: string };
 }
 
@@ -48,7 +48,10 @@ export class BingoDiscordService {
   ) {}
 
   async actor(identity: BingoIdentity): Promise<BingoActor> {
-    requireBingo(identity.guildId, 'Use bingo in a Discord server.');
+    requireBingo(
+      identity.guildId && identity.channelId,
+      'Use bingo in a Discord server channel.',
+    );
     const channel = await this.channel(identity.guildId, identity.channelId);
     const member = await channel.guild.members.fetch({
       user: identity.user.id,
@@ -168,6 +171,26 @@ export class BingoDiscordService {
               .setDisabled(
                 !!game.endedAt || !game.cells.some((c) => c.markedBy),
               ),
+            new ButtonBuilder()
+              .setCustomId(`bingo/add-phrase/${game.id}`)
+              .setLabel('Add phrase')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId(`bingo/phrases/${game.id}`)
+              .setLabel('Phrases')
+              .setStyle(ButtonStyle.Secondary),
+          ),
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`bingo/new-game/${game.id}`)
+              .setLabel('New game')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(!game.endedAt),
+            new ButtonBuilder()
+              .setCustomId(`bingo/end-game/${game.id}`)
+              .setLabel('End game')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(!!game.endedAt),
           ),
         ];
         const payload: MessageEditOptions = {

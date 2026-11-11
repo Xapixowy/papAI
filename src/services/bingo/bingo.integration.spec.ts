@@ -1,5 +1,6 @@
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -39,11 +40,13 @@ import { BingoSetController } from '@Controllers/discord/bingo/bingo-set.control
 import { BingoContributorController } from '@Controllers/discord/bingo/bingo-contributor.controller';
 import { BingoPhraseController } from '@Controllers/discord/bingo/bingo-phrase.controller';
 import { BingoGameController } from '@Controllers/discord/bingo/bingo-game.controller';
+import { BingoBoardActionsController } from '@Controllers/discord/bingo/bingo-board-actions.controller';
 import { BingoInteractionController } from '@Controllers/discord/bingo/bingo-interaction.controller';
 import type {
   Guild,
   StringSelectMenuInteraction,
   ButtonInteraction,
+  ModalSubmitInteraction,
 } from 'discord.js';
 
 const url = process.env.BINGO_TEST_POSTGRES_URL;
@@ -628,6 +631,283 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       failure.mockRestore();
     }
   });
+
+  function boardInteraction(
+    actor = owner,
+    messageId = 'private',
+    text = 'A phrase from the form',
+  ) {
+    const i = {
+      guildId: actor.guildId,
+      channelId: actor.channelId,
+      user: { id: actor.userId },
+      message: { id: messageId },
+      customId: 'bingo/board/test',
+      deferred: false,
+      replied: false,
+      isChatInputCommand: () => false,
+      fields: { getTextInputValue: () => text },
+      deferReply: jest.fn<() => Promise<void>>().mockImplementation(() => {
+        i.deferred = true;
+        return Promise.resolve();
+      }),
+      deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+      showModal: jest
+        .fn<(payload: unknown) => Promise<void>>()
+        .mockResolvedValue(),
+      editReply: jest
+        .fn<(payload: unknown) => Promise<void>>()
+        .mockResolvedValue(),
+      followUp: jest
+        .fn<(payload: unknown) => Promise<void>>()
+        .mockResolvedValue(),
+      reply: jest.fn<(payload: unknown) => Promise<void>>().mockResolvedValue(),
+    };
+    return i;
+  }
+  const button = (
+    i: ReturnType<typeof boardInteraction>,
+  ): [ButtonInteraction] => [i as unknown as ButtonInteraction];
+  const selected = (
+    i: ReturnType<typeof boardInteraction>,
+  ): [StringSelectMenuInteraction] => [
+    i as unknown as StringSelectMenuInteraction,
+  ];
+  const modal = (
+    i: ReturnType<typeof boardInteraction>,
+  ): [ModalSubmitInteraction] => [i as unknown as ModalSubmitInteraction];
+  let restoreBoardActor: (() => void) | undefined;
+  afterEach(() => {
+    restoreBoardActor?.();
+    restoreBoardActor = undefined;
+  });
+  const boardPayload = (value: unknown) =>
+    JSON.parse(JSON.stringify(value)) as {
+      title: string;
+      custom_id: string;
+      embeds: { title: string; description: string }[];
+      components: {
+        components: { label: string; custom_id: string; max_length: number }[];
+      }[];
+    };
+  const boardActions = () => {
+    const spy = jest.spyOn(discord, 'actor').mockImplementation((identity) =>
+      Promise.resolve({
+        ...[owner, contributor, player, manager, admin].find(
+          (a) => a.userId === identity.user.id,
+        )!,
+        guildId: identity.guildId!,
+        channelId: identity.channelId!,
+      }),
+    );
+    restoreBoardActor = () => spy.mockRestore();
+    return new BingoBoardActionsController(
+      store,
+      discord,
+      selections,
+      new BingoRepliesService(discord),
+    );
+  };
+
+  selectionTest(
+    'adds and browses phrases from board buttons without changing its snapshot',
+    async () => {
+      const { set, board } = await game();
+      const actions = boardActions();
+      const open = boardInteraction(contributor, board.messageId!);
+      await actions.addPhrase(button(open), board.id);
+      expect(open.deferReply).not.toHaveBeenCalled();
+      const form = boardPayload(open.showModal.mock.calls[0][0]);
+      expect(form.title).toBe('Add phrase');
+      expect(form.custom_id.length).toBeLessThanOrEqual(100);
+      expect(form.components[0].components[0].max_length).toBe(80);
+      const submit = boardInteraction(contributor);
+      await actions.savePhrase(modal(submit), board.id, board.messageId!);
+      expect(JSON.stringify(submit.editReply.mock.calls)).toContain(
+        'Phrase added',
+      );
+      expect((await store.show(owner, set.id)).total).toBe(26);
+      expect((await store.active(owner)).game.cells).toEqual(board.cells);
+      const browse = boardInteraction(player, board.messageId!);
+      await actions.phrases(button(browse), board.id);
+      const data = boardPayload(browse.editReply.mock.calls[0][0]);
+      expect(data.embeds[0].title).toBe('Raid Bingo');
+      expect(data.embeds[0].description).toContain('26 phrase(s)');
+      expect(JSON.stringify(data.embeds)).not.toContain(set.id);
+      const published = boardPayload(send.mock.calls[0][0]);
+      const buttons = published.components
+        .slice(1)
+        .flatMap(
+          (row: { components: { label: string; custom_id: string }[] }) =>
+            row.components,
+        );
+      expect(buttons.map((b: { label: string }) => b.label)).toEqual([
+        'Unmark a cell',
+        'Add phrase',
+        'Phrases',
+        'New game',
+        'End game',
+      ]);
+      for (const row of published.components) {
+        expect(row.components.length).toBeLessThanOrEqual(3);
+        for (const control of row.components)
+          expect(control.custom_id.length).toBeLessThanOrEqual(100);
+      }
+    },
+  );
+
+  selectionTest(
+    'confirms or cancels ending and starts another game entirely through board controls',
+    async () => {
+      const { set, board } = await game();
+      const actions = boardActions();
+      const request = boardInteraction(owner, board.messageId!);
+      await actions.endGame(button(request), board.id);
+      expect((await store.active(owner)).game.id).toBe(board.id);
+      const prompt = boardPayload(request.editReply.mock.calls[0][0]);
+      expect(
+        prompt.components[0].components[0].custom_id.length,
+      ).toBeLessThanOrEqual(100);
+      const cancel = boardInteraction();
+      await actions.cancelEnd(button(cancel), owner.userId);
+      expect((await store.active(owner)).game.id).toBe(board.id);
+      const confirm = boardInteraction();
+      await actions.confirmEnd(
+        button(confirm),
+        board.id,
+        owner.userId,
+        board.messageId!,
+      );
+      expect(confirm.followUp).not.toHaveBeenCalled();
+      expect(
+        (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
+          .endedAt,
+      ).not.toBeNull();
+      const newGame = boardInteraction(owner, board.messageId!);
+      await actions.newGame(button(newGame), board.id);
+      expect(JSON.stringify(newGame.editReply.mock.calls)).toContain(
+        'Choose a board size',
+      );
+      const size = boardInteraction();
+      await actions.size(
+        selected(size),
+        board.id,
+        owner.userId,
+        board.messageId!,
+        ['4'],
+      );
+      const picker = boardPayload(size.editReply.mock.calls[0][0]);
+      const token = picker.components[0].components[0].custom_id.split('/')[2];
+      await selections.choose(owner, token, set.id);
+      const next = (await store.active(owner)).game;
+      expect(next.size).toBe(4);
+      expect(next.id).not.toBe(board.id);
+      const stale = boardInteraction();
+      await actions.confirmEnd(
+        button(stale),
+        board.id,
+        owner.userId,
+        board.messageId!,
+      );
+      expect(stale.followUp).toHaveBeenCalled();
+      await expect(store.end(owner, board.id)).rejects.toThrow('already ended');
+      expect((await store.active(owner)).game.id).toBe(next.id);
+    },
+  );
+
+  selectionTest(
+    'rechecks board form access, bindings, ownership and feature gates before mutations',
+    async () => {
+      const { set, board } = await game();
+      const actions = boardActions();
+      const denied = boardInteraction(player);
+      await actions.savePhrase(modal(denied), board.id, board.messageId!);
+      expect(JSON.stringify(denied.editReply.mock.calls)).toContain(
+        'contributor',
+      );
+      const revoke = boardInteraction(contributor);
+      await store.contributor(owner, set.id, contributor.userId, false);
+      await actions.savePhrase(modal(revoke), board.id, board.messageId!);
+      expect(JSON.stringify(revoke.editReply.mock.calls)).toContain(
+        'contributor',
+      );
+      const wrongMessage = boardInteraction(contributor);
+      await actions.savePhrase(modal(wrongMessage), board.id, 'old-message');
+      expect(JSON.stringify(wrongMessage.editReply.mock.calls)).toContain(
+        'no longer active',
+      );
+      const wrongChannel = boardInteraction(otherChannel);
+      await actions.savePhrase(modal(wrongChannel), board.id, board.messageId!);
+      expect(JSON.stringify(wrongChannel.editReply.mock.calls)).toContain(
+        'no longer active',
+      );
+      const end = boardInteraction(player, board.messageId!);
+      await actions.endGame(button(end), board.id);
+      expect(JSON.stringify(end.editReply.mock.calls)).toContain(
+        'Only the set owner',
+      );
+      const stolen = boardInteraction(player);
+      await actions.confirmEnd(
+        button(stolen),
+        board.id,
+        owner.userId,
+        board.messageId!,
+      );
+      expect(JSON.stringify(stolen.followUp.mock.calls)).toContain(
+        'another user',
+      );
+      await actions.size(
+        selected(stolen),
+        board.id,
+        owner.userId,
+        board.messageId!,
+        ['3'],
+      );
+      expect(JSON.stringify(stolen.followUp.mock.calls)).toContain(
+        'another user',
+      );
+      const invalid = boardInteraction();
+      await actions.size(
+        selected(invalid),
+        board.id,
+        owner.userId,
+        board.messageId!,
+        ['6'],
+      );
+      expect(JSON.stringify(invalid.followUp.mock.calls)).toContain(
+        'valid board size',
+      );
+      await store.transfer(owner, set.id, contributor.userId);
+      const formerOwner = boardInteraction();
+      await actions.confirmEnd(
+        button(formerOwner),
+        board.id,
+        owner.userId,
+        board.messageId!,
+      );
+      expect(JSON.stringify(formerOwner.followUp.mock.calls)).toContain(
+        'Only the set owner',
+      );
+      await db
+        .getRepository(DiscordChannel)
+        .update(
+          { id: channelId },
+          { features: { [DiscordChannelFeature.BINGO]: false } },
+        );
+      const disabled = boardInteraction(contributor);
+      await actions.savePhrase(modal(disabled), board.id, board.messageId!);
+      expect(JSON.stringify(disabled.editReply.mock.calls)).toContain(
+        'not enabled',
+      );
+      expect(
+        (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
+          .endedAt,
+      ).toBeNull();
+      expect(
+        await db.getRepository(BingoPhrase).countBy({ setId: set.id }),
+      ).toBe(25);
+    },
+  );
 
   selectionTest(
     'runs all command groups through private selects without displaying identifiers',

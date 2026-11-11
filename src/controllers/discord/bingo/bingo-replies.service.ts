@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { EmbedBuilder, MessageFlags } from 'discord.js';
+import { EmbedBuilder, MessageFlags, ModalBuilder } from 'discord.js';
 import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
   InteractionEditReplyOptions,
   StringSelectMenuInteraction,
+  ModalSubmitInteraction,
 } from 'discord.js';
 import { BingoDiscordService } from '@Services/bingo/bingo-discord.service';
 import type { BingoActor } from '@Services/bingo/bingo-store.service';
 import { BingoError } from '@Services/bingo/bingo-rules';
 
 export type BingoInteraction =
-  ChatInputCommandInteraction | ButtonInteraction | StringSelectMenuInteraction;
+  | ChatInputCommandInteraction
+  | ButtonInteraction
+  | StringSelectMenuInteraction
+  | ModalSubmitInteraction;
 
 @Injectable()
 export class BingoRepliesService {
@@ -64,6 +68,36 @@ export class BingoRepliesService {
           });
       } catch (replyError) {
         this.discord.logFailure('error-reply', context, replyError);
+      }
+    }
+  }
+
+  async modal(
+    interaction: ButtonInteraction,
+    modal: ModalBuilder,
+  ): Promise<void> {
+    try {
+      // Respond immediately; fresh access checks happen when the form is submitted.
+      await interaction.showModal(modal);
+    } catch (error) {
+      this.discord.logFailure(
+        'open-phrase-form',
+        {
+          guild: interaction.guildId,
+          channel: interaction.channelId,
+          user: interaction.user.id,
+        },
+        error,
+      );
+      try {
+        await interaction.reply({
+          ...this.text(
+            'The phrase form could not open. Please try again. The error has been logged.',
+          ),
+          flags: MessageFlags.Ephemeral,
+        });
+      } catch (replyError) {
+        this.discord.logFailure('form-error-reply', {}, replyError);
       }
     }
   }

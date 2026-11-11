@@ -65,7 +65,12 @@ export class BingoSelectionService {
     actor: BingoActor,
     action: BingoSelectionAction,
     input: Input = {},
+    browseSetId?: string,
   ): Promise<InteractionEditReplyOptions> {
+    requireBingo(
+      !browseSetId || action === 'show',
+      'Choose a valid bingo action.',
+    );
     const token = randomUUID();
     const session: Session = {
       guildId: actor.guildId,
@@ -73,7 +78,8 @@ export class BingoSelectionService {
       userId: actor.userId,
       action,
       input,
-      stage: 'set',
+      stage: browseSetId ? 'details' : 'set',
+      setId: browseSetId,
       page: 1,
       offered: [],
     };

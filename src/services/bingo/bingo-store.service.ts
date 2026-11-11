@@ -288,12 +288,21 @@ export class BingoStoreService {
     actor: BingoActor,
     gameId: string,
     messageId: string,
-  ): Promise<{ game: BingoGame; eligible: number[] }> {
+    allowEnded = false,
+  ): Promise<{ game: BingoGame; eligible: number[]; canManage: boolean }> {
     await this.gate(actor, this.db.manager, true);
-    const game = await this.findGame(this.db.manager, actor, gameId, messageId);
+    const game = await this.findGame(
+      this.db.manager,
+      actor,
+      gameId,
+      messageId,
+      false,
+      allowEnded,
+    );
     const set = await this.findSet(this.db.manager, actor, game.setId);
     return {
       game,
+      canManage: actor.manageChannels || set.ownerId === actor.userId,
       eligible: game.cells.flatMap((cell, index) =>
         cell.markedBy &&
         (cell.markedBy === actor.userId ||
@@ -344,7 +353,7 @@ export class BingoStoreService {
     });
   }
 
-  async end(actor: BingoActor): Promise<BingoGame> {
+  async end(actor: BingoActor, expectedGameId?: string): Promise<BingoGame> {
     return this.db.transaction(async (manager) => {
       await this.gate(actor, manager, true);
       const initial = await manager.getRepository(BingoGame).findOneBy({
@@ -353,6 +362,10 @@ export class BingoStoreService {
         endedAt: IsNull(),
       });
       requireBingo(initial, 'There is no active bingo game on this channel.');
+      requireBingo(
+        !expectedGameId || initial.id === expectedGameId,
+        'This game has already ended. Open the current board to manage its game.',
+      );
       const set = await this.findSet(manager, actor, initial.setId, true);
       this.gameManager(set, actor);
       const game = await manager.getRepository(BingoGame).findOne({
@@ -487,6 +500,7 @@ export class BingoStoreService {
     id: string,
     messageId: string,
     lock = false,
+    allowEnded = false,
   ): Promise<BingoGame> {
     const game = await manager.getRepository(BingoGame).findOne({
       where: {
@@ -497,7 +511,7 @@ export class BingoStoreService {
       ...(lock ? { lock: { mode: 'pessimistic_write' as const } } : {}),
     });
     requireBingo(
-      game && !game.endedAt && game.messageId === messageId,
+      game && (allowEnded || !game.endedAt) && game.messageId === messageId,
       'This board is no longer active. Use /bingo game show for the current board.',
     );
     return game;

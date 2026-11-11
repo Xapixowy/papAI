@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.8.2",
+    "date": "2026-11-11",
+    "changes": [
+      {
+        "type": "feat",
+        "description": "Use buttons below bingo boards to add phrases, browse the phrase pool, start another game and confirm ending the current game"
+      },
+      {
+        "type": "improve",
+        "description": "Board actions use private forms and selectors, preserve current permissions, and protect newer games from stale end confirmations"
+      }
+    ]
+  },
+  {
     "version": "0.8.1",
     "date": "2026-11-11",
     "changes": [
