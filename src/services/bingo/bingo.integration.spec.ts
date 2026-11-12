@@ -192,6 +192,11 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       const message = {
         id: String(nextMessage++),
         content: (payload as { content?: string }).content ?? '',
+        attachments: new Collection(
+          ((payload as { files?: { name: string }[] }).files ?? []).map(
+            (file, index) => [String(index), { name: file.name }],
+          ),
+        ),
         author: { id: 'bot' },
         createdTimestamp: Date.now(),
         edit: jest.fn<() => Promise<void>>().mockResolvedValue(),
@@ -418,12 +423,103 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     },
   );
 
+  it('reposts a changed board at the bottom and retires the previous controls without deleting its image', async () => {
+    const { board } = await game();
+    await store.mark(player, board.id, board.messageId!, 0);
+    const link = await discord.publish(board.id);
+    const current = (await store.active(owner)).game;
+    expect(current.messageId).not.toBe(board.messageId);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(link).toContain(current.messageId!);
+    expect(current.cells[0].markedBy).toBe(player.userId);
+    const retired = JSON.stringify(
+      messages.get(board.messageId!)!.edit.mock.calls.at(-1),
+    );
+    expect(retired).toContain('Latest board');
+    expect(retired).toContain(current.messageId!);
+    expect(retired).toContain('"components":[]');
+    expect(retired).not.toContain('"attachments"');
+    await expect(
+      store.mark(player, board.id, board.messageId!, 1),
+    ).rejects.toThrow('no longer active');
+    await discord.publish(board.id);
+    await discord.publish(board.id, false, true);
+    expect(send).toHaveBeenCalledTimes(2);
+    await store.mark(player, board.id, current.messageId!, 0, true);
+    await discord.publish(board.id);
+    expect(send).toHaveBeenCalledTimes(3);
+    expect((await store.active(owner)).game.cells[0].markedBy).toBeNull();
+  });
+
+  it.each([false, true])(
+    'recovers a board sent before its database acknowledgement is lost (updated: %s)',
+    async (updated) => {
+      const set = await ready();
+      const initial = await store.start(owner, set.id, 3);
+      if (updated) await discord.publish(initial.id);
+      const board = await db
+        .getRepository(BingoGame)
+        .findOneByOrFail({ id: initial.id });
+      if (updated) await store.mark(player, board.id, board.messageId!, 0);
+      await db.query(
+        `CREATE FUNCTION bingo_reject_ack() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.message_id IS DISTINCT FROM OLD.message_id THEN RAISE EXCEPTION 'simulated board acknowledgement loss'; END IF; RETURN NEW; END $$`,
+      );
+      await db.query(
+        `CREATE TRIGGER bingo_reject_ack BEFORE UPDATE ON bingo_games FOR EACH ROW EXECUTE FUNCTION bingo_reject_ack()`,
+      );
+      const errors = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      try {
+        await expect(discord.publish(board.id)).rejects.toThrow(
+          'Progress is saved',
+        );
+      } finally {
+        await db.query('DROP TRIGGER bingo_reject_ack ON bingo_games');
+        await db.query('DROP FUNCTION bingo_reject_ack()');
+        errors.mockRestore();
+      }
+      const count = send.mock.calls.length;
+      const sentId = [...messages.keys()].at(-1)!;
+      expect((await store.active(owner)).game.messageId).toBe(board.messageId);
+      await discord.retryPending();
+      expect(send).toHaveBeenCalledTimes(count);
+      const recovered = (await store.active(owner)).game;
+      expect(recovered.messageId).toBe(sentId);
+      expect(recovered.syncedRevision).toBe(recovered.revision);
+      if (updated)
+        expect(
+          JSON.stringify(messages.get(board.messageId!)!.edit.mock.calls),
+        ).toContain(sentId);
+    },
+  );
+
+  it('keeps progress and stale-control protection when retiring an old board fails', async () => {
+    const { board } = await game();
+    await store.mark(player, board.id, board.messageId!, 0);
+    messages
+      .get(board.messageId!)!
+      .edit.mockRejectedValueOnce(new Error('retire failed'));
+    const errors = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    await discord.publish(board.id);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+    const current = (await store.active(owner)).game;
+    expect(current.messageId).not.toBe(board.messageId);
+    await expect(
+      store.mark(player, board.id, board.messageId!, 1),
+    ).rejects.toThrow('no longer active');
+    await store.mark(player, board.id, current.messageId!, 1);
+  });
+
   it('announces bingo once and disables marking and undo when the game automatically ends', async () => {
     const { board } = await game();
     for (let i = 0; i < 3; i++)
       await store.mark(player, board.id, board.messageId!, i);
     await Promise.all([discord.publish(board.id), discord.publish(board.id)]);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
     await expect(
       store.mark(player, board.id, board.messageId!, 0, true),
     ).rejects.toThrow('no longer active');
@@ -431,16 +527,14 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       store.mark(player, board.id, board.messageId!, 0),
     ).rejects.toThrow('no longer active');
     await discord.publish(board.id);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
     expect(JSON.stringify(send.mock.calls.at(-1))).toContain(
       'This game has ended',
     );
     await expect(
       store.mark(player, board.id, board.messageId!, 3),
     ).rejects.toThrow('no longer active');
-    expect(
-      JSON.stringify(messages.get(board.messageId!)!.edit.mock.calls.at(-1)),
-    ).toContain('"disabled":true');
+    expect(JSON.stringify(send.mock.calls.at(-2))).toContain('"disabled":true');
   });
 
   it.each([false, true])(
@@ -467,7 +561,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       expect(stored.revision).toBe(won.revision + 1);
       expect(stored.syncedRevision).toBe(stored.revision);
       expect(stored.announcedAt).not.toBeNull();
-      expect(send).toHaveBeenCalledTimes(3); // Original board, its announcement and the other channel's board.
+      expect(send).toHaveBeenCalledTimes(announced ? 5 : 4); // Reposted revisions, one announcement, and the other channel's board.
       const active = await db
         .getRepository(BingoGame)
         .findOneByOrFail({ id: untouched.id });
@@ -478,7 +572,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
         (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
           .revision,
       ).toBe(stored.revision);
-      expect(send).toHaveBeenCalledTimes(3);
+      expect(send).toHaveBeenCalledTimes(announced ? 5 : 4);
     },
   );
 
@@ -498,7 +592,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     expect(stored.endedAt).toEqual(stored.bingoAt);
     expect(stored.cells.filter((cell) => cell.markedBy)).toHaveLength(4);
     await Promise.all([discord.publish(board.id), discord.publish(board.id)]);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
   });
 
   it('preserves progress when Discord fails and restores deleted messages without drawing again', async () => {
@@ -507,8 +601,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     const logger = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
-    const message = messages.get(board.messageId!)!;
-    message.edit.mockRejectedValueOnce(
+    send.mockRejectedValueOnce(
       Object.assign(new Error('Do not dump token'), { code: 50013 }),
     );
     await expect(discord.publish(board.id)).rejects.toThrow(
@@ -548,12 +641,12 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     for (let i = 0; i < 3; i++)
       await store.mark(player, board.id, board.messageId!, i);
     await discord.publish(board.id);
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
     await db
       .getRepository(BingoGame)
       .update({ id: board.id }, { announcedAt: null });
     await discord.retryPending();
-    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(3);
     expect(
       (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
         .announcedAt,
@@ -571,9 +664,11 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     const started = new Promise<void>((resolve) => {
       entered = resolve;
     });
-    messages.get(board.messageId!)!.edit.mockImplementationOnce(async () => {
+    const normalSend = send.getMockImplementation()!;
+    send.mockImplementationOnce(async (payload) => {
       entered();
       await waiting;
+      return normalSend(payload);
     });
     const first = discord.publish(board.id);
     await started;
@@ -585,9 +680,9 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       .getRepository(BingoGame)
       .findOneByOrFail({ id: board.id });
     expect(stored.syncedRevision).toBe(stored.revision);
-    expect(
-      JSON.stringify(messages.get(board.messageId!)!.edit.mock.calls.at(-1)),
-    ).toContain(`bingo-${stored.revision}.png`);
+    expect(JSON.stringify(send.mock.calls.at(-1))).toContain(
+      `bingo-${stored.revision}-`,
+    );
   });
 
   it('retries persisted board updates and first-bingo announcements after transport failure', async () => {
@@ -613,9 +708,9 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
         .announcedAt,
     ).not.toBeNull();
-    expect(send).toHaveBeenCalledTimes(3);
+    expect(send).toHaveBeenCalledTimes(4);
     await discord.retryPending();
-    expect(send).toHaveBeenCalledTimes(3);
+    expect(send).toHaveBeenCalledTimes(4);
   });
 
   it('recovers ownership through server administration and applies new ownership immediately', async () => {
@@ -873,15 +968,14 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     expect((await store.active(owner)).game.cells[0].markedBy).toBe(
       player.userId,
     );
-    const nextOpen = boardInteraction(player, board.messageId!);
+    const current = (await store.active(owner)).game;
+    const nextOpen = boardInteraction(player, current.messageId!);
     await controls.markMenu(button(nextOpen), board.id);
     expect(JSON.stringify(nextOpen.editReply.mock.calls)).not.toContain(
       '"value":"0"',
     );
     const published = JSON.parse(
-      JSON.stringify(
-        messages.get(board.messageId!)!.edit.mock.calls.at(-1)![0],
-      ),
+      JSON.stringify(send.mock.calls.at(-1)![0]),
     ) as {
       components: {
         components: { label: string; style: number; disabled: boolean }[];
@@ -953,7 +1047,8 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
   selectionTest(
     'keeps legacy lifecycle interactions safe on previously posted boards',
     async () => {
-      const { set, board } = await game();
+      const { set, board: initialBoard } = await game();
+      let board = initialBoard;
       const actions = boardActions();
       const request = boardInteraction(owner, board.messageId!);
       await actions.endGame(button(request), board.id);
@@ -977,6 +1072,9 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
         (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
           .endedAt,
       ).not.toBeNull();
+      board = await db
+        .getRepository(BingoGame)
+        .findOneByOrFail({ id: board.id });
       const newGame = boardInteraction(owner, board.messageId!);
       await actions.newGame(button(newGame), board.id);
       expect(JSON.stringify(newGame.editReply.mock.calls)).toContain(
@@ -1240,7 +1338,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       const start = slash();
       await games.start(start, { size: 3 });
       await select(start, set.id);
-      const board = (await store.active(owner)).game;
+      let board = (await store.active(owner)).game;
       const mark = interaction(player, board.messageId!);
       await controls.mark(
         [mark as unknown as StringSelectMenuInteraction],
@@ -1250,6 +1348,7 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
       expect(JSON.stringify(mark.editReply.mock.calls)).toContain(
         'A1 is marked',
       );
+      board = (await store.active(owner)).game;
       const unmark = interaction(player, board.messageId!);
       await controls.unmark([unmark as unknown as ButtonInteraction], board.id);
       expect(JSON.stringify(unmark.editReply.mock.calls)).toContain(

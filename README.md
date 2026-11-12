@@ -25,9 +25,9 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Discord Bingo (0.8.4)
+## Discord Bingo (0.8.5)
 
-Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a primary Mark a cell button opening a private dropdown, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
+Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a primary Mark a cell button opening a private dropdown, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits. Marking, undo and ending post an updated image as a new message at the bottom of the channel. Previous board images remain as history with a Latest board link and no controls; only the newest message is interactive. Viewing an already synchronized board does not post another copy.
 
 The main-branch deployment builds the app image, applies database migrations with `npm run migration:run`, then restarts the bot only if migration succeeds. For manual deployments, apply migrations before starting the updated bot. A bot super administrator then enables `BINGO` with `/guild feature add`, registers the channel with `/channel add` if necessary, and enables `BINGO` through `/channel feature set` with `value: true`.
 

@@ -170,64 +170,96 @@ export class BingoDiscordService {
         }
       }
       if (!message || refresh || game.syncedRevision < game.revision) {
-        const image = await this.renderer.render(game);
-        const components = [
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`bingo/mark-menu/${game.id}`)
-              .setLabel('Mark a cell')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(
-                !!game.endedAt || game.cells.every((cell) => cell.markedBy),
-              ),
-            new ButtonBuilder()
-              .setCustomId(`bingo/unmark/${game.id}`)
-              .setLabel('Unmark a cell')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(
-                !!game.endedAt || !game.cells.some((cell) => cell.markedBy),
-              ),
-          ),
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-              .setCustomId(`bingo/add-phrase/${game.id}`)
-              .setLabel('Add phrase')
-              .setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder()
-              .setCustomId(`bingo/phrases/${game.id}`)
-              .setLabel('Phrases')
-              .setStyle(ButtonStyle.Secondary),
-          ),
-        ];
-        const payload: MessageEditOptions = {
-          content: `**${escapeMarkdown(game.setName)} · ${game.size}×${game.size}**${game.endedAt ? ' · Game ended' : ''}`,
-          files: [
-            new AttachmentBuilder(image, {
-              name: `bingo-${game.revision}.png`,
-            }),
-          ],
-          attachments: [],
-          components,
-          allowedMentions: { parse: [] },
-        };
-        if (message) await message.edit(payload);
-        else
-          message = await channel.send({
-            content: payload.content!,
-            files: payload.files,
+        const previous = message;
+        const repost = !message || game.syncedRevision < game.revision;
+        const nonce = `b${createHash('sha256')
+          .update(`${game.id}:${game.revision}:${game.messageId ?? 'initial'}`)
+          .digest('hex')
+          .slice(0, 24)}`;
+        const filename = `bingo-${game.revision}-${nonce}.png`;
+        const recovered = repost
+          ? await this.findBoard(channel, game, filename, me.id)
+          : null;
+        if (recovered) {
+          message = recovered;
+        } else {
+          const image = await this.renderer.render(game);
+          const components = [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`bingo/mark-menu/${game.id}`)
+                .setLabel('Mark a cell')
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(
+                  !!game.endedAt || game.cells.every((cell) => cell.markedBy),
+                ),
+              new ButtonBuilder()
+                .setCustomId(`bingo/unmark/${game.id}`)
+                .setLabel('Unmark a cell')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(
+                  !!game.endedAt || !game.cells.some((cell) => cell.markedBy),
+                ),
+            ),
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`bingo/add-phrase/${game.id}`)
+                .setLabel('Add phrase')
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId(`bingo/phrases/${game.id}`)
+                .setLabel('Phrases')
+                .setStyle(ButtonStyle.Secondary),
+            ),
+          ];
+          const payload: MessageEditOptions = {
+            content: `**${escapeMarkdown(game.setName)} · ${game.size}×${game.size}**${game.endedAt ? ' · Game ended' : ''}`,
+            files: [
+              new AttachmentBuilder(image, {
+                name: filename,
+              }),
+            ],
+            attachments: [],
             components,
             allowedMentions: { parse: [] },
-            nonce: `b${createHash('sha256')
-              .update(`${game.id}:${game.messageId ?? 'initial'}`)
-              .digest('hex')
-              .slice(0, 24)}`,
-            enforceNonce: true,
-          });
+          };
+          if (repost) {
+            message = await channel.send({
+              content: payload.content!,
+              files: payload.files,
+              components,
+              allowedMentions: { parse: [] },
+              nonce,
+              enforceNonce: true,
+            });
+          } else {
+            await message!.edit(payload);
+          }
+        }
+        requireBingo(message, 'The board could not be published.');
         await repo.update(
           { id: game.id },
           { messageId: message.id, syncedRevision: game.revision },
         );
+        if (previous && previous.id !== message.id) {
+          try {
+            await previous.edit({
+              content: `**${escapeMarkdown(game.setName)} · ${game.size}×${game.size}** · Previous board\n[Latest board](https://discord.com/channels/${game.guildId}/${game.channelId}/${message.id})`,
+              components: [],
+              allowedMentions: { parse: [] },
+            });
+          } catch (error) {
+            // The saved message binding still rejects stale controls if retiring them fails.
+            if (!this.unknownMessage(error))
+              this.logFailure(
+                'retire-board',
+                { gameId, message: previous.id },
+                error,
+              );
+          }
+        }
       }
+      requireBingo(message, 'The board could not be published.');
       if (game.bingoAt && !game.announcedAt) {
         const marker = `https://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}`;
         // Recover the send/commit crash window using an immutable, bot-authored marker.
@@ -328,6 +360,37 @@ export class BingoDiscordService {
     if (error instanceof BingoError)
       this.logger.warn(`${description}\n${bingoErrorDetails(error)}`);
     else this.logger.error(description, bingoErrorDetails(error));
+  }
+
+  /** Recover a sent revision even if its database acknowledgement was lost. */
+  private async findBoard(
+    channel: GuildTextBasedChannel,
+    game: BingoGame,
+    filename: string,
+    botId: string,
+  ): Promise<Message<true> | null> {
+    let before: string | undefined;
+    for (;;) {
+      const messages = await channel.messages.fetch({ limit: 100, before });
+      const found = messages.find(
+        (message) =>
+          message.author.id === botId &&
+          message.id !== game.messageId &&
+          message.attachments.some(
+            (attachment) => attachment.name === filename,
+          ),
+      );
+      if (found) return found;
+      const oldest = messages.last();
+      if (
+        !oldest ||
+        messages.has(game.messageId ?? '') ||
+        oldest.createdTimestamp < game.createdAt.getTime() - 60_000 ||
+        messages.size < 100
+      )
+        return null;
+      before = oldest.id;
+    }
   }
 
   private async findAnnouncement(

@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.8.5",
+    "date": "2026-11-12",
+    "changes": [
+      {
+        "type": "improve",
+        "description": "Post an updated bingo board at the bottom of the channel after state changes, keeping previous images as history with a link to the latest board"
+      },
+      {
+        "type": "fix",
+        "description": "Recover already-sent board revisions after lost database acknowledgements, prevent duplicate reposts and reject interactions from superseded boards"
+      }
+    ]
+  },
+  {
     "version": "0.8.4",
     "date": "2026-11-12",
     "changes": [
