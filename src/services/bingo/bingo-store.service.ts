@@ -346,11 +346,24 @@ export class BingoStoreService {
         cell.markedBy = actor.userId;
         cell.markedAt = new Date().toISOString();
       }
-      if (!game.bingoAt && completedLines(game.cells, game.size).length)
+      if (!game.bingoAt && completedLines(game.cells, game.size).length) {
         game.bingoAt = new Date();
+        game.endedAt = game.bingoAt;
+      }
       game.revision++;
       return manager.getRepository(BingoGame).save(game);
     });
+  }
+
+  /** Finalize wins saved by older versions without changing their board or announcement. */
+  async finishWonGames(): Promise<number> {
+    const result = await this.db
+      .createQueryBuilder()
+      .update(BingoGame)
+      .set({ endedAt: () => 'bingo_at', revision: () => 'revision + 1' })
+      .where('bingo_at IS NOT NULL AND ended_at IS NULL')
+      .execute();
+    return result.affected ?? 0;
   }
 
   async end(actor: BingoActor, expectedGameId?: string): Promise<BingoGame> {

@@ -25,7 +25,7 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Discord Bingo (0.8.3)
+## Discord Bingo (0.8.4)
 
 Bingo uses reusable server-owned phrase pools and one active shared game per channel. Boards support 3×3, 4×4, and 5×5 layouts, with tile-only images, a primary Mark a cell button opening a private dropdown, and a separate unmark action. Game progress and drawn phrases persist across bot restarts and later pool edits.
 
@@ -38,7 +38,7 @@ Once a board is posted, use its buttons for everyday actions:
 - **Phrases** opens the paginated phrase pool directly.
 - **Unmark a cell** opens the existing private undo selector.
 
-These controls work after restarts. Form submissions recheck access; old confirmations cannot end a newer game. New games and ending games use `/bingo game start` and `/bingo game end`; lifecycle management is not displayed under the image. Other slash commands remain available for initial setup and set/contributor administration.
+These controls work after restarts. Form submissions recheck access; old confirmations cannot end a newer game. New games and early endings use `/bingo game start` and `/bingo game end`; lifecycle management is not displayed under the image. Other slash commands remain available for initial setup and set/contributor administration.
 
 The bot needs **View Channel**, **Send Messages**, **Attach Files**, and **Read Message History** in each bingo channel. Bingo does not require message-content or reaction intents.
 
@@ -50,7 +50,7 @@ The bot needs **View Channel**, **Send Messages**, **Attach Files**, and **Read 
 
 Private selection menus expire after ten minutes and are bound to the invoking user and channel. Menus paginate beyond 25 entries and recheck permissions before applying a choice.
 
-Any channel member can mark cells. Unmarking requires authorship of the mark, set ownership, or **Manage Channels**. Only the first bingo is announced in each game, without mentions. Archiving a set prevents new games but leaves existing games playable.
+Any channel member can mark cells. Unmarking requires authorship of the mark, set ownership, or **Manage Channels**. The first completed row, column or main diagonal automatically ends the game and posts one bingo announcement without mentions. The final board is kept, marking and undo are disabled, and the channel is free for a new game. Previously won games left active by an older version are finalized during the next synchronization cycle (every 30 seconds), without repeating their announcement. Archiving a set prevents new games but leaves existing games playable.
 
 All bot-authored bingo content is in English; user-entered names and phrases are not translated. Errors are logged to the console with operation and Discord identifiers plus diagnostic codes and stack locations, without dumping tokens, request payloads, or SQL parameters. Failed board updates keep their persisted progress and are retried every 30 seconds; a deleted board requires an authorized `/bingo game show`.
 

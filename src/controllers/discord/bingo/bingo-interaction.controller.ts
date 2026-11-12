@@ -56,7 +56,7 @@ export class BingoInteractionController {
       );
       await this.discord.publish(game.id);
       return this.replies.text(
-        `${cellLabel(this.index(value), game.size)} is marked.`,
+        `${cellLabel(this.index(value), game.size)} is marked.${game.endedAt ? ' Bingo! This game has ended.' : ''}`,
       );
     });
   }
@@ -76,7 +76,7 @@ export class BingoInteractionController {
         this.index(value),
       );
       await this.discord.publish(game.id);
-      return `${cellLabel(this.index(value), game.size)} is marked.`;
+      return `${cellLabel(this.index(value), game.size)} is marked.${game.endedAt ? ' Bingo! This game has ended.' : ''}`;
     });
   }
 

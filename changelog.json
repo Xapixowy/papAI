@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.8.4",
+    "date": "2026-11-12",
+    "changes": [
+      {
+        "type": "fix",
+        "description": "End bingo automatically when the first row, column or main diagonal is completed; disable further marking and undo, and free the channel for another game"
+      },
+      {
+        "type": "fix",
+        "description": "Finalize previously won games during board synchronization without changing snapshots or sending duplicate announcements"
+      }
+    ]
+  },
+  {
     "version": "0.8.3",
     "date": "2026-11-11",
     "changes": [

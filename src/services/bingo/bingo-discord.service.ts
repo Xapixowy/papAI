@@ -239,7 +239,7 @@ export class BingoDiscordService {
         );
         if (!alreadySent)
           await channel.send({
-            content: `**BINGO!** The first row, column, or main diagonal has been completed.\nhttps://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}`,
+            content: `**BINGO!** A row, column, or main diagonal has been completed. This game has ended.\nhttps://discord.com/channels/${game.guildId}/${game.channelId}/${message.id}`,
             allowedMentions: { parse: [] },
             nonce: `a${game.id.replaceAll('-', '').slice(0, 24)}`,
             enforceNonce: true,
@@ -279,6 +279,11 @@ export class BingoDiscordService {
     if (this.flushing || !this.client.isReady()) return;
     this.flushing = true;
     try {
+      const finished = await this.store.finishWonGames();
+      if (finished)
+        this.logger.log(
+          `Automatically ended previously won bingo games: count=${finished}`,
+        );
       const games = await this.db
         .getRepository(BingoGame)
         .createQueryBuilder('g')

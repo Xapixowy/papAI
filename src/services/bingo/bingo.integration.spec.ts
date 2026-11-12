@@ -364,24 +364,141 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
     ).rejects.toThrow('no longer active');
   });
 
-  it('announces only the first bingo, survives undo and keeps ended boards inactive', async () => {
+  it.each(
+    [3, 4, 5].flatMap((size) => [
+      { size, pattern: 'row', line: Array.from({ length: size }, (_, i) => i) },
+      {
+        size,
+        pattern: 'column',
+        line: Array.from({ length: size }, (_, i) => i * size),
+      },
+      {
+        size,
+        pattern: 'main diagonal',
+        line: Array.from({ length: size }, (_, i) => i * (size + 1)),
+      },
+      {
+        size,
+        pattern: 'opposite diagonal',
+        line: Array.from({ length: size }, (_, i) => (i + 1) * (size - 1)),
+      },
+    ]),
+  )(
+    'automatically ends a $size board on its first $pattern',
+    async ({ size, line }) => {
+      const { set, board } = await game(size);
+      for (const index of line.slice(0, -1)) {
+        const partial = await store.mark(
+          player,
+          board.id,
+          board.messageId!,
+          index,
+        );
+        expect(partial.endedAt).toBeNull();
+      }
+      const won = await store.mark(
+        player,
+        board.id,
+        board.messageId!,
+        line.at(-1)!,
+      );
+      expect(won.bingoAt).not.toBeNull();
+      expect(won.endedAt).toEqual(won.bingoAt);
+      expect(won.endedAt).not.toBeNull();
+      await expect(store.active(owner)).rejects.toThrow('no active');
+      await expect(
+        store.mark(player, board.id, board.messageId!, line[0], true),
+      ).rejects.toThrow('no longer active');
+      await expect(
+        store.mark(player, board.id, board.messageId!, line[0]),
+      ).rejects.toThrow('no longer active');
+      const next = await store.start(owner, set.id, size);
+      expect(next.endedAt).toBeNull();
+      expect(next.id).not.toBe(board.id);
+    },
+  );
+
+  it('announces bingo once and disables marking and undo when the game automatically ends', async () => {
     const { board } = await game();
     for (let i = 0; i < 3; i++)
       await store.mark(player, board.id, board.messageId!, i);
     await Promise.all([discord.publish(board.id), discord.publish(board.id)]);
     expect(send).toHaveBeenCalledTimes(2);
-    await store.mark(player, board.id, board.messageId!, 0, true);
-    await store.mark(player, board.id, board.messageId!, 0);
+    await expect(
+      store.mark(player, board.id, board.messageId!, 0, true),
+    ).rejects.toThrow('no longer active');
+    await expect(
+      store.mark(player, board.id, board.messageId!, 0),
+    ).rejects.toThrow('no longer active');
     await discord.publish(board.id);
     expect(send).toHaveBeenCalledTimes(2);
-    const ended = await store.end(manager);
-    await discord.publish(ended.id);
+    expect(JSON.stringify(send.mock.calls.at(-1))).toContain(
+      'This game has ended',
+    );
     await expect(
       store.mark(player, board.id, board.messageId!, 3),
     ).rejects.toThrow('no longer active');
     expect(
       JSON.stringify(messages.get(board.messageId!)!.edit.mock.calls.at(-1)),
     ).toContain('"disabled":true');
+  });
+
+  it.each([false, true])(
+    'finalizes legacy wins idempotently without duplicate announcements (already announced: %s)',
+    async (announced) => {
+      const { set, board } = await game();
+      let won = board;
+      for (const index of [0, 1, 2])
+        won = await store.mark(player, board.id, board.messageId!, index);
+      if (announced) await discord.publish(board.id);
+      await db
+        .getRepository(BingoGame)
+        .update(
+          { id: board.id },
+          { endedAt: null, syncedRevision: won.revision },
+        );
+      const untouched = await store.start(otherChannel, set.id, 3);
+      await discord.retryPending();
+      const stored = await db
+        .getRepository(BingoGame)
+        .findOneByOrFail({ id: board.id });
+      expect(stored.endedAt).toEqual(won.bingoAt);
+      expect(stored.cells).toEqual(won.cells);
+      expect(stored.revision).toBe(won.revision + 1);
+      expect(stored.syncedRevision).toBe(stored.revision);
+      expect(stored.announcedAt).not.toBeNull();
+      expect(send).toHaveBeenCalledTimes(3); // Original board, its announcement and the other channel's board.
+      const active = await db
+        .getRepository(BingoGame)
+        .findOneByOrFail({ id: untouched.id });
+      expect(active.endedAt).toBeNull();
+      expect(active.revision).toBe(untouched.revision);
+      await discord.retryPending();
+      expect(
+        (await db.getRepository(BingoGame).findOneByOrFail({ id: board.id }))
+          .revision,
+      ).toBe(stored.revision);
+      expect(send).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it('serializes simultaneous winning marks and keeps the final board immutable', async () => {
+    const { board } = await game();
+    for (const index of [0, 1, 3])
+      await store.mark(player, board.id, board.messageId!, index);
+    const results = await Promise.allSettled([
+      store.mark(player, board.id, board.messageId!, 2),
+      store.mark(contributor, board.id, board.messageId!, 6),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    const stored = await db
+      .getRepository(BingoGame)
+      .findOneByOrFail({ id: board.id });
+    expect(stored.endedAt).toEqual(stored.bingoAt);
+    expect(stored.cells.filter((cell) => cell.markedBy)).toHaveLength(4);
+    await Promise.all([discord.publish(board.id), discord.publish(board.id)]);
+    expect(send).toHaveBeenCalledTimes(2);
   });
 
   it('preserves progress when Discord fails and restores deleted messages without drawing again', async () => {
