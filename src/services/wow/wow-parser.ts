@@ -47,9 +47,11 @@ const characterSchema = z.object({
         }),
       )
       .default([]),
-    stats: z.object({
-      groups: z.array(z.object({ name: z.string(), stats: z.array(stat) })),
-    }),
+    stats: z
+      .object({
+        groups: z.array(z.object({ name: z.string(), stats: z.array(stat) })),
+      })
+      .default({ groups: [] }),
     professions: z.object({
       primaries: z.array(profession),
       secondaries: z.array(profession),

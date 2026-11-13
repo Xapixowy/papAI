@@ -136,6 +136,39 @@ describe('WoW Forever data and notification semantics', () => {
     ).toThrow('The Armory data format has changed.');
   });
 
+  it('reads profiles whose Armory response omits stats without accepting malformed data', () => {
+    // Nytheris Moonwhisper's level-14 profile omits stats entirely.
+    const data = {
+      ...profile,
+      character: {
+        ...profile.character,
+        name: 'Nytheris',
+        surname: 'Moonwhisper',
+        slug: 'nytheris-moonwhisper',
+        level: 14,
+        stats: undefined,
+      },
+    };
+    const c = parseCharacterHtml(html(data), 'nytheris-moonwhisper');
+    expect(c).toMatchObject({
+      name: 'Nytheris Moonwhisper',
+      level: 14,
+      stats: [],
+    });
+    expect(c.guild).toBe(character().guild);
+    expect(c.talents).toEqual(character().talents);
+    expect(c.professions).toEqual(character().professions);
+    expect(c.pvp).toEqual(character().pvp);
+    for (const stats of [null, 'invalid', {}, { groups: 'invalid' }]) {
+      expect(() =>
+        parseCharacterHtml(
+          html({ ...data, character: { ...data.character, stats } }),
+          'nytheris-moonwhisper',
+        ),
+      ).toThrow('The Armory data format has changed.');
+    }
+  });
+
   it('reads unguilded profiles whose Armory response omits the guild field', () => {
     const data = {
       ...profile,
