@@ -38,7 +38,17 @@ export class WowEmbedService extends EmbedBuilderService {
       .setURL(c.url)
       .addFields(
         { name: 'Level', value: String(c.level), inline: true },
-        { name: 'Guild', value: fit(text(c.guild ?? 'None')), inline: true },
+        {
+          name: 'Guild',
+          value: fit(
+            text(
+              c.unavailableFields?.includes('guild')
+                ? 'No guild data available'
+                : (c.guild ?? 'None'),
+            ),
+          ),
+          inline: true,
+        },
         {
           name: 'Character',
           value: fit(
@@ -62,7 +72,10 @@ export class WowEmbedService extends EmbedBuilderService {
           value: fit(
             c.professions
               .map((p) => `${text(p.name)}: **${p.points}/${p.max}**`)
-              .join('\n') || 'No professions',
+              .join('\n') ||
+              (c.unavailableFields?.includes('professions')
+                ? 'No profession data available'
+                : 'No professions'),
           ),
         },
         {
@@ -71,9 +84,28 @@ export class WowEmbedService extends EmbedBuilderService {
         },
         {
           name: 'Data freshness',
-          value: `Armory updated: <t:${Math.floor(Date.parse(c.sourceUpdatedAt) / 1000)}:f>\nChecked: <t:${Math.floor(Date.parse(c.checkedAt) / 1000)}:f>`,
+          value: `Armory updated: ${c.sourceUpdatedAt ? `<t:${Math.floor(Date.parse(c.sourceUpdatedAt) / 1000)}:f>` : 'Not provided by Armory'}\nChecked: <t:${Math.floor(Date.parse(c.checkedAt) / 1000)}:f>`,
         },
       );
+    const labels = {
+      guild: 'Guild',
+      faction: 'Faction',
+      race: 'Race',
+      class: 'Class',
+      ruleset: 'Ruleset',
+      talents: 'Talents',
+      professions: 'Professions',
+      pvp: 'PvP',
+      sourceUpdatedAt: 'Update timestamp',
+    };
+    const missing = (c.unavailableFields ?? []).flatMap((field) =>
+      field in labels ? [labels[field as keyof typeof labels]] : [],
+    );
+    if (missing.length)
+      embed.addFields({
+        name: 'Partial Armory data',
+        value: `Unavailable or incomplete: ${missing.join(', ')}. Available details are shown above.`,
+      });
     if (c.avatar) embed.setThumbnail(c.avatar);
     return [embed];
   }

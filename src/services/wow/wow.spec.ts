@@ -128,15 +128,15 @@ describe('WoW Forever data and notification semantics', () => {
     expect(characterChanges(character(), c)).not.toContainEqual(
       expect.stringContaining('Specialization:'),
     );
-    expect(() =>
+    expect(
       parseCharacterHtml(
         html({ ...data, character: { ...data.character, specs: 'invalid' } }),
         'nytheris-moonwhisper',
-      ),
-    ).toThrow('The Armory data format has changed.');
+      ).unavailableFields,
+    ).toContain('talents');
   });
 
-  it('reads profiles whose Armory response omits stats without accepting malformed data', () => {
+  it('reads profiles whose Armory response omits stats and isolates malformed optional data', () => {
     // Nytheris Moonwhisper's level-14 profile omits stats entirely.
     const data = {
       ...profile,
@@ -160,12 +160,12 @@ describe('WoW Forever data and notification semantics', () => {
     expect(c.professions).toEqual(character().professions);
     expect(c.pvp).toEqual(character().pvp);
     for (const stats of [null, 'invalid', {}, { groups: 'invalid' }]) {
-      expect(() =>
-        parseCharacterHtml(
-          html({ ...data, character: { ...data.character, stats } }),
-          'nytheris-moonwhisper',
-        ),
-      ).toThrow('The Armory data format has changed.');
+      const partial = parseCharacterHtml(
+        html({ ...data, character: { ...data.character, stats } }),
+        'nytheris-moonwhisper',
+      );
+      expect(partial.stats).toEqual([]);
+      expect(partial.unavailableFields).toContain('stats');
     }
   });
 
@@ -187,15 +187,18 @@ describe('WoW Forever data and notification semantics', () => {
       level: 26,
       guild: null,
     });
-    expect(characterChanges(character(), c)).toContain(
-      'Guild: **Circle of Lore → None**',
-    );
-    expect(() =>
+    expect(c.unavailableFields).toContain('guild');
+    expect(
+      characterChanges(character(), c).some((change) =>
+        change.startsWith('Guild:'),
+      ),
+    ).toBe(false);
+    expect(
       parseCharacterHtml(
         html({ ...data, character: { ...data.character, guild: {} } }),
         'lepidoptera-viridis',
-      ),
-    ).toThrow('The Armory data format has changed.');
+      ).unavailableFields,
+    ).toContain('guild');
   });
 
   it('reports only level, guild and dominant specialization changes', () => {

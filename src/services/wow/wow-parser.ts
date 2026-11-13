@@ -2,67 +2,53 @@ import { z } from 'zod';
 import {
   WOW_EU_BASE,
   WowCharacter,
+  WowCharacterSection,
   WowRealm,
   WowSourceError,
 } from '@Types/wow/wow.type';
 
-const label = z.object({ name: z.string().min(1) });
-const numericValue = z.object({ value: z.number().finite().optional() });
+const name = z.string().trim().min(1).max(200);
+const number = z
+  .union([
+    z.number(),
+    z
+      .string()
+      .regex(/^-?\d+(?:\.\d+)?$/)
+      .transform(Number),
+  ])
+  .pipe(z.number().finite());
+const label = z.union([name, z.object({ name }).transform((v) => v.name)]);
+const record = z.record(z.string(), z.unknown());
+const numericValue = z.object({ value: number });
 const stat = z.object({
-  slug: z.string(),
+  slug: name,
   value: z.object({
-    type: z.string(),
-    value: z.number().finite().optional(),
-    min: numericValue.optional(),
-    max: numericValue.optional(),
+    type: name,
+    value: number.optional(),
+    min: z.object({ value: number.optional() }).optional(),
+    max: z.object({ value: number.optional() }).optional(),
   }),
 });
-const profession = z.object({
-  name: z.string(),
-  tiers: z.array(
-    z.object({
-      skillPoints: z.number().nonnegative(),
-      maxSkillPoints: z.number().nonnegative(),
-    }),
-  ),
+const talent = z.object({
+  id: z.union([name, z.number().int().nonnegative().transform(String)]),
+  name,
+  spentPoints: number.pipe(z.number().int().nonnegative()),
 });
+const tier = z.object({
+  skillPoints: number.pipe(z.number().nonnegative()),
+  maxSkillPoints: number.pipe(z.number().nonnegative()),
+});
+// Only identity is required. Optional sections are read independently below.
 const characterSchema = z.object({
-  character: z.object({
-    name: z.string().min(1),
-    surname: z.string().min(1),
-    slug: z.string().min(1),
-    level: z.number().int().min(10),
-    region: z.literal('eu'),
-    guild: label.nullable().default(null),
-    faction: label,
-    race: label,
-    class: label,
-    ruleset: label,
-    specs: z
-      .array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-          spentPoints: z.number().int().nonnegative(),
-        }),
-      )
-      .default([]),
-    stats: z
-      .object({
-        groups: z.array(z.object({ name: z.string(), stats: z.array(stat) })),
-      })
-      .default({ groups: [] }),
-    professions: z.object({
-      primaries: z.array(profession),
-      secondaries: z.array(profession),
-    }),
-    pvp: z.object({
-      honorableKills: numericValue.optional(),
-      rank: numericValue.optional(),
-    }),
-    lastUpdatedTimestamp: z.object({ iso8601: z.iso.datetime() }),
-    avatar: z.object({ url: z.url() }).nullable().optional(),
-  }),
+  character: z
+    .object({
+      name,
+      surname: name,
+      slug: z.string().min(1).max(120),
+      level: number.pipe(z.number().int().min(10)),
+      region: z.literal('eu'),
+    })
+    .passthrough(),
 });
 
 export function characterSlug(input: string): string {
@@ -125,57 +111,132 @@ export function parseCharacterHtml(
       'Armory returned a different character than requested.',
     );
   }
-  const talents = c.specs.map((s) => ({
+  const unavailable = new Set<WowCharacterSection>();
+  const read = <T>(
+    schema: z.ZodType<T>,
+    raw: unknown,
+    field: WowCharacterSection,
+    fallback: T,
+  ): T => {
+    const result = schema.safeParse(raw);
+    if (result.success) return result.data;
+    unavailable.add(field);
+    return fallback;
+  };
+  const list = <T>(
+    schema: z.ZodType<T>,
+    raw: unknown,
+    field: WowCharacterSection,
+  ): T[] => {
+    if (!Array.isArray(raw)) {
+      unavailable.add(field);
+      return [];
+    }
+    return raw.flatMap((item: unknown) => {
+      const result = schema.safeParse(item);
+      if (result.success) return [result.data];
+      unavailable.add(field);
+      return [];
+    });
+  };
+  const talents = list(talent, c.specs, 'talents').map((s) => ({
     id: s.id,
     name: s.name,
     points: s.spentPoints,
   }));
   const maxPoints = Math.max(0, ...talents.map((s) => s.points));
   const dominant = talents.filter((s) => s.points === maxPoints);
+  const rawStats = read(record, c.stats, 'stats', {});
+  const stats = list(
+    z.object({ stats: z.unknown() }),
+    rawStats.groups,
+    'stats',
+  ).flatMap((group) =>
+    list(stat, group.stats, 'stats')
+      .filter((s) => s.slug !== 'item-level')
+      .flatMap((s) => {
+        const v = s.value;
+        const value =
+          v.value !== undefined
+            ? `${Number(v.value.toFixed(2))}${v.type === 'PERCENTAGE' ? '%' : ''}`
+            : v.min?.value !== undefined && v.max?.value !== undefined
+              ? `${Number(v.min.value.toFixed(2))}–${Number(v.max.value.toFixed(2))}`
+              : null;
+        return value === null ? [] : [{ name: s.slug, value }];
+      }),
+  );
+  const rawProfessions = read(record, c.professions, 'professions', {});
+  const professions = [
+    rawProfessions.primaries,
+    rawProfessions.secondaries,
+  ].flatMap((group) =>
+    list(z.object({ name, tiers: z.unknown() }), group, 'professions').flatMap(
+      (p) =>
+        list(tier, p.tiers, 'professions').map((t) => ({
+          name: p.name,
+          points: t.skillPoints,
+          max: t.maxSkillPoints,
+        })),
+    ),
+  );
+  const rawPvp = read(record, c.pvp, 'pvp', {});
+  const honorableKills = read<number | null>(
+    numericValue.transform((v) => v.value),
+    rawPvp.honorableKills,
+    'pvp',
+    null,
+  );
+  const rank = read<number | null>(
+    numericValue.transform((v) => v.value),
+    rawPvp.rank,
+    'pvp',
+    null,
+  );
+  const guild = read(label.nullable(), c.guild, 'guild', null);
+  const faction = read(label, c.faction, 'faction', 'Unknown faction');
+  const race = read(label, c.race, 'race', 'Unknown race');
+  const characterClass = read(label, c.class, 'class', 'Unknown class');
+  const ruleset = read(label, c.ruleset, 'ruleset', 'Unknown ruleset');
+  const sourceUpdatedAt = read<string | null>(
+    z.object({ iso8601: z.iso.datetime() }).transform((v) => v.iso8601),
+    c.lastUpdatedTimestamp,
+    'sourceUpdatedAt',
+    null,
+  );
+  const avatar =
+    c.avatar == null
+      ? null
+      : read(
+          z
+            .object({ url: z.url({ protocol: /^https?$/ }) })
+            .transform((v) => v.url)
+            .nullable(),
+          c.avatar,
+          'avatar',
+          null,
+        );
   return {
     slug: c.slug,
     name: `${c.name} ${c.surname}`,
     level: c.level,
-    guild: c.guild?.name ?? null,
-    faction: c.faction.name,
-    race: c.race.name,
-    class: c.class.name,
-    ruleset: c.ruleset.name,
+    guild,
+    faction,
+    race,
+    class: characterClass,
+    ruleset,
     talents,
     specialization:
-      maxPoints > 0 && dominant.length === 1 ? dominant[0].id : null,
-    stats: c.stats.groups.flatMap((g) =>
-      g.stats
-        .filter((s) => s.slug !== 'item-level')
-        .flatMap((s) => {
-          const v = s.value;
-          const value =
-            v.value !== undefined
-              ? `${Number(v.value.toFixed(2))}${v.type === 'PERCENTAGE' ? '%' : ''}`
-              : v.min?.value !== undefined && v.max?.value !== undefined
-                ? `${Number(v.min.value.toFixed(2))}–${Number(v.max.value.toFixed(2))}`
-                : null;
-          return value === null ? [] : [{ name: s.slug, value }];
-        }),
-    ),
-    professions: [
-      ...c.professions.primaries,
-      ...c.professions.secondaries,
-    ].flatMap((p) =>
-      p.tiers.map((t) => ({
-        name: p.name,
-        points: t.skillPoints,
-        max: t.maxSkillPoints,
-      })),
-    ),
-    pvp: {
-      honorableKills: c.pvp.honorableKills?.value ?? null,
-      rank: c.pvp.rank?.value ?? null,
-    },
-    sourceUpdatedAt: c.lastUpdatedTimestamp.iso8601,
+      !unavailable.has('talents') && maxPoints > 0 && dominant.length === 1
+        ? dominant[0].id
+        : null,
+    stats,
+    professions,
+    pvp: { honorableKills, rank },
+    sourceUpdatedAt,
     checkedAt,
     url: `${WOW_EU_BASE}/armory/character/${encodeURIComponent(c.slug)}`,
-    avatar: c.avatar?.url ?? null,
+    avatar,
+    unavailableFields: [...unavailable],
   };
 }
 

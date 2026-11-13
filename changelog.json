@@ -1,5 +1,23 @@
 [
   {
+    "version": "0.8.7",
+    "date": "2026-11-13",
+    "changes": [
+      {
+        "type": "improve",
+        "description": "Read Armory profiles across classes and races with independently validated optional sections, partial-list recovery, numeric-string support and explicit missing-data labels"
+      },
+      {
+        "type": "fix",
+        "description": "Preserve last-known monitoring values across partial Armory reads, avoiding false guild or talent alerts while detecting real changes after data recovers"
+      },
+      {
+        "type": "improve",
+        "description": "Log incomplete Armory section names to the console without exposing raw source data; keep strict character identity and EU-region checks"
+      }
+    ]
+  },
+  {
     "version": "0.8.6",
     "date": "2026-11-13",
     "changes": [

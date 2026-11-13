@@ -1,3 +1,16 @@
+export type WowCharacterSection =
+  | 'guild'
+  | 'faction'
+  | 'race'
+  | 'class'
+  | 'ruleset'
+  | 'talents'
+  | 'stats'
+  | 'professions'
+  | 'pvp'
+  | 'sourceUpdatedAt'
+  | 'avatar';
+
 export interface WowRealm {
   slug: string;
   name: string;
@@ -18,7 +31,8 @@ export interface WowCharacter {
   stats: { name: string; value: string }[];
   professions: { name: string; points: number; max: number }[];
   pvp: { honorableKills: number | null; rank: number | null };
-  sourceUpdatedAt: string;
+  sourceUpdatedAt: string | null;
+  unavailableFields?: WowCharacterSection[];
   checkedAt: string;
   url: string;
   avatar: string | null;

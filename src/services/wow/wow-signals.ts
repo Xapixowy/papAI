@@ -1,5 +1,6 @@
 import {
   WowCharacter,
+  WowCharacterSection,
   WowForumPost,
   WowForumSnapshot,
   WowForumState,
@@ -7,20 +8,59 @@ import {
 } from '@Types/wow/wow.type';
 import { escapeMarkdown } from 'discord.js';
 
+const available = (c: WowCharacter, field: WowCharacterSection | 'name') =>
+  field === 'name' || !c.unavailableFields?.includes(field);
+const older = (before: WowCharacter, after: WowCharacter) =>
+  !!(
+    before.sourceUpdatedAt &&
+    after.sourceUpdatedAt &&
+    Date.parse(after.sourceUpdatedAt) < Date.parse(before.sourceUpdatedAt)
+  );
+
+/** Monitoring retains last-known optional values through temporary gaps in Armory data. */
+export function characterBaseline(
+  before: WowCharacter | null,
+  after: WowCharacter,
+): WowCharacter {
+  const snapshot: WowCharacter = {
+    ...after,
+    unavailableFields: [...(after.unavailableFields ?? [])],
+    specialization: after.specialization ?? before?.specialization ?? null,
+  };
+  if (!before) return snapshot;
+  const carry = <K extends WowCharacterSection>(field: K) => {
+    snapshot[field] = before[field];
+  };
+  for (const field of after.unavailableFields ?? []) {
+    if (!available(before, field)) continue;
+    carry(field);
+    if (field === 'talents') snapshot.specialization = before.specialization;
+    snapshot.unavailableFields = (snapshot.unavailableFields ?? []).filter(
+      (f) => f !== field,
+    );
+  }
+  return snapshot;
+}
+
 export function characterChanges(
   before: WowCharacter,
   after: WowCharacter,
 ): string[] {
-  if (Date.parse(after.sourceUpdatedAt) < Date.parse(before.sourceUpdatedAt))
-    return [];
+  if (older(before, after)) return [];
   const changes: string[] = [];
   if (after.level > before.level)
     changes.push(`Level: **${before.level} → ${after.level}**`);
-  if (after.guild !== before.guild)
+  if (
+    available(before, 'guild') &&
+    available(after, 'guild') &&
+    after.guild !== before.guild
+  )
     changes.push(
       `Guild: **${escapeMarkdown(before.guild ?? 'None')} → ${escapeMarkdown(after.guild ?? 'None')}**`,
     );
   if (
+    available(before, 'talents') &&
+    available(after, 'talents') &&
     before.specialization &&
     after.specialization &&
     before.specialization !== after.specialization
@@ -40,8 +80,7 @@ export function characterDifferences(
   before: WowCharacter,
   after: WowCharacter,
 ): string[] {
-  if (Date.parse(after.sourceUpdatedAt) < Date.parse(before.sourceUpdatedAt))
-    return [];
+  if (older(before, after)) return [];
   const changes = characterChanges(before, after);
   const add = (label: string, oldValue: string, newValue: string) => {
     if (oldValue !== newValue)
@@ -58,7 +97,8 @@ export function characterDifferences(
     ['class', 'Class'],
     ['ruleset', 'Ruleset'],
   ] as const)
-    add(label, before[field], after[field]);
+    if (available(before, field) && available(after, field))
+      add(label, before[field], after[field]);
 
   const professions = (c: WowCharacter) => {
     const grouped = new Map<string, WowCharacter['professions']>();
@@ -74,40 +114,45 @@ export function characterDifferences(
       ]),
     );
   };
-  const oldProfessions = professions(before);
-  const newProfessions = professions(after);
-  for (const name of [
-    ...new Set([...oldProfessions.keys(), ...newProfessions.keys()]),
-  ].sort())
+  if (available(before, 'professions') && available(after, 'professions')) {
+    const oldProfessions = professions(before);
+    const newProfessions = professions(after);
+    for (const name of [
+      ...new Set([...oldProfessions.keys(), ...newProfessions.keys()]),
+    ].sort())
+      add(
+        `Profession (${name})`,
+        oldProfessions.get(name) ?? 'Not learned',
+        newProfessions.get(name) ?? 'Not learned',
+      );
+  }
+  if (available(before, 'talents') && available(after, 'talents')) {
+    const oldTalents = new Map(before.talents.map((t) => [t.id, t]));
+    const newTalents = new Map(after.talents.map((t) => [t.id, t]));
+    for (const id of [
+      ...new Set([...oldTalents.keys(), ...newTalents.keys()]),
+    ].sort()) {
+      const old = oldTalents.get(id);
+      const next = newTalents.get(id);
+      add(
+        `Talent points (${next?.name ?? old?.name ?? id})`,
+        old?.points.toString() ?? 'No data',
+        next?.points.toString() ?? 'No data',
+      );
+    }
+  }
+  if (available(before, 'pvp') && available(after, 'pvp')) {
     add(
-      `Profession (${name})`,
-      oldProfessions.get(name) ?? 'Not learned',
-      newProfessions.get(name) ?? 'Not learned',
+      'PvP rank',
+      before.pvp.rank?.toString() ?? 'No data',
+      after.pvp.rank?.toString() ?? 'No data',
     );
-
-  const oldTalents = new Map(before.talents.map((t) => [t.id, t]));
-  const newTalents = new Map(after.talents.map((t) => [t.id, t]));
-  for (const id of [
-    ...new Set([...oldTalents.keys(), ...newTalents.keys()]),
-  ].sort()) {
-    const old = oldTalents.get(id);
-    const next = newTalents.get(id);
     add(
-      `Talent points (${next?.name ?? old?.name ?? id})`,
-      old?.points.toString() ?? 'No data',
-      next?.points.toString() ?? 'No data',
+      'Honorable kills',
+      before.pvp.honorableKills?.toString() ?? 'No data',
+      after.pvp.honorableKills?.toString() ?? 'No data',
     );
   }
-  add(
-    'PvP rank',
-    before.pvp.rank?.toString() ?? 'No data',
-    after.pvp.rank?.toString() ?? 'No data',
-  );
-  add(
-    'Honorable kills',
-    before.pvp.honorableKills?.toString() ?? 'No data',
-    after.pvp.honorableKills?.toString() ?? 'No data',
-  );
   return changes;
 }
 

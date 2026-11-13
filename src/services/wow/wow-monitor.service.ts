@@ -27,6 +27,7 @@ import {
 } from '@Services/wow/wow-store.service';
 import {
   characterChanges,
+  characterBaseline,
   characterDifferences,
   forumSignals,
   realmChanges,
@@ -248,7 +249,8 @@ export class WowMonitorService implements OnApplicationBootstrap {
               result,
               (before, after) => {
                 if (
-                  before &&
+                  before?.sourceUpdatedAt &&
+                  after.sourceUpdatedAt &&
                   Date.parse(after.sourceUpdatedAt) <
                     Date.parse(before.sourceUpdatedAt)
                 )
@@ -258,12 +260,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
                     ? characterDifferences(before, after)
                     : [];
                 if (changes.length) changedTargets++;
-                // Keep the last unambiguous tree through a tie or an empty reset.
-                const snapshot = {
-                  ...after,
-                  specialization:
-                    after.specialization ?? before?.specialization ?? null,
-                };
+                const snapshot = characterBaseline(before, after);
                 return {
                   snapshot,
                   messages: changes.length

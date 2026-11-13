@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { isAxiosError } from 'axios';
 import {
@@ -16,6 +16,7 @@ import {
 
 @Injectable()
 export class WowSourceService {
+  private readonly logger = new Logger(WowSourceService.name);
   private readonly inFlight = new Map<string, Promise<unknown>>();
 
   constructor(private readonly http: HttpService) {}
@@ -32,7 +33,12 @@ export class WowSourceService {
           ),
         );
         stage = 'parse';
-        return parseCharacterHtml(response.data, slug);
+        const character = parseCharacterHtml(response.data, slug);
+        if (character.unavailableFields?.length)
+          this.logger.warn(
+            `Partial Armory profile character=${slug} unavailable=${character.unavailableFields.join(',')}`,
+          );
+        return character;
       } catch (error) {
         const context = `source=armory character=${slug} stage=${stage}`;
         if (error instanceof WowSourceError)

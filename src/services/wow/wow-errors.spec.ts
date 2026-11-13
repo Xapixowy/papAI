@@ -123,7 +123,7 @@ describe('WoW console diagnostics', () => {
     );
     const log = warn.mock.calls.flat().map(String).join(' ');
     expect(log).toContain('character.level');
-    expect(log).toContain('invalid_type');
+    expect(log).toContain('invalid_union');
     expect(log).not.toContain('private-profile-value');
   });
 });

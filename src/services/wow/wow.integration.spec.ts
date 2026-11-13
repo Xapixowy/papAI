@@ -411,6 +411,44 @@ integration(
       expect(send).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps last-known optional fields across partial reads without false guild or specialization alerts', async () => {
+      await commands.add(guildId, userId, channelId, current.slug);
+      const known = structuredClone(current);
+      current = {
+        ...current,
+        level: 26,
+        guild: null,
+        talents: [],
+        specialization: null,
+        unavailableFields: ['guild', 'talents'],
+        sourceUpdatedAt: new Date().toISOString(),
+      };
+      await monitor.pollCharacters();
+      expect(send).toHaveBeenCalledTimes(1);
+      const partial = JSON.stringify(send.mock.calls[0][0]);
+      expect(partial).toContain('25 → 26');
+      expect(partial).not.toContain('Circle of Lore → None');
+      expect(partial).toContain('No guild data available');
+      expect(partial).toContain('Partial Armory data');
+      current = {
+        ...known,
+        level: 26,
+        guild: 'Recovered guild',
+        specialization: 'holy',
+        talents: known.talents.map((tree) =>
+          tree.id === 'holy' ? { ...tree, points: 15 } : tree,
+        ),
+        sourceUpdatedAt: new Date().toISOString(),
+      };
+      await monitor.pollCharacters();
+      expect(send).toHaveBeenCalledTimes(2);
+      const recovered = JSON.stringify(send.mock.calls[1][0]);
+      expect(recovered).toContain('Circle of Lore → Recovered guild');
+      expect(recovered).toContain('Retribution → Holy');
+      await newMonitor().pollCharacters();
+      expect(send).toHaveBeenCalledTimes(2);
+    });
+
     it('retries a durable notification after transport failure and a new service instance', async () => {
       await commands.add(guildId, userId, channelId, current.slug);
       current.guild = null;
