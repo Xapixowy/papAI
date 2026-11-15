@@ -18,6 +18,7 @@ import { EphemeralOption } from '@Options/ephemeral.option';
 import { WowCharacterOption } from '@Options/wow.options';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
 import { WowInteractionService } from '@Services/wow/wow-interaction.service';
+import { WowPatchNotesService } from '@Services/wow/wow-patch-notes.service';
 import {
   replyWowFlow,
   wowFlowContext,
@@ -85,6 +86,7 @@ export class WowCommandsController {
   constructor(
     private readonly commands: WowCommandsService,
     private readonly flows: WowInteractionService,
+    private readonly patches: WowPatchNotesService,
   ) {}
 
   @Subcommand({
@@ -99,6 +101,23 @@ export class WowCommandsController {
       this.commands,
       interaction,
       () => this.commands.status(interaction.guildId!),
+      options.ephemeral ?? true,
+    );
+  }
+
+  @Subcommand({
+    name: 'patch-notes',
+    description:
+      'Show the latest Forever patch notes and an AI summary for players',
+  })
+  async patchNotes(
+    @Context() [interaction]: SlashCommandContext,
+    @Options() options: EphemeralOption,
+  ): Promise<void> {
+    await replyWow(
+      this.commands,
+      interaction,
+      () => this.patches.latest(),
       options.ephemeral ?? true,
     );
   }

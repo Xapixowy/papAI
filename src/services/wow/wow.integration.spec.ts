@@ -417,6 +417,71 @@ integration(
       }
     });
 
+    it('reads patch notes manually without consuming the automatic notification or changing monitoring state', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      const patches = newPatchNotes();
+      await patches.poll();
+      const key = patchNotesStateKey(guildId, channelId);
+      const before = await db
+        .getRepository(WowMonitorState)
+        .findOneByOrFail({ key });
+      appendPatch();
+      const result = await patches.latest();
+      const text = JSON.stringify(result.map((e) => e.toJSON()));
+      expect(text).toContain('Druid healing coefficient');
+      expect(text).toContain('AI summary');
+      expect(text).not.toContain('Existing official changes');
+      expect(
+        (await db.getRepository(WowMonitorState).findOneByOrFail({ key })).data,
+      ).toEqual(before.data);
+      expect(await db.getRepository(WowNotification).count()).toBe(0);
+      expect(send).not.toHaveBeenCalled();
+      await patches.poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows manual patch lookup without a configured status channel and coalesces concurrent AI requests', async () => {
+      appendPatch();
+      const patches = newPatchNotes();
+      const [first, second] = await Promise.all([
+        patches.latest(),
+        patches.latest(),
+      ]);
+      expect(first.map((e) => e.toJSON().title)).toEqual(
+        second.map((e) => e.toJSON().title),
+      );
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+      expect(await db.getRepository(WowNotification).count()).toBe(0);
+      expect(
+        await db
+          .getRepository(WowMonitorState)
+          .findOneBy({ key: patchNotesStateKey(guildId, channelId) }),
+      ).toBeNull();
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('handles an empty news index and retries an unavailable AI summary on a later manual check', async () => {
+      const patches = newPatchNotes();
+      patchEntries = [];
+      expect((await patches.latest())[0].toJSON().description).toContain(
+        'No published WoW Forever patch notes',
+      );
+      expect(generateSummary).not.toHaveBeenCalled();
+      appendPatch();
+      generateSummary.mockResolvedValueOnce(
+        err(ErrorCode.GEMINI_GENERATION_ERROR),
+      );
+      expect(JSON.stringify(await patches.latest())).toContain(
+        'AI summary unavailable',
+      );
+      expect(JSON.stringify(await patches.latest())).toContain(
+        'What this means for players',
+      );
+      expect(generateSummary).toHaveBeenCalledTimes(2);
+      expect(await db.getRepository(WowNotification).count()).toBe(0);
+    });
+
     it('baselines patch notes silently, sends new notes plus an AI summary and survives restart/queue cleanup without duplicates', async () => {
       await newPatchNotes().poll();
       expect(patchRead).not.toHaveBeenCalled();

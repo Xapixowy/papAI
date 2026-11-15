@@ -14,6 +14,8 @@ import { WowObserverCommandsController } from '@Controllers/discord/wow/wow-obse
 import { WowConfigCommandsController } from '@Controllers/discord/wow/wow-config-commands.controller';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
 import { EmbedBuilder } from 'discord.js';
+import { WowPatchNotesService } from '@Services/wow/wow-patch-notes.service';
+import { WowInteractionService } from '@Services/wow/wow-interaction.service';
 
 describe('WoW command contract', () => {
   it('discovers all commands and preserves required-before-optional option order', () => {
@@ -45,7 +47,14 @@ describe('WoW command contract', () => {
         .getSubcommands()
         .map((c) => c.getName())
         .sort(),
-    ).toEqual(['character', 'config', 'observer', 'status']);
+    ).toEqual(['character', 'config', 'observer', 'patch-notes', 'status']);
+    const patchOptions = root.getSubcommand('patch-notes').getOptions() as {
+      name: string;
+      required?: boolean;
+    }[];
+    expect(
+      patchOptions.map((o) => ({ name: o.name, required: !!o.required })),
+    ).toEqual([{ name: 'ephemeral', required: false }]);
     const character = root.getSubcommand('character');
     const options = character.getOptions() as { name: string }[];
     expect(options.map((o) => o.name)).toEqual(['character', 'ephemeral']);
@@ -104,4 +113,56 @@ describe('WoW command contract', () => {
       flags: undefined,
     });
   });
+
+  it.each([null, false])(
+    'keeps every patch-notes reply private by default and honors ephemeral=%s for all parts',
+    async (ephemeral) => {
+      const commands = Object.create(
+        WowCommandsService.prototype,
+      ) as WowCommandsService;
+      jest.spyOn(commands, 'execute').mockImplementation((action) => action());
+      const patches = {
+        latest: jest
+          .fn<WowPatchNotesService['latest']>()
+          .mockResolvedValue([
+            new EmbedBuilder()
+              .setTitle('Official notes (1/2)')
+              .setDescription('A'.repeat(3500)),
+            new EmbedBuilder()
+              .setTitle('Official notes (2/2)')
+              .setDescription('B'.repeat(3500)),
+            new EmbedBuilder()
+              .setTitle('AI summary')
+              .setDescription('A simple explanation for players.'),
+          ]),
+      };
+      const controller = new WowCommandsController(
+        commands,
+        {} as WowInteractionService,
+        patches as unknown as WowPatchNotesService,
+      );
+      const interaction = {
+        guildId: '100000000000000001',
+        deferReply: jest.fn<() => Promise<void>>().mockResolvedValue(),
+        editReply: jest.fn<() => Promise<void>>().mockResolvedValue(),
+        followUp: jest.fn<() => Promise<void>>().mockResolvedValue(),
+      };
+      await controller.patchNotes(
+        [interaction as unknown as ChatInputCommandInteraction],
+        { ephemeral },
+      );
+      expect(patches.latest).toHaveBeenCalledTimes(1);
+      expect(interaction.deferReply).toHaveBeenCalledWith({
+        flags: ephemeral === false ? undefined : MessageFlags.Ephemeral,
+      });
+      expect(interaction.editReply).toHaveBeenCalledTimes(1);
+      expect(interaction.followUp).toHaveBeenCalledTimes(1);
+      expect(interaction.followUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flags: ephemeral === false ? undefined : MessageFlags.Ephemeral,
+          allowedMentions: { parse: [] },
+        }),
+      );
+    },
+  );
 });

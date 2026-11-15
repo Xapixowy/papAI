@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9.1",
+    "date": "2026-11-15",
+    "changes": [
+      { "type": "feat", "description": "Add /wow patch-notes to show the latest official Forever changes and AI player summary on demand, privately by default with an ephemeral=false option, without consuming automatic notifications" },
+      { "type": "improve", "description": "Reuse successful patch summaries, coalesce concurrent AI requests and allow a later manual check to retry an unavailable AI summary" }
+    ]
+  },
+  {
     "version": "0.9.0",
     "date": "2026-11-15",
     "changes": [
