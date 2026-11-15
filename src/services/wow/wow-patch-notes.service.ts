@@ -10,6 +10,10 @@ import { WowPatchNotesSourceService } from '@Services/wow/wow-patch-notes-source
 import { WowMonitorService } from '@Services/wow/wow-monitor.service';
 import { WowStoreService } from '@Services/wow/wow-store.service';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
+import {
+  patchNotesMessages,
+  patchNotesPages,
+} from '@Services/wow/wow-patch-notes-format';
 import { wowErrorDetails } from '@Services/wow/wow-error-details';
 import { CronjobName } from '@Enums/cronjob-name.enum';
 import {
@@ -29,74 +33,6 @@ Explain what changes for players without inventing effects, dates, EU rollout ti
 Prioritize concrete gameplay effects players will notice. State before/after effects when supported. Do not merely list class names or categories, or say "various fixes". You need not cover every minor fix.
 Preserve numbers, qualifiers such as "with realm restarts", and the distinction between tooltip fixes and gameplay changes.
 Distinguish a coefficient change from a change to total damage or healing. Do not add links or repeat the full notes.`;
-
-function textChunks(text: string): string[] {
-  const chunks: string[] = [];
-  let remaining = text;
-  while (remaining.length > 3200) {
-    let end = remaining.lastIndexOf('\n', 3200);
-    if (end < 1600) end = 3200;
-    if (/[\uD800-\uDBFF]/.test(remaining[end - 1])) end--;
-    chunks.push(remaining.slice(0, end));
-    remaining = remaining.slice(end).trimStart();
-  }
-  if (remaining) chunks.push(remaining);
-  return chunks;
-}
-
-/** Each batch is one Discord message; the AI explanation is always last. */
-export function patchNotesMessages(
-  renderer: WowEmbedService,
-  entry: WowPatchNotesEntry,
-  summary: string | null,
-  updated: boolean,
-): EmbedBuilder[][] {
-  const chunks = textChunks(escapeMarkdown(entry.text));
-  const embeds = chunks.map((chunk, i) =>
-    renderer
-      .message(chunk)[0]
-      .setTitle(
-        `${updated ? 'Updated: ' : ''}${entry.title}${chunks.length > 1 ? ` (${i + 1}/${chunks.length})` : ''}`.slice(
-          0,
-          256,
-        ),
-      )
-      .setURL(entry.url),
-  );
-  embeds.push(
-    renderer
-      .message(
-        summary ??
-          'AI summary is currently unavailable. The official changes are included above; use the source link for the complete article.',
-        summary ? 'info' : 'warning',
-      )[0]
-      .setTitle(
-        summary
-          ? 'What this means for players · AI summary'
-          : 'AI summary unavailable',
-      )
-      .setURL(entry.url),
-  );
-  const batches: EmbedBuilder[][] = [];
-  let batch: EmbedBuilder[] = [];
-  let length = 0;
-  for (const embed of embeds) {
-    const e = embed.toJSON();
-    const size =
-      (e.title?.length ?? 0) +
-      (e.description?.length ?? 0) +
-      (e.footer?.text.length ?? 0);
-    if (batch.length && (batch.length >= 10 || length + size > 5900)) {
-      batches.push(batch);
-      batch = [];
-      length = 0;
-    }
-    batch.push(embed);
-    length += size;
-  }
-  if (batch.length) batches.push(batch);
-  return batches;
-}
 
 @Injectable()
 export class WowPatchNotesService implements OnApplicationBootstrap {
@@ -129,12 +65,12 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
         'No published WoW Forever patch notes are currently available in the official news index.',
         'info',
       );
-    return patchNotesMessages(
+    return patchNotesPages(
       this.renderer,
       latest,
       await this.summary(latest),
       false,
-    ).flat();
+    );
   }
 
   private summary(entry: WowPatchNotesEntry): Promise<string | null> {

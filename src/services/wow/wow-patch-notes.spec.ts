@@ -1,11 +1,15 @@
 import { describe, expect, it } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'discord.js';
+import { parsePatchNotesNews } from '@Services/wow/wow-patch-notes-source.service';
 import {
-  parsePatchNotesNews,
+  patchNotesMessages,
+  patchNotesPages,
+} from '@Services/wow/wow-patch-notes-format';
+import {
+  patchNotesBlocks,
   patchNotesText,
-} from '@Services/wow/wow-patch-notes-source.service';
-import { patchNotesMessages } from '@Services/wow/wow-patch-notes.service';
+} from '@Services/wow/wow-patch-notes-content';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
 
 const article = (overrides: Record<string, unknown> = {}) => ({
@@ -117,7 +121,11 @@ describe('Official Forever patch notes', () => {
         app: { version: 'test' },
       }),
     );
-    const entry = { ...parse([article()])[0], text: 'A'.repeat(25_000) };
+    const entry = {
+      ...parse([article()])[0],
+      blocks: undefined,
+      text: 'A'.repeat(25_000),
+    };
     const batches = patchNotesMessages(
       renderer,
       entry,
@@ -133,6 +141,9 @@ describe('Official Forever patch notes', () => {
         .join(''),
     ).toBe(entry.text);
     for (const batch of batches) {
+      // Reusing a URL hides later embeds in the Discord client.
+      const urls = batch.flatMap((e) => (e.url ? [e.url] : []));
+      expect(new Set(urls).size).toBe(urls.length);
       expect(batch.length).toBeLessThanOrEqual(10);
       expect(
         batch.every(
@@ -152,5 +163,113 @@ describe('Official Forever patch notes', () => {
       .map((e) => e.toJSON());
     expect(fallback[0].title).toMatch(/^Updated:/);
     expect(fallback.at(-1)?.title).toBe('AI summary unavailable');
+  });
+
+  it('keeps nested class/specification context, developer notes, conditions and source order', () => {
+    const blocks = patchNotesBlocks(
+      '<div><p><strong>Classes</strong></p><ul><li>Druid<ul><li>Restoration<ul>' +
+        '<li>Wild Growth coefficient: 6.6% (was 3.3%).<p><em>Developers’ notes:</em> This is a coefficient change, not doubled total healing.</p></li>' +
+        '<li>Cannot be cast while moving.</li></ul></li></ul></li>' +
+        '<li>Shaman<ul><li>Windfury triggers on main-hand strikes; off-hand hits cannot trigger it.</li></ul></li></ul>' +
+        '<h2>Items</h2><p>The exchange cannot be reversed.</p><script>doBadThings()</script></div>',
+    );
+    expect(blocks).toEqual([
+      {
+        path: ['Classes', 'Druid', 'Restoration'],
+        text: 'Wild Growth coefficient: 6.6% (was 3.3%).\nDevelopers’ notes: This is a coefficient change, not doubled total healing.',
+        bullet: true,
+      },
+      {
+        path: ['Classes', 'Druid', 'Restoration'],
+        text: 'Cannot be cast while moving.',
+        bullet: true,
+      },
+      {
+        path: ['Classes', 'Shaman'],
+        text: 'Windfury triggers on main-hand strikes; off-hand hits cannot trigger it.',
+        bullet: true,
+      },
+      {
+        path: ['Items'],
+        text: 'The exchange cannot be reversed.',
+        bullet: false,
+      },
+    ]);
+  });
+
+  it('repeats source context across readable pages without omitting any change or qualifier', () => {
+    const renderer = new WowEmbedService(
+      new Client({ intents: [] }),
+      new ConfigService({
+        discord: {
+          botName: 'Test bot',
+          colors: { info: 0x5865f2, warning: 0xffaa00 },
+        },
+        app: { version: 'test' },
+      }),
+    );
+    const notes = Array.from(
+      { length: 30 },
+      (_, i) =>
+        'Change ' +
+        i +
+        ': coefficient increased to 6.6% (was 3.3%); only with realm restarts. Off-hand hits are excluded.',
+    );
+    const entry = {
+      ...parse([article()])[0],
+      blocks: notes.map((text) => ({
+        path: ['Classes', 'Druid', 'Restoration'],
+        text,
+        bullet: true,
+      })),
+    };
+    const pages = patchNotesPages(
+      renderer,
+      entry,
+      '• A separate AI overview.',
+      false,
+    ).map((e) => e.toJSON());
+    expect(pages.length).toBeGreaterThan(2);
+    const text = pages
+      .slice(0, -1)
+      .map((p) => p.description)
+      .join('\n');
+    for (const note of notes) expect(text.split(note)).toHaveLength(2);
+    for (const [index, page] of pages.entries()) {
+      expect(page.description!.length).toBeLessThanOrEqual(2000);
+      expect(page.footer!.text).toContain(
+        'Page ' + (index + 1) + ' of ' + pages.length,
+      );
+      if (index < pages.length - 1)
+        expect(page.description).toContain('**Classes · Druid · Restoration**');
+    }
+    expect(pages.at(-1)?.title).toContain('AI summary');
+    expect(pages.at(-1)?.description).toBe('• A separate AI overview.');
+  });
+
+  it('splits oversized individual changes safely and escapes source Markdown', () => {
+    const renderer = new WowEmbedService(
+      new Client({ intents: [] }),
+      new ConfigService({
+        discord: {
+          botName: 'Test bot',
+          colors: { info: 0x5865f2, warning: 0xffaa00 },
+        },
+      }),
+    );
+    const entry = {
+      ...parse([article()])[0],
+      blocks: undefined,
+      text: '😀*'.repeat(2000),
+    };
+    const pages = patchNotesPages(renderer, entry, null, false)
+      .slice(0, -1)
+      .map((p) => p.toJSON());
+    expect(pages.map((p) => p.description).join('')).toBe('😀\\*'.repeat(2000));
+    for (const page of pages) {
+      expect(page.description!.length).toBeLessThanOrEqual(2000);
+      expect(page.description).not.toMatch(/[\uD800-\uDBFF]$/);
+      expect(page.description).not.toMatch(/^[\uDC00-\uDFFF]/);
+    }
   });
 });

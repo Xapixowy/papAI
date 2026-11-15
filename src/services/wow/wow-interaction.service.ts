@@ -17,6 +17,7 @@ import { WowSourceError } from '@Types/wow/wow.type';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
 import { WowSourceService } from '@Services/wow/wow-source.service';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
+import { WowPatchNotesService } from '@Services/wow/wow-patch-notes.service';
 
 export interface WowFlowContext {
   guildId: string;
@@ -29,13 +30,27 @@ export interface WowFlowReply {
   components: ActionRowBuilder<MessageActionRowComponentBuilder>[];
 }
 
+const patchPageSchema = z.object({
+  title: z.string().min(1).max(256),
+  description: z.string().min(1).max(4096),
+  url: z.url().optional(),
+  color: z.number().int().min(0).max(0xffffff).optional(),
+  timestamp: z.iso.datetime().optional(),
+  footer: z
+    .object({
+      text: z.string().max(2048),
+      icon_url: z.url().optional(),
+    })
+    .optional(),
+});
 const sessionSchema = z.object({
   guildId: z.string(),
   channelId: z.string(),
   userId: z.string(),
-  kind: z.enum(['observe', 'lookup']),
-  stage: z.enum(['confirm', 'channel', 'character']),
+  kind: z.enum(['observe', 'lookup', 'patch']),
+  stage: z.enum(['confirm', 'channel', 'character', 'patch']),
   characterSlug: z.string().optional(),
+  patchPages: z.array(patchPageSchema).min(1).optional(),
 });
 type Session = z.infer<typeof sessionSchema>;
 const SESSION_TTL = 10 * 60;
@@ -48,6 +63,7 @@ export class WowInteractionService {
     private readonly source: WowSourceService,
     private readonly embeds: WowEmbedService,
     @Inject(ProviderToken.REDIS) private readonly redis: Redis,
+    private readonly patches: WowPatchNotesService,
   ) {}
 
   async execute(action: () => Promise<WowFlowReply>): Promise<WowFlowReply> {
@@ -163,6 +179,20 @@ export class WowInteractionService {
     return this.menu(token, session, options, 0);
   }
 
+  async patchNotes(context: WowFlowContext): Promise<WowFlowReply> {
+    const pages = await this.patches.latest();
+    if (pages.length === 1) return { embeds: pages, components: [] };
+    const token = randomUUID();
+    const session: Session = {
+      ...context,
+      kind: 'patch',
+      stage: 'patch',
+      patchPages: pages.map((page) => patchPageSchema.parse(page.toJSON())),
+    };
+    await this.save(token, session);
+    return this.patchPage(token, session, 0);
+  }
+
   async chooseCharacter(
     token: string,
     context: WowFlowContext,
@@ -189,6 +219,8 @@ export class WowInteractionService {
       throw new WowSourceError(
         'This selection is no longer available. Run the command again.',
       );
+    if (session.kind === 'patch' && session.stage === 'patch')
+      return this.patchPage(token, session, Number(page));
     const options =
       session.stage === 'channel'
         ? await this.commands.allowedObservationChannels(
@@ -268,6 +300,48 @@ export class WowInteractionService {
         buttons,
       ],
     };
+  }
+
+  private patchPage(
+    token: string,
+    session: Session,
+    requestedPage: number,
+  ): WowFlowReply {
+    const pages = session.patchPages;
+    if (!pages?.length)
+      throw new WowSourceError(
+        'This request has expired. Run /wow patch-notes again.',
+      );
+    const page = Math.min(requestedPage, pages.length - 1);
+    const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(
+          DiscordButtonId.WOW_FLOW_PAGE +
+            '/' +
+            token +
+            '/' +
+            Math.max(0, page - 1),
+        )
+        .setLabel('Previous')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === 0),
+      new ButtonBuilder()
+        .setCustomId(
+          DiscordButtonId.WOW_FLOW_PAGE + '/' + token + '/' + (page + 1),
+        )
+        .setLabel('Next')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === pages.length - 1),
+    );
+    const url = pages[page].url;
+    if (url)
+      buttons.addComponents(
+        new ButtonBuilder()
+          .setLabel('Source')
+          .setStyle(ButtonStyle.Link)
+          .setURL(url),
+      );
+    return { embeds: [new EmbedBuilder(pages[page])], components: [buttons] };
   }
 
   private cancelButton(token: string): ButtonBuilder {

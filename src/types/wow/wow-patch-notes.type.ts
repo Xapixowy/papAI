@@ -1,3 +1,9 @@
+export interface WowPatchNotesBlock {
+  path: string[];
+  text: string;
+  bullet: boolean;
+}
+
 export interface WowPatchNotesEntry {
   key: string;
   hash: string;
@@ -5,6 +11,7 @@ export interface WowPatchNotesEntry {
   url: string;
   publishedAt: string;
   text: string;
+  blocks?: WowPatchNotesBlock[];
 }
 
 export interface WowPatchNotesState {
