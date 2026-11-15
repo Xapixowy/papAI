@@ -1,8 +1,27 @@
 import { EmbedBuilder, escapeMarkdown } from 'discord.js';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
-import { WowPatchNotesEntry } from '@Types/wow/wow-patch-notes.type';
+import {
+  WowPatchNotesEntry,
+  WowPatchSummaryBullet,
+} from '@Types/wow/wow-patch-notes.type';
 
 const PAGE_TEXT_MAX = 2000;
+
+/** AI chooses emphasis; only the renderer introduces Markdown formatting. */
+export function formatPatchSummary(bullets: WowPatchSummaryBullet[]): string {
+  return bullets
+    .map(
+      (bullet) =>
+        '• ' +
+        bullet.parts
+          .map((part) => {
+            const text = escapeMarkdown(part.text);
+            return part.bold ? '**' + text + '**' : text;
+          })
+          .join(''),
+    )
+    .join('\n\n');
+}
 
 /** Split source text before escaping, preserving words and Unicode pairs. */
 function chunks(text: string, limit: number): string[] {

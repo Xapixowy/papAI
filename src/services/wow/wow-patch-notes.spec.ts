@@ -5,6 +5,7 @@ import { parsePatchNotesNews } from '@Services/wow/wow-patch-notes-source.servic
 import {
   patchNotesMessages,
   patchNotesPages,
+  formatPatchSummary,
 } from '@Services/wow/wow-patch-notes-format';
 import {
   patchNotesBlocks,
@@ -29,6 +30,60 @@ const parse = (blogs: unknown[]) =>
   parsePatchNotesNews(news(blogs), '2026-11-15T18:00:00Z');
 
 describe('Official Forever patch notes', () => {
+  it('emphasizes subjects, exact values and restrictions without changing the summary text', () => {
+    expect(
+      formatPatchSummary([
+        {
+          parts: [
+            { text: 'Druid', bold: true },
+            { text: ': coefficient ' },
+            { text: '3.3% → 6.6%', bold: true },
+            { text: '; ' },
+            { text: 'cannot cast while moving', bold: true },
+            { text: '.' },
+          ],
+        },
+        {
+          parts: [
+            { text: 'Items', bold: true },
+            { text: ': ' },
+            { text: 'Spirit → Spell Power', bold: true },
+            { text: '.' },
+          ],
+        },
+      ]),
+    ).toBe(
+      '• **Druid**: coefficient **3.3% → 6.6%**; **cannot cast while moving**.\n\n• **Items**: **Spirit → Spell Power**.',
+    );
+  });
+
+  it('preserves spaces, repeated words and every unbolded part', () => {
+    expect(
+      formatPatchSummary([
+        {
+          parts: [
+            { text: 'Druid Restoration', bold: true },
+            { text: ': Druid ' },
+            { text: 'heals.' },
+          ],
+        },
+      ]),
+    ).toBe('• **Druid Restoration**: Druid heals.');
+  });
+
+  it('escapes other Markdown instead of allowing AI to style the whole response', () => {
+    expect(
+      formatPatchSummary([
+        {
+          parts: [
+            { text: 'Druid', bold: true },
+            { text: ': _tooltip_ versus *gameplay*.' },
+          ],
+        },
+      ]),
+    ).toBe('• **Druid**: \\_tooltip\\_ versus \\*gameplay\\*.');
+  });
+
   it('extracts dated hotfix sections and includes live numbered patches only', () => {
     const result = parse([
       article(),

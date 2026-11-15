@@ -4,6 +4,10 @@ export interface WowPatchNotesBlock {
   bullet: boolean;
 }
 
+export interface WowPatchSummaryBullet {
+  parts: { text: string; bold?: boolean }[];
+}
+
 export interface WowPatchNotesEntry {
   key: string;
   hash: string;
