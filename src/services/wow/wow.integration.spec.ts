@@ -896,7 +896,7 @@ integration(
         return component.options;
       };
 
-      it('shows one ephemeral message and edits cached pages through the controller without new source or AI requests', async () => {
+      it('opens with the AI summary and switches between cached details and summary in one ephemeral message', async () => {
         appendPatch();
         const entry = patchEntries.at(-1)!;
         entry.text = Array.from(
@@ -936,13 +936,14 @@ integration(
         expect(slash.followUp).not.toHaveBeenCalled();
         const first = slash.editReply.mock.calls[0][0] as WowFlowReply;
         expect(first.embeds).toHaveLength(1);
+        expect(first.embeds[0].toJSON().title).toContain('AI summary');
+        expect(first.embeds[0].toJSON().author?.name).toBe(entry.title);
+        expect(first.embeds[0].toJSON().footer!.text).not.toContain('Page ');
         const buttons = first.components[0].toJSON().components;
         expect(buttons.map((b) => ('label' in b ? b.label : ''))).toEqual([
-          'Previous',
-          'Next',
+          'Details',
           'Source',
         ]);
-        expect(buttons[0]).toMatchObject({ disabled: true });
         const token = tokenFrom(first);
         const button = interaction();
         // Unavailable upstream services must not affect already opened pages.
@@ -952,7 +953,7 @@ integration(
         await new WowInteractionController(flows).page(
           [button as unknown as ButtonInteraction],
           token,
-          '1',
+          '0',
         );
         expect(button.deferUpdate).toHaveBeenCalledTimes(1);
         expect(button.editReply).toHaveBeenCalledTimes(1);
@@ -960,7 +961,19 @@ integration(
         expect(button.reply).not.toHaveBeenCalled();
         const second = button.editReply.mock.calls[0][0] as WowFlowReply;
         expect(second.embeds).toHaveLength(1);
-        expect(second.embeds[0].toJSON().footer!.text).toContain('Page 2 of');
+        expect(second.embeds[0].toJSON().footer!.text).toContain('Page 1 of 2');
+        const detailsButtons = second.components[0].toJSON().components;
+        expect(
+          detailsButtons.map((b) => ('label' in b ? b.label : '')),
+        ).toEqual(['Previous', 'Next', 'Summary', 'Source']);
+        expect(detailsButtons[0]).toMatchObject({ disabled: true });
+        const finalDetails = await flows.page(token, context, '1');
+        expect(finalDetails.embeds[0].toJSON().footer!.text).toContain(
+          'Page 2 of 2',
+        );
+        expect(finalDetails.components[0].toJSON().components[1]).toMatchObject(
+          { disabled: true },
+        );
         const restarted = new WowInteractionService(
           commands,
           source,
@@ -970,16 +983,51 @@ integration(
         );
         const last = await restarted.page(token, context, '999999');
         expect(last.embeds[0].toJSON().title).toContain('AI summary');
-        expect(last.components[0].toJSON().components[1]).toMatchObject({
-          disabled: true,
-        });
+        expect(last.embeds[0].toJSON()).toEqual(first.embeds[0].toJSON());
+        expect(
+          last.components[0]
+            .toJSON()
+            .components.map((b) => ('label' in b ? b.label : '')),
+        ).toEqual(['Details', 'Source']);
         const back = await restarted.page(token, context, '0');
-        expect(back.embeds[0].toJSON()).toEqual(first.embeds[0].toJSON());
+        expect(back.embeds[0].toJSON()).toEqual(second.embeds[0].toJSON());
         expect(await redis!.ttl('wow:flow:' + token)).toBeGreaterThan(0);
         expect(patchRead).toHaveBeenCalledTimes(1);
         expect(generateSummary).toHaveBeenCalledTimes(1);
         expect(await db.getRepository(WowNotification).count()).toBe(0);
         expect(send).not.toHaveBeenCalled();
+      });
+
+      it('keeps all details accessible when AI fails and hides pagination for one detail page', async () => {
+        generateSummary.mockResolvedValueOnce(
+          err(ErrorCode.GEMINI_GENERATION_ERROR),
+        );
+        const summary = await flows.patchNotes(context);
+        expect(summary.embeds[0].toJSON().title).toBe('AI summary unavailable');
+        const token = tokenFrom(summary);
+        const details = await flows.page(token, context, '0');
+        expect(details.embeds[0].toJSON().description).toContain(
+          'Existing official changes.',
+        );
+        expect(details.embeds[0].toJSON().footer!.text).toContain(
+          'Page 1 of 1',
+        );
+        const buttons = details.components[0].toJSON().components;
+        expect(buttons.map((b) => ('label' in b ? b.label : ''))).toEqual([
+          'Summary',
+          'Source',
+        ]);
+        const summaryButton = buttons[0];
+        if (!('custom_id' in summaryButton))
+          throw new Error('Missing summary button');
+        const back = await flows.page(
+          token,
+          context,
+          summaryButton.custom_id.split('/').at(-1)!,
+        );
+        expect(back.embeds[0].toJSON()).toEqual(summary.embeds[0].toJSON());
+        expect(patchRead).toHaveBeenCalledTimes(1);
+        expect(generateSummary).toHaveBeenCalledTimes(1);
       });
 
       it('rejects foreign, expired and invalid patch navigation without modifying the original message', async () => {

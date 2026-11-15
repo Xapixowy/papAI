@@ -72,7 +72,7 @@ export function patchNotesPages(
     renderer
       .message(
         summary ??
-          'AI summary is currently unavailable. All official changes are on the previous pages. Use the source link to read the complete article.',
+          'AI summary is currently unavailable. The complete official changes remain available alongside the source link.',
         summary ? 'info' : 'warning',
       )[0]
       .setTitle(
@@ -80,6 +80,7 @@ export function patchNotesPages(
           ? 'What this means for players · AI summary'
           : 'AI summary unavailable',
       )
+      .setAuthor({ name: entry.title.slice(0, 256) })
       .setURL(entry.url),
   );
   return pages.map((embed, i) => {
@@ -88,11 +89,13 @@ export function patchNotesPages(
       ...original,
       text:
         (original?.text ? original.text.slice(0, 1800) + ' · ' : '') +
-        'Page ' +
-        (i + 1) +
-        ' of ' +
-        pages.length +
-        (i === pages.length - 1 ? ' · AI summary' : ' · Official changes'),
+        (i === pages.length - 1
+          ? 'AI summary'
+          : 'Page ' +
+            (i + 1) +
+            ' of ' +
+            (pages.length - 1) +
+            ' · Official changes'),
     });
   });
 }
@@ -112,7 +115,8 @@ export function patchNotesMessages(
     const size =
       (e.title?.length ?? 0) +
       (e.description?.length ?? 0) +
-      (e.footer?.text.length ?? 0);
+      (e.footer?.text.length ?? 0) +
+      (e.author?.name.length ?? 0);
     if (batch.length && (batch.length >= 10 || length + size > 5900)) {
       batches.push(batch);
       batch = [];

@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9.3",
+    "date": "2026-11-15",
+    "changes": [
+      { "type": "improve", "description": "Open /wow patch-notes with the AI player summary and patch title; Details opens the complete original changes, and Summary returns to the overview in the same message" },
+      { "type": "improve", "description": "Keep detailed-page navigation separate from the summary, preserve access to all original changes when AI is unavailable, and reuse cached pages for every view switch" }
+    ]
+  },
+  {
     "version": "0.9.2",
     "date": "2026-11-15",
     "changes": [

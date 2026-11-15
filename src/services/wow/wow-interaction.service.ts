@@ -36,6 +36,7 @@ const patchPageSchema = z.object({
   url: z.url().optional(),
   color: z.number().int().min(0).max(0xffffff).optional(),
   timestamp: z.iso.datetime().optional(),
+  author: z.object({ name: z.string().min(1).max(256) }).optional(),
   footer: z
     .object({
       text: z.string().max(2048),
@@ -190,7 +191,7 @@ export class WowInteractionService {
       patchPages: pages.map((page) => patchPageSchema.parse(page.toJSON())),
     };
     await this.save(token, session);
-    return this.patchPage(token, session, 0);
+    return this.patchPage(token, session, pages.length - 1);
   }
 
   async chooseCharacter(
@@ -312,26 +313,47 @@ export class WowInteractionService {
       throw new WowSourceError(
         'This request has expired. Run /wow patch-notes again.',
       );
-    const page = Math.min(requestedPage, pages.length - 1);
-    const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    const summaryPage = pages.length - 1;
+    const page = Math.min(requestedPage, summaryPage);
+    const buttons = new ActionRowBuilder<ButtonBuilder>();
+    if (page !== summaryPage && summaryPage > 1)
+      buttons.addComponents(
+        new ButtonBuilder()
+          .setCustomId(
+            DiscordButtonId.WOW_FLOW_PAGE +
+              '/' +
+              token +
+              '/' +
+              Math.max(0, page - 1),
+          )
+          .setLabel('Previous')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === 0),
+        new ButtonBuilder()
+          .setCustomId(
+            DiscordButtonId.WOW_FLOW_PAGE +
+              '/' +
+              token +
+              '/' +
+              Math.min(page + 1, summaryPage - 1),
+          )
+          .setLabel('Next')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === summaryPage - 1),
+      );
+    buttons.addComponents(
       new ButtonBuilder()
         .setCustomId(
           DiscordButtonId.WOW_FLOW_PAGE +
             '/' +
             token +
             '/' +
-            Math.max(0, page - 1),
+            (page === summaryPage ? 0 : summaryPage),
         )
-        .setLabel('Previous')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page === 0),
-      new ButtonBuilder()
-        .setCustomId(
-          DiscordButtonId.WOW_FLOW_PAGE + '/' + token + '/' + (page + 1),
-        )
-        .setLabel('Next')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page === pages.length - 1),
+        .setLabel(page === summaryPage ? 'Details' : 'Summary')
+        .setStyle(
+          page === summaryPage ? ButtonStyle.Primary : ButtonStyle.Secondary,
+        ),
     );
     const url = pages[page].url;
     if (url)
