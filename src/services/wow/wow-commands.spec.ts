@@ -129,8 +129,8 @@ describe('WoW command contract', () => {
       const firstPage = {
         embeds: [
           new EmbedBuilder()
-            .setTitle('Official changes')
-            .setDescription('Full original notes.'),
+            .setTitle('What this means for players · AI summary')
+            .setDescription('Player overview.'),
         ],
         components: [],
       };

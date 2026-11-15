@@ -153,7 +153,11 @@ describe('Official Forever patch notes', () => {
       expect(
         batch.reduce(
           (n, e) =>
-            n + e.title!.length + e.description!.length + e.footer!.text.length,
+            n +
+            e.title!.length +
+            e.description!.length +
+            e.footer!.text.length +
+            (e.author?.name.length ?? 0),
           0,
         ),
       ).toBeLessThanOrEqual(6000);
@@ -237,9 +241,14 @@ describe('Official Forever patch notes', () => {
     for (const note of notes) expect(text.split(note)).toHaveLength(2);
     for (const [index, page] of pages.entries()) {
       expect(page.description!.length).toBeLessThanOrEqual(2000);
-      expect(page.footer!.text).toContain(
-        'Page ' + (index + 1) + ' of ' + pages.length,
-      );
+      if (index < pages.length - 1)
+        expect(page.footer!.text).toContain(
+          'Page ' + (index + 1) + ' of ' + (pages.length - 1),
+        );
+      else {
+        expect(page.footer!.text).not.toContain('Page ');
+        expect(page.author?.name).toBe(entry.title);
+      }
       if (index < pages.length - 1)
         expect(page.description).toContain('**Classes · Druid · Restoration**');
     }

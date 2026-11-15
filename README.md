@@ -56,9 +56,9 @@ All bot-authored bingo content is in English; user-entered names and phrases are
 
 Run unit and command-registration checks with `npm test -- --runInBand`. Database workflow checks additionally require `BINGO_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_bingo_test`; this suite clears its test data and exercises migration rollback. Selection-flow checks also require `BINGO_TEST_REDIS_URL` pointing to a dedicated local Redis on port 56380, database 14. The database must never contain production data. Simulated Discord transport tests must be followed by live acceptance checks on a test server.
 
-## WoW Forever patch notes (0.9.2)
+## WoW Forever patch notes (0.9.3)
 
-Use `/wow patch-notes` to browse the latest official Forever changes in one private message. **Previous** and **Next** edit that same message; **Source** opens Blizzard's article. Original changes retain class/specification headings, numerical values, exceptions and developer notes. A separate AI overview appears on the final page, or an unavailable notice if AI fails.
+Use `/wow patch-notes` to open the latest Forever AI player summary in one private message. **Details** opens the complete original changes, **Previous** and **Next** browse their pages, and **Summary** returns to the overview in that same message. **Source** opens Blizzard's article. Original changes retain class/specification headings, numerical values, exceptions and developer notes. If AI is unavailable, **Details** still provides every original change.
 
 Use `/wow patch-notes ephemeral:false` for a public reply. Navigation belongs to the invoking user and channel, expires after ten minutes, and reads cached pages without fetching Blizzard or calling AI again. Run the command again after expiry to open a new message.
 
