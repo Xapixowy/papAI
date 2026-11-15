@@ -101,6 +101,10 @@ export function patchNotesMessages(
 @Injectable()
 export class WowPatchNotesService implements OnApplicationBootstrap {
   private readonly logger = new Logger(WowPatchNotesService.name);
+  private readonly summariesInFlight = new Map<
+    string,
+    Promise<string | null>
+  >();
   constructor(
     private readonly db: DataSource,
     private readonly store: WowStoreService,
@@ -116,14 +120,45 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
     else this.client.once(Events.ClientReady, () => void this.poll());
   }
 
-  private async summary(entry: WowPatchNotesEntry): Promise<string | null> {
+  async latest(): Promise<EmbedBuilder[]> {
+    this.logger.log('Checking latest WoW patch notes on demand...');
+    const entries = await this.source.read();
+    const latest = entries.at(-1);
+    if (!latest)
+      return this.renderer.message(
+        'No published WoW Forever patch notes are currently available in the official news index.',
+        'info',
+      );
+    return patchNotesMessages(
+      this.renderer,
+      latest,
+      await this.summary(latest),
+      false,
+    ).flat();
+  }
+
+  private summary(entry: WowPatchNotesEntry): Promise<string | null> {
+    const revision = `${entry.key}:${entry.hash}`;
+    const existing = this.summariesInFlight.get(revision);
+    if (existing) return existing;
+    const pending = this.generateSummary(entry).finally(() =>
+      this.summariesInFlight.delete(revision),
+    );
+    this.summariesInFlight.set(revision, pending);
+    return pending;
+  }
+
+  private async generateSummary(
+    entry: WowPatchNotesEntry,
+  ): Promise<string | null> {
     const key = `patch-summary:${entry.key}`;
     const cached = await this.db
       .getRepository(WowMonitorState)
       .findOneBy({ key });
     const previous = cached?.data as
       { hash: string; text: string | null } | undefined;
-    if (previous?.hash === entry.hash) return previous.text;
+    if (previous?.hash === entry.hash && typeof previous.text === 'string')
+      return previous.text;
     let text: string | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
