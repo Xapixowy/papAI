@@ -6,7 +6,11 @@ import {
   GuildTextBasedChannel,
   PermissionFlagsBits,
 } from 'discord.js';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
+import {
+  initialPatchNotesState,
+  patchNotesStateKey,
+} from '@Types/wow/wow-patch-notes.type';
 import { DiscordChannel } from '@Database/entities/discord-channel.entity';
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
 import { DiscordUser } from '@Database/entities/discord-user.entity';
@@ -370,7 +374,7 @@ export class WowCommandsService {
     const existing = await repository.findOneBy({ guildId });
     if (existing?.channelId === channelId)
       return this.embeds.message(
-        `EU status is already monitored in <#${channelId}>.`,
+        `EU status and Forever patch notes are already monitored in <#${channelId}>.`,
         'info',
       );
     const [realms] = await Promise.allSettled([this.source.realms()]);
@@ -383,11 +387,15 @@ export class WowCommandsService {
       await manager.getRepository(WowStatusWatch).save({ guildId, channelId });
       await manager
         .getRepository(WowNotification)
-        .delete({ guildId, kind: 'status' });
+        .delete({ guildId, kind: In(['status', 'patch']) });
       const states = manager.getRepository(WowMonitorState);
       const realmHealth = initialHealth<WowRealm[]>();
       if (realms.status === 'fulfilled') realmHealth.snapshot = realms.value;
       await states.save([
+        {
+          key: patchNotesStateKey(guildId, channelId),
+          data: initialPatchNotesState(),
+        },
         { key: realmStateKey(guildId, channelId), data: realmHealth },
         {
           key: forumStateKey(guildId, channelId),
@@ -400,7 +408,7 @@ export class WowCommandsService {
     });
     return [
       ...this.embeds.message(
-        `EU realm status and login reports will be checked every 5 minutes. Channel: <#${channelId}>. The initial state will not be posted to the channel.`,
+        `EU realm status and login reports will be checked every 5 minutes; Forever patch notes and hotfixes every 15 minutes. Channel: <#${channelId}>. New patch notes include an English AI summary when available. Initial states and historical patch notes will not be posted.`,
         'success',
       ),
       ...(realms.status === 'fulfilled'
@@ -425,10 +433,10 @@ export class WowCommandsService {
       await manager.getRepository(WowStatusWatch).delete({ guildId });
       await manager
         .getRepository(WowNotification)
-        .delete({ guildId, kind: 'status' });
+        .delete({ guildId, kind: In(['status', 'patch']) });
     });
     return this.embeds.message(
-      'Automatic realm status and login report monitoring is disabled on this server.',
+      'Automatic realm status, login report and patch notes monitoring is disabled on this server.',
       'success',
     );
   }

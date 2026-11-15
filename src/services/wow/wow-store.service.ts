@@ -37,7 +37,7 @@ export class WowStoreService {
     notification: Pick<
       WowNotification,
       'eventKey' | 'guildId' | 'channelId' | 'kind' | 'characterSlug' | 'embeds'
-    >,
+    > & { createdAt?: Date },
   ): Promise<void> {
     await manager
       .getRepository(WowNotification)
@@ -50,6 +50,7 @@ export class WowStoreService {
         kind: notification.kind,
         characterSlug: notification.characterSlug,
         embeds: notification.embeds,
+        createdAt: notification.createdAt,
       })
       .orIgnore()
       .execute();

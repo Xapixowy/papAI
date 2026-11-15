@@ -356,7 +356,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
         const observers = await this.activeObservers();
         for (const n of notifications) {
           const active =
-            n.kind === 'status'
+            n.kind === 'status' || n.kind === 'patch'
               ? watches.some(
                   (w) => w.guildId === n.guildId && w.channelId === n.channelId,
                 )

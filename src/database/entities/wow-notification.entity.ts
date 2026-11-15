@@ -23,7 +23,7 @@ export class WowNotification {
   channelId: string;
 
   @Column({ type: 'text' })
-  kind: 'status' | 'character';
+  kind: 'status' | 'character' | 'patch';
 
   @Column({ type: 'text', name: 'character_slug', nullable: true })
   characterSlug: string | null;

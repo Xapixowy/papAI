@@ -4,5 +4,6 @@ export enum CronjobName {
   REMINDERS_DISPATCH = 'remindersDispatch',
   WOW_STATUS_CHECK = 'wowStatusCheck',
   WOW_CHARACTER_CHECK = 'wowCharacterCheck',
+  WOW_PATCH_NOTES_CHECK = 'wowPatchNotesCheck',
   WOW_NOTIFICATIONS_DISPATCH = 'wowNotificationsDispatch',
 }

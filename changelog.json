@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-11-15",
+    "changes": [
+      { "type": "feat", "description": "Monitor official WoW Forever patch notes and hotfixes every 15 minutes and send new or revised sections to the configured EU status channel" },
+      { "type": "feat", "description": "Append a clearly labeled English AI explanation for players after the official changes and source link; official notes are still delivered when AI is unavailable" },
+      { "type": "improve", "description": "Keep patch notes history across restarts, share cached AI summaries between servers and preserve multipart delivery order through retries without posting an initial archive" }
+    ]
+  },
+  {
     "version": "0.8.7",
     "date": "2026-11-13",
     "changes": [

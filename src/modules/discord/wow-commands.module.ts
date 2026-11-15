@@ -15,9 +15,13 @@ import { WowStoreService } from '@Services/wow/wow-store.service';
 import { DiscordGuildFeatureGuardModule } from '@Modules/guards/discord-guild-feature-guard.module';
 import { DiscordUserRoleGuardModule } from '@Modules/guards/discord-user-role-guard.module';
 import { BaseCommandsModule } from '@Modules/discord/base-commands.module';
+import { GeminiModule } from '@Modules/api/gemini.module';
+import { WowPatchNotesSourceService } from '@Services/wow/wow-patch-notes-source.service';
+import { WowPatchNotesService } from '@Services/wow/wow-patch-notes.service';
 
 @Module({
   imports: [
+    GeminiModule,
     HttpModule.register({
       timeout: 10_000,
       maxContentLength: 8 * 1024 * 1024,
@@ -38,6 +42,8 @@ import { BaseCommandsModule } from '@Modules/discord/base-commands.module';
     WowSourceService,
     WowForumService,
     WowStoreService,
+    WowPatchNotesSourceService,
+    WowPatchNotesService,
   ],
 })
 export class WowCommandsModule extends BaseCommandsModule {
