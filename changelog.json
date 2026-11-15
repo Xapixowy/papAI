@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9.4",
+    "date": "2026-11-15",
+    "changes": [
+      { "type": "improve", "description": "Make WoW AI summaries easier to scan with separated, concise bullets and bold subjects, before/after values and important restrictions" },
+      { "type": "improve", "description": "Apply bold only to validated text spans, escape other Markdown, and refresh older summary caches once while reusing the new summaries for subsequent views" }
+    ]
+  },
+  {
     "version": "0.9.3",
     "date": "2026-11-15",
     "changes": [

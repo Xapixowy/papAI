@@ -292,7 +292,16 @@ integration(
         ok(
           JSON.stringify({
             bullets: [
-              'Druid healing uses a higher coefficient; the notes specify 6.6% instead of 3.3%.',
+              {
+                parts: [
+                  { text: 'Druid', bold: true },
+                  {
+                    text: ' healing uses a higher coefficient; the notes specify ',
+                  },
+                  { text: '6.6% instead of 3.3%', bold: true },
+                  { text: '.' },
+                ],
+              },
             ],
           }),
         ),
@@ -487,6 +496,57 @@ integration(
         'What this means for players',
       );
       expect(generateSummary).toHaveBeenCalledTimes(2);
+      expect(await db.getRepository(WowNotification).count()).toBe(0);
+    });
+
+    it('keeps original notes available when AI returns invalid formatting data', async () => {
+      appendPatch();
+      generateSummary.mockResolvedValueOnce(
+        ok(
+          JSON.stringify({
+            bullets: [{ parts: [] }],
+          }),
+        ),
+      );
+      const pages = await newPatchNotes().latest();
+      expect(pages.at(-1)!.toJSON().title).toBe('AI summary unavailable');
+      expect(pages[0].toJSON().description).toContain(
+        'Druid healing coefficient',
+      );
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it('refreshes a plain legacy summary once, then reuses its highlighted cache across restarts without new notifications', async () => {
+      appendPatch();
+      const entry = patchEntries.at(-1)!;
+      const key = 'patch-summary:' + entry.key;
+      await db.getRepository(WowMonitorState).save({
+        key,
+        data: { hash: entry.hash, text: '• Legacy plain summary.' },
+      });
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      const patches = newPatchNotes();
+      await patches.poll();
+      const first = await patches.latest();
+      const summary = first.at(-1)!.toJSON().description;
+      expect(summary).toContain('**Druid**');
+      expect(summary).toContain('**6.6% instead of 3.3%**');
+      expect(summary).not.toContain('Legacy plain summary');
+      const cache = await db
+        .getRepository(WowMonitorState)
+        .findOneByOrFail({ key });
+      expect(cache.data).toMatchObject({
+        hash: entry.hash,
+        text: summary,
+        formatVersion: 2,
+      });
+      expect(
+        (await newPatchNotes().latest()).at(-1)!.toJSON().description,
+      ).toBe(summary);
+      await patches.poll();
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+      expect(send).not.toHaveBeenCalled();
       expect(await db.getRepository(WowNotification).count()).toBe(0);
     });
 
