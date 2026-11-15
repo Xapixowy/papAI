@@ -5,6 +5,10 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { WowSourceError } from '@Types/wow/wow.type';
 import { WowPatchNotesEntry } from '@Types/wow/wow-patch-notes.type';
+import {
+  patchNotesText,
+  patchNotesBlocks,
+} from '@Services/wow/wow-patch-notes-content';
 
 export const WOW_NEWS_URL = 'https://worldofwarcraft.blizzard.com/en-gb/news';
 const articleSchema = z.object({
@@ -30,53 +34,6 @@ const months = [
   'November',
   'December',
 ];
-
-/** Only source text is retained; scripts, styling and link targets are discarded. */
-export function patchNotesText(html: string): string {
-  const entities: Record<string, string> = {
-    nbsp: ' ',
-    amp: '&',
-    quot: '"',
-    apos: "'",
-    lt: '<',
-    gt: '>',
-    ndash: '–',
-    mdash: '—',
-    rsquo: '’',
-    lsquo: '‘',
-    rdquo: '”',
-    ldquo: '“',
-    hellip: '…',
-    shy: '',
-    times: '×',
-  };
-  return html
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<li\b[^>]*>/gi, '\n• ')
-    .replace(/<\/(?:td|th)>/gi, ' | ')
-    .replace(
-      /<br\s*\/?\s*>|<\/(?:p|h[1-6]|li|ul|ol|div|blockquote|tr)>/gi,
-      '\n',
-    )
-    .replace(/<[^>]*>/g, '')
-    .replace(/&#(x[\da-f]+|\d+);/gi, (_, code: string) => {
-      const n =
-        code[0].toLowerCase() === 'x'
-          ? Number.parseInt(code.slice(1), 16)
-          : Number(code);
-      return n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff)
-        ? String.fromCodePoint(n)
-        : ' ';
-    })
-    .replace(
-      /&([a-z]+);/gi,
-      (entity, name: string) => entities[name.toLowerCase()] ?? entity,
-    )
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n');
-}
 
 function sectionDate(text: string): string | null {
   const match = /^(\w+) (\d{1,2}), (\d{4})$/.exec(text);
@@ -176,6 +133,9 @@ export function parsePatchNotesNews(
           text: patchNotesText(
             article.content.slice(d.end, dates[i + 1]?.start),
           ),
+          blocks: patchNotesBlocks(
+            article.content.slice(d.end, dates[i + 1]?.start),
+          ),
           title: hotfix
             ? `WoW: Forever Hotfixes — ${d.date}`
             : `${article.title} — ${d.date}`,
@@ -185,6 +145,7 @@ export function parsePatchNotesNews(
             id: 'article',
             date: article.published,
             text: patchNotesText(article.content),
+            blocks: patchNotesBlocks(article.content),
             title: article.title,
           },
         ];
@@ -203,6 +164,7 @@ export function parsePatchNotesNews(
           .digest('hex'),
         title: section.title,
         text: section.text,
+        blocks: section.blocks,
         publishedAt: section.date,
         url: `${WOW_NEWS_URL}/${article.id}`,
       });

@@ -54,6 +54,7 @@ import { WowStoreService } from '@Services/wow/wow-store.service';
 import { WowMonitorService } from '@Services/wow/wow-monitor.service';
 import { WowCommandsService } from '@Services/wow/wow-commands.service';
 import { WowObserverCommandsController } from '@Controllers/discord/wow/wow-observer-commands.controller';
+import { WowCommandsController } from '@Controllers/discord/wow-commands.controller';
 import { WowInteractionController } from '@Controllers/discord/wow/wow-interaction.controller';
 import {
   WowFlowReply,
@@ -219,7 +220,6 @@ integration(
           maxRetriesPerRequest: 0,
         });
         await redis.connect();
-        flows = new WowInteractionService(commands, source, embeds, redis);
       }
     }, 30_000);
 
@@ -300,6 +300,14 @@ integration(
       patchRead.mockImplementation(() =>
         Promise.resolve(structuredClone(patchEntries)),
       );
+      if (redis)
+        flows = new WowInteractionService(
+          commands,
+          source,
+          embeds,
+          redis,
+          newPatchNotes(),
+        );
     });
 
     afterAll(async () => {
@@ -887,6 +895,163 @@ integration(
           throw new Error('Expected string select');
         return component.options;
       };
+
+      it('shows one ephemeral message and edits cached pages through the controller without new source or AI requests', async () => {
+        appendPatch();
+        const entry = patchEntries.at(-1)!;
+        entry.text = Array.from(
+          { length: 40 },
+          (_, i) =>
+            'Change ' +
+            i +
+            ': 6.6% (was 3.3%); main-hand only, with realm restarts.',
+        ).join('\n');
+        const interaction = () => ({
+          guildId,
+          channelId,
+          user: { id: userId },
+          deferReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          reply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          followUp: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+        });
+        const slash = interaction();
+        await new WowCommandsController(commands, flows).patchNotes(
+          [slash as unknown as ChatInputCommandInteraction],
+          { ephemeral: null },
+        );
+        expect(slash.deferReply).toHaveBeenCalledWith({
+          flags: MessageFlags.Ephemeral,
+        });
+        expect(slash.editReply).toHaveBeenCalledTimes(1);
+        expect(slash.followUp).not.toHaveBeenCalled();
+        const first = slash.editReply.mock.calls[0][0] as WowFlowReply;
+        expect(first.embeds).toHaveLength(1);
+        const buttons = first.components[0].toJSON().components;
+        expect(buttons.map((b) => ('label' in b ? b.label : ''))).toEqual([
+          'Previous',
+          'Next',
+          'Source',
+        ]);
+        expect(buttons[0]).toMatchObject({ disabled: true });
+        const token = tokenFrom(first);
+        const button = interaction();
+        // Unavailable upstream services must not affect already opened pages.
+        patchRead.mockRejectedValue(
+          new Error('Source should not be called on navigation'),
+        );
+        await new WowInteractionController(flows).page(
+          [button as unknown as ButtonInteraction],
+          token,
+          '1',
+        );
+        expect(button.deferUpdate).toHaveBeenCalledTimes(1);
+        expect(button.editReply).toHaveBeenCalledTimes(1);
+        expect(button.followUp).not.toHaveBeenCalled();
+        expect(button.reply).not.toHaveBeenCalled();
+        const second = button.editReply.mock.calls[0][0] as WowFlowReply;
+        expect(second.embeds).toHaveLength(1);
+        expect(second.embeds[0].toJSON().footer!.text).toContain('Page 2 of');
+        const restarted = new WowInteractionService(
+          commands,
+          source,
+          embeds,
+          redis!,
+          newPatchNotes(),
+        );
+        const last = await restarted.page(token, context, '999999');
+        expect(last.embeds[0].toJSON().title).toContain('AI summary');
+        expect(last.components[0].toJSON().components[1]).toMatchObject({
+          disabled: true,
+        });
+        const back = await restarted.page(token, context, '0');
+        expect(back.embeds[0].toJSON()).toEqual(first.embeds[0].toJSON());
+        expect(await redis!.ttl('wow:flow:' + token)).toBeGreaterThan(0);
+        expect(patchRead).toHaveBeenCalledTimes(1);
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+        expect(await db.getRepository(WowNotification).count()).toBe(0);
+        expect(send).not.toHaveBeenCalled();
+      });
+
+      it('rejects foreign, expired and invalid patch navigation without modifying the original message', async () => {
+        const first = await flows.patchNotes(context);
+        const token = tokenFrom(first);
+        for (const foreign of [
+          { ...context, userId: adminId },
+          { ...context, channelId: 'another-channel' },
+          { ...context, guildId: otherGuildId },
+        ])
+          await expect(flows.page(token, foreign, '1')).rejects.toThrow(
+            'another user or channel',
+          );
+        await expect(flows.page(token, context, '-1')).rejects.toThrow(
+          'no longer available',
+        );
+        const outsider = {
+          guildId,
+          channelId,
+          user: { id: adminId },
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          reply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+        };
+        const controller = new WowInteractionController(flows);
+        await controller.page(
+          [outsider as unknown as ButtonInteraction],
+          token,
+          '1',
+        );
+        expect(outsider.reply).toHaveBeenCalledWith(
+          expect.objectContaining({ flags: MessageFlags.Ephemeral }),
+        );
+        expect(outsider.editReply).not.toHaveBeenCalled();
+        expect(outsider.deferUpdate).not.toHaveBeenCalled();
+        await redis!.del('wow:flow:' + token);
+        const expired = {
+          ...outsider,
+          user: { id: userId },
+          reply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+        };
+        await controller.page(
+          [expired as unknown as ButtonInteraction],
+          token,
+          '1',
+        );
+        expect(expired.reply).toHaveBeenCalledWith(
+          expect.objectContaining({ flags: MessageFlags.Ephemeral }),
+        );
+        expect(JSON.stringify(expired.reply.mock.calls)).toContain('expired');
+        expect(expired.editReply).not.toHaveBeenCalled();
+        expect(patchRead).toHaveBeenCalledTimes(1);
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+      });
+
+      it('shows an empty index without navigation or an unnecessary Redis session', async () => {
+        patchEntries = [];
+        const reply = await flows.patchNotes(context);
+        expect(reply.embeds).toHaveLength(1);
+        expect(reply.embeds[0].toJSON().description).toContain(
+          'No published WoW Forever patch notes',
+        );
+        expect(reply.components).toEqual([]);
+        expect(await redis!.keys('wow:flow:*')).toEqual([]);
+        expect(generateSummary).not.toHaveBeenCalled();
+      });
 
       it('previews without stats, requires confirmation, and saves only after an enabled channel is selected', async () => {
         const interaction = () => ({

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.9.2",
+    "date": "2026-11-15",
+    "changes": [
+      { "type": "improve", "description": "Show /wow patch-notes in one message with Previous, Next and Source buttons, private by default and with the AI player summary on the final page" },
+      { "type": "improve", "description": "Preserve nested patch note headings, class and specialization context, original values, exceptions and developer notes across readable pages; navigation reuses cached content without fetching sources or calling AI again" },
+      { "type": "fix", "description": "Prevent Discord from hiding later automatic patch note embeds that previously shared the same source URL" }
+    ]
+  },
+  {
     "version": "0.9.1",
     "date": "2026-11-15",
     "changes": [
