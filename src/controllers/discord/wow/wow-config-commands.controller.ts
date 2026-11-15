@@ -47,7 +47,8 @@ export class WowConfigCommandsController {
 
   @Subcommand({
     name: 'status-channel',
-    description: 'Set the channel for EU realm status and login reports',
+    description:
+      'Set the channel for EU status, login reports and Forever patch notes',
   })
   @RequiresDiscordUserRole(DiscordUserRole.ADMIN)
   async statusChannel(
@@ -62,7 +63,7 @@ export class WowConfigCommandsController {
   @Subcommand({
     name: 'status-disable',
     description:
-      'Disable automatic EU realm status and login report notifications',
+      'Disable automatic EU status, login report and Forever patch notes notifications',
   })
   @RequiresDiscordUserRole(DiscordUserRole.ADMIN)
   async disable(@Context() [i]: SlashCommandContext): Promise<void> {

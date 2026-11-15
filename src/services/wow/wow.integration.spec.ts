@@ -22,6 +22,15 @@ import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { Logger } from '@nestjs/common';
+import { ok, err } from 'neverthrow';
+import { GeminiService } from '@Services/api/gemini.service';
+import { ErrorCode } from '@Enums/error-code.enum';
+import { WowPatchNotesService } from '@Services/wow/wow-patch-notes.service';
+import { WowPatchNotesSourceService } from '@Services/wow/wow-patch-notes-source.service';
+import {
+  WowPatchNotesEntry,
+  patchNotesStateKey,
+} from '@Types/wow/wow-patch-notes.type';
 import { DataSource, IsNull } from 'typeorm';
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
 import { DiscordChannel } from '@Database/entities/discord-channel.entity';
@@ -78,6 +87,29 @@ integration(
     let currentRealms: ReturnType<typeof parseRealmStatus>;
     let redis: Redis | undefined;
     let flows: WowInteractionService;
+    let patchEntries: WowPatchNotesEntry[];
+    let patchSource: WowPatchNotesSourceService;
+    let patchRead: jest.SpiedFunction<WowPatchNotesSourceService['read']>;
+    const generateSummary = jest.fn<GeminiService['generateContent']>();
+    const newPatchNotes = () =>
+      new WowPatchNotesService(
+        db,
+        new WowStoreService(db),
+        patchSource,
+        { generateContent: generateSummary } as unknown as GeminiService,
+        embeds,
+        monitor,
+        client,
+      );
+    const appendPatch = () =>
+      patchEntries.push({
+        key: '42:2026-11-11',
+        hash: 'new-section',
+        title: 'WoW: Forever Hotfixes — 2026-11-11',
+        url: 'https://worldofwarcraft.blizzard.com/en-gb/news/42',
+        publishedAt: '2026-11-11T00:00:00Z',
+        text: 'Druid healing coefficient increased to 6.6% (was 3.3%).',
+      });
     const send = jest
       .fn<(options: unknown) => Promise<object>>()
       .mockResolvedValue({});
@@ -144,6 +176,12 @@ integration(
       });
       embeds = new WowEmbedService(client, config);
       source = new WowSourceService(new HttpService());
+      patchSource = new WowPatchNotesSourceService(new HttpService());
+      patchRead = jest
+        .spyOn(patchSource, 'read')
+        .mockImplementation(() =>
+          Promise.resolve(structuredClone(patchEntries)),
+        );
       forum = new WowForumService(new HttpService());
       characterRead = jest
         .spyOn(source, 'character')
@@ -240,6 +278,28 @@ integration(
         Promise.resolve({ posts: [], checkedAt: new Date().toISOString() }),
       );
       monitor = newMonitor();
+      patchEntries = [
+        {
+          key: '42:2026-11-10',
+          hash: 'baseline',
+          title: 'WoW: Forever Hotfixes — 2026-11-10',
+          url: 'https://worldofwarcraft.blizzard.com/en-gb/news/42',
+          publishedAt: '2026-11-10T00:00:00Z',
+          text: 'Existing official changes.',
+        },
+      ];
+      generateSummary.mockResolvedValue(
+        ok(
+          JSON.stringify({
+            bullets: [
+              'Druid healing uses a higher coefficient; the notes specify 6.6% instead of 3.3%.',
+            ],
+          }),
+        ),
+      );
+      patchRead.mockImplementation(() =>
+        Promise.resolve(structuredClone(patchEntries)),
+      );
     });
 
     afterAll(async () => {
@@ -355,6 +415,164 @@ integration(
         await runner.release();
         log.mockRestore();
       }
+    });
+
+    it('baselines patch notes silently, sends new notes plus an AI summary and survives restart/queue cleanup without duplicates', async () => {
+      await newPatchNotes().poll();
+      expect(patchRead).not.toHaveBeenCalled();
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      expect(send).not.toHaveBeenCalled();
+      expect(generateSummary).not.toHaveBeenCalled();
+      appendPatch();
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      const message = JSON.stringify(send.mock.calls[0][0]);
+      expect(message).toContain('Druid healing coefficient increased to 6.6%');
+      expect(message).toContain('What this means for players');
+      expect(message).toContain(
+        'https://worldofwarcraft.blizzard.com/en-gb/news/42',
+      );
+      expect(message).not.toContain('Existing official changes');
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+      await db.getRepository(WowNotification).clear();
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+    });
+
+    it('notifies edited patch sections once, ignores already-seen revisions and silently records older newly-discovered history', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      patchEntries[0] = {
+        ...patchEntries[0],
+        hash: 'revised',
+        text: 'Corrected official changes.',
+      };
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(send.mock.calls[0][0])).toContain('Updated:');
+      patchEntries.push({
+        ...patchEntries[0],
+        key: '42:2026-11-09',
+        hash: 'old-history',
+        publishedAt: '2026-11-09T00:00:00Z',
+      });
+      patchEntries[0] = {
+        ...patchEntries[0],
+        hash: 'baseline',
+        text: 'Existing official changes.',
+      };
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps official notes when AI fails and preserves the baseline through source failures', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      const before = await db
+        .getRepository(WowMonitorState)
+        .findOneByOrFail({ key: patchNotesStateKey(guildId, channelId) });
+      patchRead.mockRejectedValueOnce(new Error('News source unavailable'));
+      await newPatchNotes().poll();
+      expect(
+        (
+          await db
+            .getRepository(WowMonitorState)
+            .findOneByOrFail({ key: before.key })
+        ).data,
+      ).toEqual(before.data);
+      appendPatch();
+      generateSummary.mockResolvedValueOnce(
+        err(ErrorCode.GEMINI_GENERATION_ERROR),
+      );
+      await newPatchNotes().poll();
+      const message = JSON.stringify(send.mock.calls[0][0]);
+      expect(message).toContain('Druid healing coefficient');
+      expect(message).toContain('AI summary unavailable');
+      expect(send).toHaveBeenCalledTimes(1);
+    });
+
+    it('summarizes once across guilds and drops delivery when the guild feature is disabled', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      const otherChannelId = '110000000000000002';
+      await db.getRepository(DiscordChannel).save({
+        id: otherChannelId,
+        discordGuildId: otherGuildId,
+        name: 'other-wow',
+        features: {},
+      });
+      await db.query(
+        'INSERT INTO wow_status_watches(guild_id, channel_id) VALUES ($1, $2)',
+        [otherGuildId, otherChannelId],
+      );
+      const dispatch = jest.spyOn(monitor, 'dispatch').mockResolvedValue();
+      try {
+        await newPatchNotes().poll();
+        appendPatch();
+        await newPatchNotes().poll();
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+        expect(
+          await db.getRepository(WowNotification).countBy({ kind: 'patch' }),
+        ).toBe(2);
+      } finally {
+        dispatch.mockRestore();
+      }
+      await db
+        .getRepository(DiscordGuild)
+        .update(otherGuildId, { features: [] });
+      await monitor.dispatch();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(
+        await db
+          .getRepository(WowNotification)
+          .countBy({ guildId: otherGuildId }),
+      ).toBe(0);
+    });
+
+    it('preserves multipart order through retries, caches AI and cancels pending patches when monitoring is disabled', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      appendPatch();
+      patchEntries[1].text = 'An official change. '.repeat(900);
+      send.mockRejectedValueOnce(new Error('Discord unavailable'));
+      await newPatchNotes().poll();
+      const queued = await db
+        .getRepository(WowNotification)
+        .find({ order: { createdAt: 'ASC' } });
+      expect(queued.length).toBeGreaterThan(2);
+      expect(queued[0].attempts).toBe(1);
+      expect(queued.at(-1)?.embeds.at(-1)?.title).toContain('AI summary');
+      expect(
+        queued.every(
+          (n, i) => i === 0 || n.createdAt > queued[i - 1].createdAt,
+        ),
+      ).toBe(true);
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(generateSummary).toHaveBeenCalledTimes(1);
+      await db
+        .getRepository(WowNotification)
+        .update(queued[0].id, { nextAttemptAt: new Date(Date.now() - 1000) });
+      send.mockClear();
+      for (let i = 0; i < queued.length; i++) await monitor.dispatch();
+      expect(send).toHaveBeenCalledTimes(queued.length);
+      expect(
+        send.mock.calls.map(
+          ([message]) => (message as { embeds: unknown }).embeds,
+        ),
+      ).toEqual(queued.map((n) => n.embeds));
+      patchEntries[1] = { ...patchEntries[1], hash: 'next-edit' };
+      await newPatchNotes().poll();
+      await commands.disableStatus(guildId, adminId);
+      expect(
+        await db.getRepository(WowNotification).countBy({ kind: 'patch' }),
+      ).toBe(0);
+      const sent = send.mock.calls.length;
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      expect(send).toHaveBeenCalledTimes(sent);
     });
 
     it('baselines silently, keeps a manual read independent, and sends one level change per channel for two subscribers', async () => {
