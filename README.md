@@ -56,6 +56,26 @@ All bot-authored bingo content is in English; user-entered names and phrases are
 
 Run unit and command-registration checks with `npm test -- --runInBand`. Database workflow checks additionally require `BINGO_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_bingo_test`; this suite clears its test data and exercises migration rollback. Selection-flow checks also require `BINGO_TEST_REDIS_URL` pointing to a dedicated local Redis on port 56380, database 14. The database must never contain production data. Simulated Discord transport tests must be followed by live acceptance checks on a test server.
 
+## Discord Quotes (0.10.0)
+
+Each server has one shared quote collection. Apply database migrations before starting the updated bot, then have a bot super administrator enable `QUOTES` using `/guild feature add`. Quotes use this server-wide feature toggle; no channel registration or channel feature toggle is required.
+
+- `/quote add` opens a private form with a required **Author** (1–100 characters) and multiline **Quote** (1–2000 characters). Authors are free-text names and do not need Discord accounts. The submitting member is recorded separately.
+- `/quote show [author]` publicly displays a page of complete quotes, newest first. Each page fits as many full quotes as the embed allows. The title is **Server name · Quotes**, or **Author · Quotes** when filtered. **Previous** / **Next** appear only when there is more than one page, and only the invoking member can navigate. There is no separate list command.
+- `/quote edit` opens a private, paginated selection menu, followed by a prefilled edit form.
+- `/quote remove` opens a private selection menu and requires confirmation before deleting the selected quote.
+- `/quote random [author]` publicly shares a minimalist embed with just the quotation and its author in the footer. Both `show` and `random` match author names without regard to case or repeated whitespace. Each eligible random quote has an equal chance; the previous random quote in that channel is excluded when another matching quote exists. Selection history persists across restarts.
+
+All members can add quotes and manage their own submissions. Members with Discord's **Manage Server** permission can manage every quote in that server. Attribution as the author grants no editing rights. Permissions and server feature availability are checked again on interactions and form submissions. Forms and confirmation screens reject conflicting edits instead of overwriting or removing a newer revision.
+
+Quote text retains line breaks. Duplicate author-and-content pairs are rejected after normalizing Unicode, case, and whitespace for comparison; that normalization does not rewrite the displayed quote. The same content with a different author is allowed. Messages suppress mentions.
+
+Navigation starts at the newest quotes, does not wrap, and disables the relevant button at either end. Each interaction rebuilds pages from current saved content, including edits and deletions. Old messages update only when interacted with. Empty collections display a standard **Info** embed with `No quotes saved yet.` and no buttons; unmatched author filters display `No quotes found for this author.`. Success, error, warning, and informational messages use the same simple embeds as the rest of the bot. Browsers and private management sessions belong to their invoking user, server and channel, and expire after ten minutes of inactivity; rerun the command to reopen them.
+
+The bot needs **View Channel**, **Send Messages** (or **Send Messages in Threads**), and **Embed Links** wherever quotes are displayed. No message-content intent is required.
+
+Run quote unit and registration checks with `npm test -- --runInBand src/services/quotes`. The real PostgreSQL/Redis workflow suite additionally requires `QUOTES_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_quotes_test`, and `QUOTES_TEST_REDIS_URL` pointing to dedicated local Redis on port **56389**, database **14**. The suite clears only these dedicated fixtures and exercises migration rollback. Discord transport is simulated; live Discord acceptance remains a separate check.
+
 ## WoW Forever patch notes (0.9.4)
 
 Use `/wow patch-notes` to open the latest Forever AI player summary in one private message. **Details** opens the complete original changes, **Previous** and **Next** browse their pages, and **Summary** returns to the overview in that same message. **Source** opens Blizzard's article. Original changes retain class/specification headings, numerical values, exceptions and developer notes. If AI is unavailable, **Details** still provides every original change.

@@ -17,6 +17,7 @@ import { RemindersCommandsModule } from './discord/reminders-commands.module';
 import { MessageRouterModule } from './discord/message-router.module';
 import { WowCommandsModule } from './discord/wow-commands.module';
 import { BingoCommandsModule } from './discord/bingo-commands.module';
+import { QuoteCommandsModule } from './discord/quote-commands.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { BingoCommandsModule } from './discord/bingo-commands.module';
     MessageRouterModule,
     WowCommandsModule,
     BingoCommandsModule,
+    QuoteCommandsModule,
   ],
 })
 export class DiscordModule extends BaseCommandsModule {
@@ -66,6 +68,7 @@ export class DiscordModule extends BaseCommandsModule {
       ...MessageRouterModule.botIntents,
       ...WowCommandsModule.botIntents,
       ...BingoCommandsModule.botIntents,
+      ...QuoteCommandsModule.botIntents,
     ];
   }
 }
