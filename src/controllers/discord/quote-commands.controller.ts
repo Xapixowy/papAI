@@ -17,7 +17,7 @@ import type {
   SlashCommandContext,
   StringSelectContext,
 } from 'necord';
-import { QuoteAuthorOptions } from '@Options/quote.options';
+import { QuoteAuthorOptions, QuoteListOptions } from '@Options/quote.options';
 import { QuoteStoreService } from '@Services/quotes/quote-store.service';
 import { QuoteDiscordService } from '@Services/quotes/quote-discord.service';
 import { QuoteUiService, quoteForm } from '@Services/quotes/quote-ui.service';
@@ -67,17 +67,17 @@ export class QuoteCommandsController {
   }
 
   @Subcommand({
-    name: 'show',
+    name: 'list',
     description: 'Browse server quotes, optionally filtered by author',
   })
-  async show(
+  async list(
     @Context() [i]: SlashCommandContext,
-    @Options() options: QuoteAuthorOptions,
+    @Options() options: QuoteListOptions,
   ): Promise<void> {
     await this.discord.run(
       i,
       (actor) => this.ui.open(actor, 'show', options.author),
-      'public',
+      options.ephemeral === false ? 'public' : 'private',
     );
   }
 

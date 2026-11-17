@@ -110,7 +110,7 @@ export class QuoteUiService {
     return this.locked(actor, token, async (session) => {
       requireQuote(
         session.action === 'show' && session.stage === 'browse',
-        'Open your own quote browser with /quote show.',
+        'Open your own quote browser with /quote list.',
       );
       requireQuote(
         direction === 'previous' || direction === 'next',

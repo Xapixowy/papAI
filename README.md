@@ -56,15 +56,15 @@ All bot-authored bingo content is in English; user-entered names and phrases are
 
 Run unit and command-registration checks with `npm test -- --runInBand`. Database workflow checks additionally require `BINGO_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_bingo_test`; this suite clears its test data and exercises migration rollback. Selection-flow checks also require `BINGO_TEST_REDIS_URL` pointing to a dedicated local Redis on port 56380, database 14. The database must never contain production data. Simulated Discord transport tests must be followed by live acceptance checks on a test server.
 
-## Discord Quotes (0.10.0)
+## Discord Quotes (0.10.1)
 
 Each server has one shared quote collection. Apply database migrations before starting the updated bot, then have a bot super administrator enable `QUOTES` using `/guild feature add`. Quotes use this server-wide feature toggle; no channel registration or channel feature toggle is required.
 
 - `/quote add` opens a private form with a required **Author** (1–100 characters) and multiline **Quote** (1–2000 characters). Authors are free-text names and do not need Discord accounts. The submitting member is recorded separately.
-- `/quote show [author]` publicly displays a page of complete quotes, newest first. Each page fits as many full quotes as the embed allows. The title is **Server name · Quotes**, or **Author · Quotes** when filtered. **Previous** / **Next** appear only when there is more than one page, and only the invoking member can navigate. There is no separate list command.
+- `/quote list [author] [ephemeral]` displays complete quotes, newest first, privately by default. Use `ephemeral:false` to post the list publicly. Each page fits as many full quotes as the embed allows. The title is **Server name · Quotes**, or **Author · Quotes** when filtered. **Previous** / **Next** appear only when there is more than one page, and only the invoking member can navigate. This replaces `/quote show`.
 - `/quote edit` opens a private, paginated selection menu, followed by a prefilled edit form.
 - `/quote remove` opens a private selection menu and requires confirmation before deleting the selected quote.
-- `/quote random [author]` publicly shares a minimalist embed with just the quotation and its author in the footer. Both `show` and `random` match author names without regard to case or repeated whitespace. Each eligible random quote has an equal chance; the previous random quote in that channel is excluded when another matching quote exists. Selection history persists across restarts.
+- `/quote random [author]` publicly shares a minimalist embed with just the quotation and its author in the footer. Both `list` and `random` match author names without regard to case or repeated whitespace. Each eligible random quote has an equal chance; the previous random quote in that channel is excluded when another matching quote exists. Selection history persists across restarts.
 
 All members can add quotes and manage their own submissions. Members with Discord's **Manage Server** permission can manage every quote in that server. Attribution as the author grants no editing rights. Permissions and server feature availability are checked again on interactions and form submissions. Forms and confirmation screens reject conflicting edits instead of overwriting or removing a newer revision.
 

@@ -641,7 +641,7 @@ integration(
     const output = (i: ReturnType<typeof interaction>) =>
       i.editReply.mock.calls.at(-1)![0];
 
-    it('executes add/show/edit/random/remove with private simple embeds and a minimalist random quote', async () => {
+    it('executes add/list/edit/random/remove with private simple embeds and a minimalist random quote', async () => {
       const form = interaction();
       await commands.add(slash(form));
       expect(view(form.showModal.mock.calls[0][0]).components).toHaveLength(2);
@@ -659,8 +659,10 @@ integration(
         .getRepository(Quote)
         .findOneByOrFail({ guildId: owner.guildId });
       const show = interaction();
-      await commands.show(slash(show), {});
-      expect(show.deferReply).toHaveBeenCalledWith({});
+      await commands.list(slash(show), {});
+      expect(show.deferReply).toHaveBeenCalledWith({
+        flags: MessageFlags.Ephemeral,
+      });
       expect(view(output(show)).embeds![0].description).toContain(
         'First line\nSecond line',
       );
@@ -684,7 +686,7 @@ integration(
         description: 'Quote updated.',
       });
       const filtered = interaction();
-      await commands.show(slash(filtered), { author: 'edited AUTHOR' });
+      await commands.list(slash(filtered), { author: 'edited AUTHOR' });
       expect(view(output(filtered)).embeds![0].title).toBe(
         'Edited author · Quotes',
       );
@@ -727,11 +729,45 @@ integration(
       }
     });
 
+    it.each([undefined, null, true, false])(
+      'uses private quote lists unless ephemeral is explicitly false (%s)',
+      async (ephemeral) => {
+        await add('A filtered quote', 'Ada');
+        await add('Other author', 'Grace');
+        const list = interaction();
+        await commands.list(slash(list), { author: 'ada', ephemeral });
+        expect(list.deferReply).toHaveBeenCalledWith(
+          ephemeral === false ? {} : { flags: MessageFlags.Ephemeral },
+        );
+        const result = view(output(list));
+        expect(result.embeds![0].title).toBe('Ada · Quotes');
+        expect(result.embeds![0].description).toContain('A filtered quote');
+        expect(result.embeds![0].description).not.toContain('Other author');
+      },
+    );
+
+    it('keeps private list pagination on the original private response', async () => {
+      await sortedQuotes(true);
+      const list = interaction();
+      await commands.list(slash(list), {});
+      expect(list.deferReply).toHaveBeenCalledWith({
+        flags: MessageFlags.Ephemeral,
+      });
+      const next = interaction();
+      await commands.browse(button(next), tokenFrom(output(list)), 'next');
+      expect(next.deferUpdate).toHaveBeenCalled();
+      expect(next.deferReply).not.toHaveBeenCalled();
+      expect(next.followUp).not.toHaveBeenCalled();
+      expect(view(output(next)).embeds![0].footer!.text).toBe(
+        'Page 2 of 3 · 3 quotes',
+      );
+    });
+
     it('fetches current member permissions and privately rejects unauthorized public-button use', async () => {
       const quote = await add();
       await sortedQuotes(true);
       const show = interaction();
-      await commands.show(slash(show), {});
+      await commands.list(slash(show), { ephemeral: false });
       const stolen = interaction(other.userId);
       const warn = jest
         .spyOn(Logger.prototype, 'warn')
@@ -795,7 +831,7 @@ integration(
         .mockRejectedValueOnce(new Error('private-payload-do-not-print'));
       try {
         const show = interaction();
-        await commands.show(slash(show), {});
+        await commands.list(slash(show), { ephemeral: false });
         expect(show.deleteReply).toHaveBeenCalled();
         expect(show.followUp).toHaveBeenCalledWith(
           expect.objectContaining({

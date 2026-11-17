@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.10.1",
+    "date": "2026-11-17",
+    "changes": [
+      { "type": "improve", "description": "Rename /quote show to /quote list and make quote lists visible only to the invoking member by default; use ephemeral=false to share the list publicly while retaining author filtering and pagination" }
+    ]
+  },
+  {
     "version": "0.10.0",
     "date": "2026-11-17",
     "changes": [
