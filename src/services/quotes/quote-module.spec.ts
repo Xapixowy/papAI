@@ -45,17 +45,26 @@ describe('Quote command registration', () => {
     expect([...root.getSubcommands().keys()].sort()).toEqual([
       'add',
       'edit',
+      'list',
       'random',
       'remove',
-      'show',
     ]);
-    expect(root.getSubcommand('show').toJSON().options).toEqual([
-      expect.objectContaining({
-        name: 'author',
-        required: false,
-        max_length: 100,
-      }),
-    ]);
+    const listOptions: unknown = root.getSubcommand('list').toJSON().options;
+    expect(listOptions).toHaveLength(2);
+    expect(listOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'author',
+          required: false,
+          max_length: 100,
+        }),
+        expect.objectContaining({
+          name: 'ephemeral',
+          required: false,
+          type: 5,
+        }),
+      ]),
+    );
     expect(root.getSubcommand('add').toJSON().options).toEqual([]);
     const random: unknown = root.getSubcommand('random').toJSON().options;
     expect(random).toEqual([
