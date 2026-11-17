@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.10.0",
+    "date": "2026-11-17",
+    "changes": [
+      { "type": "feat", "description": "Add server quote collections with private add/edit forms, confirmed removal, and separate attributed authors and submitters" },
+      { "type": "feat", "description": "Browse complete quotes in paginated server or author lists with /quote show, and share minimalist random quotes with optional author filtering and no immediate channel repeats" },
+      { "type": "improve", "description": "Use standard status embeds, hide unnecessary navigation, preserve multiline content, and enforce server isolation, submission ownership, Manage Server access, duplicate checks and stale-edit protection" }
+    ]
+  },
+  {
     "version": "0.9.4",
     "date": "2026-11-15",
     "changes": [

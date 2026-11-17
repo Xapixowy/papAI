@@ -1492,7 +1492,14 @@ integration('Bingo with PostgreSQL and simulated Discord transport', () => {
 
   it('reverses and reapplies the bingo migration without removing other feature configuration', async () => {
     await ready(1);
-    await db.undoLastMigration();
+    // Roll back later features first so this still exercises Bingo as migrations are added.
+    const applied = await db.query<{ name: string }[]>(
+      'SELECT name FROM migrations ORDER BY id DESC',
+    );
+    for (const migration of applied) {
+      await db.undoLastMigration();
+      if (migration.name === 'AddBingo1794400000000') break;
+    }
     const rows: { features: string[] }[] = await db.query(
       'SELECT features FROM discord_guilds',
     );
