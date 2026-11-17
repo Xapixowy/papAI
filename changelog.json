@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.10.2",
+    "date": "2026-11-17",
+    "changes": [
+      { "type": "fix", "description": "Publish one AI summary with Details and Source buttons for automatic WoW patch notes; Details opens a separate ephemeral viewer for each clicking member" },
+      { "type": "improve", "description": "Persist complete notification snapshots so Details keeps the matching revision after restarts, source edits, queue cleanup or channel reconfiguration; reuse cached content without source or AI requests" },
+      { "type": "fix", "description": "Consolidate pending legacy multipart patch notifications into one summary while preserving their complete details and retry behavior" }
+    ]
+  },
+  {
     "version": "0.10.1",
     "date": "2026-11-17",
     "changes": [

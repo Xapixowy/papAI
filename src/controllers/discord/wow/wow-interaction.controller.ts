@@ -15,6 +15,7 @@ import { RequiresDiscordGuildFeature } from '@Decorators/nest/requires-discord-g
 import { DiscordGuildFeatureGuard } from '@Guards/discord/discord-guild-feature.guard';
 import { WowInteractionService } from '@Services/wow/wow-interaction.service';
 import {
+  replyWowFlow,
   updateWowFlow,
   wowFlowContext,
 } from '@Controllers/discord/wow/wow-interaction-replies';
@@ -24,6 +25,16 @@ import {
 @RequiresDiscordGuildFeature(DiscordFeature.WOW_FOREVER)
 export class WowInteractionController {
   constructor(private readonly flows: WowInteractionService) {}
+
+  @Button(DiscordButtonId.WOW_PATCH_DETAILS + '/:token')
+  async patchDetails(
+    @Context() [interaction]: ButtonContext,
+    @ComponentParam('token') token: string,
+  ): Promise<void> {
+    await replyWowFlow(this.flows, interaction, () =>
+      this.flows.notificationDetails(token, wowFlowContext(interaction)),
+    );
+  }
 
   @Button(`${DiscordButtonId.WOW_OBSERVER_CONFIRM}/:token`)
   async confirm(

@@ -11,7 +11,6 @@ import { WowMonitorService } from '@Services/wow/wow-monitor.service';
 import { WowStoreService } from '@Services/wow/wow-store.service';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import {
-  patchNotesMessages,
   patchNotesPages,
   formatPatchSummary,
 } from '@Services/wow/wow-patch-notes-format';
@@ -22,6 +21,7 @@ import {
   WowPatchNotesState,
   initialPatchNotesState,
   patchNotesStateKey,
+  patchNotificationKey,
 } from '@Types/wow/wow-patch-notes.type';
 
 const summarySchema = z.object({
@@ -107,6 +107,15 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
       await this.summary(latest),
       false,
     );
+  }
+
+  async notificationPages(
+    token: string,
+    guildId: string,
+    channelId: string,
+  ): Promise<EmbedBuilder[]> {
+    const pages = await this.store.patchView(token, guildId, channelId);
+    return pages.map((page) => new EmbedBuilder(page));
   }
 
   private summary(entry: WowPatchNotesEntry): Promise<string | null> {
@@ -220,14 +229,14 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
                     entry.publishedAt.slice(0, 10) >= previous.latestDate),
               )
             : [];
-          const messages = new Map<string, EmbedBuilder[][]>();
+          const pagesByRevision = new Map<string, EmbedBuilder[]>();
           for (const entry of pending) {
             const revision = `${entry.key}:${entry.hash}`;
             if (!summaries.has(revision))
               summaries.set(revision, this.summary(entry));
-            messages.set(
+            pagesByRevision.set(
               revision,
-              patchNotesMessages(
+              patchNotesPages(
                 this.renderer,
                 entry,
                 await summaries.get(revision)!,
@@ -252,17 +261,24 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
               for (const entry of entries) {
                 const seen = state.seen[entry.key] ?? [];
                 if (seen.includes(entry.hash)) continue;
-                const batches = state.initialized
-                  ? (messages.get(`${entry.key}:${entry.hash}`) ?? [])
+                const pages = state.initialized
+                  ? (pagesByRevision.get(entry.key + ':' + entry.hash) ?? [])
                   : [];
-                for (const [part, embeds] of batches.entries()) {
+                if (pages.length) {
+                  const snapshot = pages.map((page) => page.toJSON());
+                  const token = await this.store.savePatchView(
+                    manager,
+                    watch.guildId,
+                    watch.channelId,
+                    snapshot,
+                  );
                   await this.store.queue(manager, {
                     guildId: watch.guildId,
                     channelId: watch.channelId,
                     kind: 'patch',
                     characterSlug: null,
-                    eventKey: `patch:${watch.guildId}:${watch.channelId}:${entry.key}:${entry.hash}:${part}`,
-                    embeds: embeds.map((e) => e.toJSON()),
+                    eventKey: patchNotificationKey(token),
+                    embeds: [snapshot.at(-1)!],
                     createdAt: new Date(createdAt + sequence++),
                   });
                   queued++;

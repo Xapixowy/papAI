@@ -8,6 +8,8 @@ export interface WowPatchSummaryBullet {
   parts: { text: string; bold?: boolean }[];
 }
 
+import type { APIEmbed } from 'discord.js';
+
 export interface WowPatchNotesEntry {
   key: string;
   hash: string;
@@ -32,3 +34,13 @@ export const initialPatchNotesState = (): WowPatchNotesState => ({
   latestDate: '',
   seen: {},
 });
+export interface WowPatchView {
+  guildId: string;
+  channelId: string;
+  pages: APIEmbed[];
+}
+
+export const patchViewKey = (token: string) => 'patch-view:' + token;
+export const patchNotificationKey = (token: string) => 'patch-summary:' + token;
+export const patchNotificationToken = (key: string): string | null =>
+  /^patch-summary:([a-f0-9]{64})$/.exec(key)?.[1] ?? null;

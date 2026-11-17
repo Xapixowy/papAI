@@ -1,4 +1,12 @@
-import { EmbedBuilder, escapeMarkdown } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  escapeMarkdown,
+  type APIEmbed,
+} from 'discord.js';
+import { DiscordButtonId } from '@Enums/discord/discord-button-id.enum';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import {
   WowPatchNotesEntry,
@@ -99,7 +107,9 @@ export function patchNotesPages(
           ? 'What this means for players · AI summary'
           : 'AI summary unavailable',
       )
-      .setAuthor({ name: entry.title.slice(0, 256) })
+      .setAuthor({
+        name: ((updated ? 'Updated: ' : '') + entry.title).slice(0, 256),
+      })
       .setURL(entry.url),
   );
   return pages.map((embed, i) => {
@@ -119,33 +129,25 @@ export function patchNotesPages(
   });
 }
 
-/** Automatic notifications retain complete, ordered delivery through the outbox. */
-export function patchNotesMessages(
-  renderer: WowEmbedService,
-  entry: WowPatchNotesEntry,
-  summary: string | null,
-  updated: boolean,
-): EmbedBuilder[][] {
-  const batches: EmbedBuilder[][] = [];
-  let batch: EmbedBuilder[] = [];
-  let length = 0;
-  for (const embed of patchNotesPages(renderer, entry, summary, updated)) {
-    const e = embed.toJSON();
-    const size =
-      (e.title?.length ?? 0) +
-      (e.description?.length ?? 0) +
-      (e.footer?.text.length ?? 0) +
-      (e.author?.name.length ?? 0);
-    if (batch.length && (batch.length >= 10 || length + size > 5900)) {
-      batches.push(batch);
-      batch = [];
-      length = 0;
-    }
-    // Discord hides later embeds in a message when they share the same URL.
-    if (batch.length) embed.setURL(null);
-    batch.push(embed);
-    length += size;
-  }
-  if (batch.length) batches.push(batch);
-  return batches;
+export function patchNotesNotification(
+  summary: APIEmbed,
+  token: string,
+): {
+  embeds: APIEmbed[];
+  components: ActionRowBuilder<ButtonBuilder>[];
+} {
+  const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(DiscordButtonId.WOW_PATCH_DETAILS + '/' + token)
+      .setLabel('Details')
+      .setStyle(ButtonStyle.Primary),
+  );
+  if (summary.url)
+    buttons.addComponents(
+      new ButtonBuilder()
+        .setLabel('Source')
+        .setStyle(ButtonStyle.Link)
+        .setURL(summary.url),
+    );
+  return { embeds: [summary], components: [buttons] };
 }

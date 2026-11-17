@@ -10,6 +10,8 @@ import { WowNotification } from '@Database/entities/wow-notification.entity';
 import { WowMonitorState } from '@Database/entities/wow-monitor-state.entity';
 import { DiscordFeature } from '@Enums/discord/discord-feature.enum';
 import { CronjobName } from '@Enums/cronjob-name.enum';
+import { patchNotesNotification } from '@Services/wow/wow-patch-notes-format';
+import { patchNotificationToken } from '@Types/wow/wow-patch-notes.type';
 import { wowErrorDetails } from '@Services/wow/wow-error-details';
 import {
   WowCharacter,
@@ -372,6 +374,10 @@ export class WowMonitorService implements OnApplicationBootstrap {
             continue;
           }
           try {
+            if (n.kind === 'patch')
+              Object.assign(n, await this.store.preparePatchNotification(n));
+            const token =
+              n.kind === 'patch' ? patchNotificationToken(n.eventKey) : null;
             const channel = await this.client.channels.fetch(n.channelId);
             if (
               !channel ||
@@ -382,9 +388,13 @@ export class WowMonitorService implements OnApplicationBootstrap {
             )
               throw new Error('Notification channel unavailable');
             await channel.send({
-              embeds: n.embeds,
+              ...(token
+                ? patchNotesNotification(n.embeds[0], token)
+                : { embeds: n.embeds }),
               allowedMentions: { parse: [] },
-              nonce: n.id.replace(/-/g, '').slice(0, 25),
+              nonce: token
+                ? token.slice(0, 25)
+                : n.id.replace(/-/g, '').slice(0, 25),
               enforceNonce: true,
             });
             await repository.update(n.id, { sentAt: new Date() });

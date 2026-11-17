@@ -10,6 +10,9 @@ import {
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  type APIEmbed,
   ButtonInteraction,
   ChatInputCommandInteraction,
   Client,
@@ -30,6 +33,7 @@ import { WowPatchNotesSourceService } from '@Services/wow/wow-patch-notes-source
 import {
   WowPatchNotesEntry,
   patchNotesStateKey,
+  patchNotificationToken,
 } from '@Types/wow/wow-patch-notes.type';
 import { DataSource, IsNull } from 'typeorm';
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
@@ -49,6 +53,7 @@ import {
 import { parseCharacterHtml, parseRealmStatus } from '@Services/wow/wow-parser';
 import { WowSourceService } from '@Services/wow/wow-source.service';
 import { WowForumService } from '@Services/wow/wow-forum.service';
+import { patchNotesPages } from '@Services/wow/wow-patch-notes-format';
 import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import { WowStoreService } from '@Services/wow/wow-store.service';
 import { WowMonitorService } from '@Services/wow/wow-monitor.service';
@@ -114,6 +119,18 @@ integration(
     const send = jest
       .fn<(options: unknown) => Promise<object>>()
       .mockResolvedValue({});
+
+    const latestNotice = () =>
+      send.mock.calls.at(-1)![0] as {
+        embeds: APIEmbed[];
+        components: ActionRowBuilder<ButtonBuilder>[];
+        nonce: string;
+      };
+    const publicToken = () => {
+      const details = latestNotice().components[0].toJSON().components[0];
+      if (!('custom_id' in details)) throw new Error('Missing public Details');
+      return details.custom_id.split('/')[1];
+    };
 
     const newMonitor = () =>
       new WowMonitorService(
@@ -561,7 +578,16 @@ integration(
       await newPatchNotes().poll();
       expect(send).toHaveBeenCalledTimes(1);
       const message = JSON.stringify(send.mock.calls[0][0]);
-      expect(message).toContain('Druid healing coefficient increased to 6.6%');
+      expect(latestNotice().embeds).toHaveLength(1);
+      expect(message).not.toContain(
+        'Druid healing coefficient increased to 6.6%',
+      );
+      expect(message).toContain('**Druid**');
+      expect(
+        latestNotice()
+          .components[0].toJSON()
+          .components.map((button) => ('label' in button ? button.label : '')),
+      ).toEqual(['Details', 'Source']);
       expect(message).toContain('What this means for players');
       expect(message).toContain(
         'https://worldofwarcraft.blizzard.com/en-gb/news/42',
@@ -622,8 +648,17 @@ integration(
       );
       await newPatchNotes().poll();
       const message = JSON.stringify(send.mock.calls[0][0]);
-      expect(message).toContain('Druid healing coefficient');
+      expect(message).not.toContain('Druid healing coefficient');
       expect(message).toContain('AI summary unavailable');
+      expect(
+        JSON.stringify(
+          await newPatchNotes().notificationPages(
+            publicToken(),
+            guildId,
+            channelId,
+          ),
+        ),
+      ).toContain('Druid healing coefficient');
       expect(send).toHaveBeenCalledTimes(1);
     });
 
@@ -664,24 +699,34 @@ integration(
       ).toBe(0);
     });
 
-    it('preserves multipart order through retries, caches AI and cancels pending patches when monitoring is disabled', async () => {
+    it('retries one summary with a stable snapshot and cancels pending delivery when monitoring is disabled', async () => {
       await commands.setStatusChannel(guildId, adminId, channelId);
       await newPatchNotes().poll();
       appendPatch();
       patchEntries[1].text = 'An official change. '.repeat(900);
       send.mockRejectedValueOnce(new Error('Discord unavailable'));
       await newPatchNotes().poll();
-      const queued = await db
-        .getRepository(WowNotification)
-        .find({ order: { createdAt: 'ASC' } });
-      expect(queued.length).toBeGreaterThan(2);
+      const queued = await db.getRepository(WowNotification).find();
+      expect(queued).toHaveLength(1);
       expect(queued[0].attempts).toBe(1);
-      expect(queued.at(-1)?.embeds.at(-1)?.title).toContain('AI summary');
+      expect(queued[0].embeds).toHaveLength(1);
+      expect(queued[0].embeds[0].title).toContain('AI summary');
+      const token = patchNotificationToken(queued[0].eventKey)!;
+      const pages = await newPatchNotes().notificationPages(
+        token,
+        guildId,
+        channelId,
+      );
+      expect(pages.length).toBeGreaterThan(2);
       expect(
-        queued.every(
-          (n, i) => i === 0 || n.createdAt > queued[i - 1].createdAt,
-        ),
-      ).toBe(true);
+        pages
+          .slice(0, -1)
+          .map((page) => page.toJSON().description)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe(patchEntries[1].text.trim());
+      const attempted = latestNotice();
       await newPatchNotes().poll();
       expect(send).toHaveBeenCalledTimes(1);
       expect(generateSummary).toHaveBeenCalledTimes(1);
@@ -689,23 +734,109 @@ integration(
         .getRepository(WowNotification)
         .update(queued[0].id, { nextAttemptAt: new Date(Date.now() - 1000) });
       send.mockClear();
-      for (let i = 0; i < queued.length; i++) await monitor.dispatch();
-      expect(send).toHaveBeenCalledTimes(queued.length);
-      expect(
-        send.mock.calls.map(
-          ([message]) => (message as { embeds: unknown }).embeds,
-        ),
-      ).toEqual(queued.map((n) => n.embeds));
+      await monitor.dispatch();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(latestNotice()).toEqual(attempted);
       patchEntries[1] = { ...patchEntries[1], hash: 'next-edit' };
+      const dispatch = jest.spyOn(monitor, 'dispatch').mockResolvedValue();
       await newPatchNotes().poll();
+      dispatch.mockRestore();
       await commands.disableStatus(guildId, adminId);
       expect(
         await db.getRepository(WowNotification).countBy({ kind: 'patch' }),
       ).toBe(0);
+      expect(
+        (await newPatchNotes().notificationPages(token, guildId, channelId))
+          .length,
+      ).toBe(pages.length);
       const sent = send.mock.calls.length;
       await commands.setStatusChannel(guildId, adminId, channelId);
       await newPatchNotes().poll();
       expect(send).toHaveBeenCalledTimes(sent);
+    });
+
+    it('consolidates legacy multipart delivery atomically and retries one summary without source or AI calls', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      appendPatch();
+      patchEntries[1].text = 'Legacy original note. '.repeat(450);
+      const pages = patchNotesPages(
+        embeds,
+        patchEntries[1],
+        '• Legacy AI summary.',
+        false,
+      ).map((page) => page.toJSON());
+      const base =
+        'patch:' + guildId + ':' + channelId + ':42:2026-11-11:legacy-hash:';
+      const records = await db.getRepository(WowNotification).save(
+        pages.map((page, index) => ({
+          guildId,
+          channelId,
+          kind: 'patch' as const,
+          characterSlug: null,
+          eventKey: base + index,
+          embeds: [page],
+          createdAt: new Date(Date.now() + index),
+          sentAt: index === 0 ? new Date() : null,
+        })),
+      );
+      send.mockRejectedValueOnce(new Error('Discord unavailable'));
+      await monitor.dispatch();
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(latestNotice().embeds[0].description).toBe('• Legacy AI summary.');
+      expect(latestNotice().embeds).toHaveLength(1);
+      expect(latestNotice().nonce).not.toBe(
+        records[1].id.replace(/-/g, '').slice(0, 25),
+      );
+      const token = publicToken();
+      expect(
+        (
+          await newPatchNotes().notificationPages(token, guildId, channelId)
+        ).map((page) => page.toJSON()),
+      ).toEqual(pages);
+      const pending = await db
+        .getRepository(WowNotification)
+        .findBy({ sentAt: IsNull() });
+      expect(pending).toHaveLength(1);
+      expect(pending[0].eventKey).toBe('patch-summary:' + token);
+      expect(pending[0].attempts).toBe(1);
+      const before = latestNotice();
+      await db
+        .getRepository(WowNotification)
+        .update(pending[0].id, { nextAttemptAt: new Date(Date.now() - 1000) });
+      await newMonitor().dispatch();
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(latestNotice()).toEqual(before);
+      expect(patchRead).not.toHaveBeenCalled();
+      expect(generateSummary).not.toHaveBeenCalled();
+    });
+
+    it('preserves an incomplete legacy queue instead of publishing partial details or deleting its data', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      const rows = await db.getRepository(WowNotification).save([
+        {
+          guildId,
+          channelId,
+          kind: 'patch' as const,
+          characterSlug: null,
+          eventKey: 'patch:' + guildId + ':' + channelId + ':missing:1',
+          embeds: [
+            {
+              title: 'AI summary',
+              description: 'Retained summary.',
+              url: 'https://worldofwarcraft.blizzard.com/en-gb/news/42',
+            },
+          ],
+        },
+      ]);
+      await monitor.dispatch();
+      expect(send).not.toHaveBeenCalled();
+      expect(await db.getRepository(WowNotification).count()).toBe(1);
+      const row = await db
+        .getRepository(WowNotification)
+        .findOneByOrFail({ id: rows[0].id });
+      expect(row.embeds).toEqual(rows[0].embeds);
+      expect(row.attempts).toBe(1);
+      expect(row.eventKey).toBe(rows[0].eventKey);
     });
 
     it('baselines silently, keeps a manual read independent, and sends one level change per channel for two subscribers', async () => {
@@ -955,6 +1086,190 @@ integration(
           throw new Error('Expected string select');
         return component.options;
       };
+
+      it('opens automatic Details in separate owner-bound ephemeral replies for different members', async () => {
+        await commands.setStatusChannel(guildId, adminId, channelId);
+        await newPatchNotes().poll();
+        appendPatch();
+        await newPatchNotes().poll();
+        const token = publicToken();
+        const published = JSON.stringify(latestNotice());
+        const controller = new WowInteractionController(flows);
+        const click = (id: string) => ({
+          guildId,
+          channelId,
+          user: { id },
+          deferReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+          update: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          message: {
+            edit: jest
+              .fn<(payload: unknown) => Promise<void>>()
+              .mockResolvedValue(),
+          },
+        });
+        const first = click(userId);
+        const other = click(adminId);
+        await controller.patchDetails(
+          [first as unknown as ButtonInteraction],
+          token,
+        );
+        await controller.patchDetails(
+          [other as unknown as ButtonInteraction],
+          token,
+        );
+        for (const interaction of [first, other]) {
+          expect(interaction.deferReply).toHaveBeenCalledWith({
+            flags: MessageFlags.Ephemeral,
+          });
+          expect(interaction.editReply).toHaveBeenCalledTimes(1);
+          expect(interaction.deferUpdate).not.toHaveBeenCalled();
+          expect(interaction.update).not.toHaveBeenCalled();
+          expect(interaction.message.edit).not.toHaveBeenCalled();
+        }
+        const privateFirst = first.editReply.mock.calls[0][0] as WowFlowReply;
+        const privateOther = other.editReply.mock.calls[0][0] as WowFlowReply;
+        expect(privateFirst.embeds[0].toJSON().description).toContain(
+          'Druid healing coefficient increased to 6.6%',
+        );
+        const firstSession = tokenFrom(privateFirst),
+          otherSession = tokenFrom(privateOther);
+        expect(firstSession).not.toBe(otherSession);
+        await expect(
+          flows.page(firstSession, { ...context, userId: adminId }, '0'),
+        ).rejects.toThrow('another user or channel');
+        const summary = await flows.page(firstSession, context, '999999');
+        expect(summary.embeds[0].toJSON()).toEqual(latestNotice().embeds[0]);
+        expect(JSON.stringify(latestNotice())).toBe(published);
+        expect(send).toHaveBeenCalledTimes(1);
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+        expect(patchRead).toHaveBeenCalledTimes(2);
+      });
+
+      it('retains the notified revision after queue cleanup, source edits, Redis loss and monitoring disablement', async () => {
+        await commands.setStatusChannel(guildId, adminId, channelId);
+        await newPatchNotes().poll();
+        appendPatch();
+        await newPatchNotes().poll();
+        const token = publicToken();
+        const original = (
+          await newPatchNotes().notificationPages(token, guildId, channelId)
+        ).map((page) => page.toJSON());
+        await db
+          .getRepository(WowNotification)
+          .update(
+            { kind: 'patch' },
+            { sentAt: new Date(Date.now() - 8 * 86400_000) },
+          );
+        await newMonitor().dispatch();
+        expect(
+          await db.getRepository(WowNotification).countBy({ kind: 'patch' }),
+        ).toBe(0);
+        await commands.disableStatus(guildId, adminId);
+        await redis!.flushdb();
+        patchEntries[1] = {
+          ...patchEntries[1],
+          hash: 'later-edit',
+          text: 'A different revision.',
+        };
+        patchRead.mockRejectedValue(new Error('Source unavailable'));
+        const restarted = new WowInteractionService(
+          commands,
+          source,
+          embeds,
+          redis!,
+          newPatchNotes(),
+        );
+        const details = await restarted.notificationDetails(token, context);
+        expect(details.embeds[0].toJSON()).toEqual(original[0]);
+        expect(details.embeds[0].toJSON().description).not.toContain(
+          'different revision',
+        );
+        const summary = await restarted.page(
+          tokenFrom(details),
+          context,
+          '999999',
+        );
+        expect(summary.embeds[0].toJSON()).toEqual(original.at(-1));
+        expect(send).toHaveBeenCalledTimes(1);
+        expect(patchRead).toHaveBeenCalledTimes(2);
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+      });
+
+      it('rejects automatic Details outside its published channel and never exposes another server snapshot', async () => {
+        await commands.setStatusChannel(guildId, adminId, channelId);
+        await newPatchNotes().poll();
+        appendPatch();
+        await newPatchNotes().poll();
+        const token = publicToken();
+        for (const foreign of [
+          { ...context, guildId: otherGuildId },
+          { ...context, channelId: 'another-channel' },
+        ])
+          await expect(
+            flows.notificationDetails(token, foreign),
+          ).rejects.toThrow('not available in this channel');
+        await expect(
+          flows.notificationDetails('0'.repeat(64), context),
+        ).rejects.toThrow('not available');
+        await expect(
+          flows.notificationDetails('invalid', context),
+        ).rejects.toThrow('not available');
+        const interaction = {
+          guildId: otherGuildId,
+          channelId,
+          user: { id: userId },
+          deferReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          editReply: jest
+            .fn<(payload: unknown) => Promise<void>>()
+            .mockResolvedValue(),
+          deferUpdate: jest.fn<() => Promise<void>>().mockResolvedValue(),
+        };
+        await new WowInteractionController(flows).patchDetails(
+          [interaction as unknown as ButtonInteraction],
+          token,
+        );
+        expect(interaction.deferReply).toHaveBeenCalledWith({
+          flags: MessageFlags.Ephemeral,
+        });
+        expect(JSON.stringify(interaction.editReply.mock.calls)).not.toContain(
+          'Druid healing coefficient',
+        );
+        expect(interaction.deferUpdate).not.toHaveBeenCalled();
+        expect(send).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps automatic notifications compact when AI fails and still opens every original change privately', async () => {
+        await commands.setStatusChannel(guildId, adminId, channelId);
+        await newPatchNotes().poll();
+        appendPatch();
+        generateSummary.mockResolvedValueOnce(
+          err(ErrorCode.GEMINI_GENERATION_ERROR),
+        );
+        await newPatchNotes().poll();
+        expect(latestNotice().embeds).toHaveLength(1);
+        expect(latestNotice().embeds[0].title).toBe('AI summary unavailable');
+        expect(JSON.stringify(latestNotice())).not.toContain(
+          'Druid healing coefficient',
+        );
+        const details = await flows.notificationDetails(publicToken(), context);
+        expect(details.embeds[0].toJSON().description).toContain(
+          'Druid healing coefficient',
+        );
+        const summary = await flows.page(tokenFrom(details), context, '999999');
+        expect(summary.embeds[0].toJSON().title).toBe('AI summary unavailable');
+        expect(generateSummary).toHaveBeenCalledTimes(1);
+        expect(send).toHaveBeenCalledTimes(1);
+      });
 
       it('opens with the AI summary and switches between cached details and summary in one ephemeral message', async () => {
         appendPatch();
