@@ -66,7 +66,7 @@ Each server has one shared quote collection. Apply database migrations before st
 - `/quote remove` opens a private selection menu and requires confirmation before deleting the selected quote.
 - `/quote random [author]` publicly shares a minimalist embed with just the quotation and its author in the footer. Both `list` and `random` match author names without regard to case or repeated whitespace. Each eligible random quote has an equal chance; the previous random quote in that channel is excluded when another matching quote exists. Selection history persists across restarts.
 
-All members can add quotes and manage their own submissions. Members with Discord's **Manage Server** permission can manage every quote in that server. Attribution as the author grants no editing rights. Permissions and server feature availability are checked again on interactions and form submissions. Forms and confirmation screens reject conflicting edits instead of overwriting or removing a newer revision.
+All members can add quotes. Only the member who submitted a quote can edit or remove it, including when another member has Discord's **Manage Server** or **Administrator** permission. Attribution as the author grants no editing rights. Ownership and server feature availability are checked again on interactions and form submissions. Forms and confirmation screens reject conflicting edits instead of overwriting or removing a newer revision.
 
 Quote text retains line breaks. Duplicate author-and-content pairs are rejected after normalizing Unicode, case, and whitespace for comparison; that normalization does not rewrite the displayed quote. The same content with a different author is allowed. Messages suppress mentions.
 

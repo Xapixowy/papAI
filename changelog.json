@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.10.2",
+    "date": "2026-11-17",
+    "changes": [
+      { "type": "fix", "description": "Restrict quote editing and removal to the submitting member, including server administrators; show only owned submissions in management menus and reject older privileged sessions" }
+    ]
+  },
+  {
     "version": "0.10.1",
     "date": "2026-11-17",
     "changes": [

@@ -238,23 +238,45 @@ integration(
         'no longer exists',
       );
       await store.edit(owner, quote.id, 1, 'Corrected author', 'Updated\ntext');
-      let current = await db
+      const current = await db
         .getRepository(Quote)
         .findOneByOrFail({ id: quote.id });
       expect(current.submitterId).toBe(owner.userId);
       expect(current.revision).toBe(2);
       expect(current.createdAt).toEqual(quote.createdAt);
+      await expect(
+        store.edit(manager, quote.id, 2, 'Moderator correction', 'No'),
+      ).rejects.toThrow('own submissions');
+      await expect(store.remove(manager, quote.id, 2)).rejects.toThrow(
+        'own submissions',
+      );
+      expect(
+        await db.getRepository(Quote).findOneByOrFail({ id: quote.id }),
+      ).toEqual(current);
+      await store.remove(owner, quote.id, 2);
+      expect(await db.getRepository(Quote).count()).toBe(0);
+    });
+
+    it('lets administrators manage their own submissions without offering other members quotes', async () => {
+      await add('Another member quote');
+      const quote = await add('Administrator quote', 'Author', manager);
+      expect(
+        (await store.manageable(manager, 1)).quotes.map((q) => q.id),
+      ).toEqual([quote.id]);
       await store.edit(
         manager,
         quote.id,
-        2,
-        'Moderator correction',
-        'Final text',
+        1,
+        'Corrected author',
+        'Corrected text',
       );
-      current = await db.getRepository(Quote).findOneByOrFail({ id: quote.id });
-      expect(current.revision).toBe(3);
-      await store.remove(manager, quote.id, 3);
-      expect(await db.getRepository(Quote).count()).toBe(0);
+      await store.remove(manager, quote.id, 2);
+      for (const action of ['edit', 'remove'] as const) {
+        const empty = view(await ui.open(manager, action));
+        expect(empty.components).toEqual([]);
+        expect(empty.embeds![0].description).toContain('No quotes');
+      }
+      expect(await db.getRepository(Quote).count()).toBe(1);
     });
 
     it('rejects invalid edits, duplicates and stale revisions without overwriting saved text', async () => {
@@ -288,7 +310,7 @@ integration(
       const second = await ui.page(owner, token, 'next');
       expect(view(second).components![0].components[0].options).toHaveLength(1);
       expect((await store.manageable(other, 1)).total).toBe(1);
-      expect((await store.manageable(manager, 1)).total).toBe(27);
+      expect((await store.manageable(manager, 1)).total).toBe(1);
       expect(view(second).embeds![0].description).toContain('Page 2 / 2');
     });
 
@@ -464,8 +486,8 @@ integration(
       expect(await db.getRepository(Quote).count()).toBe(1);
       await ui.cancel(owner, token);
       await expect(ui.confirm(owner, token)).rejects.toThrow('expired');
-      token = tokenFrom(await ui.open(manager, 'remove'));
-      await ui.removal(manager, token, quote.id);
+      token = tokenFrom(await ui.open(owner, 'remove'));
+      await ui.removal(owner, token, quote.id);
       await store.edit(
         owner,
         quote.id,
@@ -473,7 +495,7 @@ integration(
         'Author',
         'Changed after confirmation',
       );
-      await expect(ui.confirm(manager, token)).rejects.toThrow('changed');
+      await expect(ui.confirm(owner, token)).rejects.toThrow('changed');
       const fresh = tokenFrom(await ui.open(owner, 'remove'));
       await ui.removal(owner, fresh, quote.id);
       await ui.confirm(owner, fresh);
@@ -481,17 +503,40 @@ integration(
       expect(await db.getRepository(Quote).count()).toBe(0);
     });
 
-    it('rechecks permission and feature access after menus or edit forms were opened', async () => {
-      const quote = await add();
+    it('rejects legacy administrator sessions and rechecks ownership before saving or confirming', async () => {
+      await add();
+      // Simulate sessions opened under the previous administrator override.
+      const own = await add('Administrator quote', 'Author', manager);
       const token = tokenFrom(await ui.open(manager, 'edit'));
-      await ui.editForm(manager, token, quote.id);
-      await expect(ui.saveEdit(other, token, 'No', 'No')).rejects.toThrow(
+      await ui.editForm(manager, token, own.id);
+      await db
+        .getRepository(Quote)
+        .update(own.id, { submitterId: owner.userId });
+      await expect(ui.saveEdit(manager, token, 'No', 'No')).rejects.toThrow(
         'own submissions',
       );
       await db
+        .getRepository(Quote)
+        .update(own.id, { submitterId: manager.userId });
+      const removal = tokenFrom(await ui.open(manager, 'remove'));
+      await ui.removal(manager, removal, own.id);
+      await db
+        .getRepository(Quote)
+        .update(own.id, { submitterId: owner.userId });
+      await expect(ui.confirm(manager, removal)).rejects.toThrow(
+        'own submissions',
+      );
+      expect(await db.getRepository(Quote).count()).toBe(2);
+    });
+
+    it('rechecks feature access after edit forms were opened', async () => {
+      const quote = await add();
+      const token = tokenFrom(await ui.open(owner, 'edit'));
+      await ui.editForm(owner, token, quote.id);
+      await db
         .getRepository(DiscordGuild)
         .update(owner.guildId, { features: [DiscordFeature.BINGO] });
-      await expect(ui.saveEdit(manager, token, 'No', 'No')).rejects.toThrow(
+      await expect(ui.saveEdit(owner, token, 'No', 'No')).rejects.toThrow(
         'not enabled',
       );
       await expect(store.random(owner)).rejects.toThrow('not enabled');

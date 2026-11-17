@@ -63,8 +63,8 @@ export class QuoteStoreService {
       'This quote no longer exists on this server. Run the command again.',
     );
     requireQuote(
-      actor.manageGuild || quote.submitterId === actor.userId,
-      'You can only manage your own submissions unless you have Manage Server permission.',
+      quote.submitterId === actor.userId,
+      'You can only edit or remove your own submissions.',
     );
     return quote;
   }
@@ -108,7 +108,7 @@ export class QuoteStoreService {
     await this.gate(actor);
     const where = {
       guildId: actor.guildId,
-      ...(!actor.manageGuild ? { submitterId: actor.userId } : {}),
+      submitterId: actor.userId,
     };
     const repo = this.db.getRepository(Quote);
     const total = await repo.countBy(where);
