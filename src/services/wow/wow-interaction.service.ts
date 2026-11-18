@@ -181,7 +181,29 @@ export class WowInteractionService {
   }
 
   async patchNotes(context: WowFlowContext): Promise<WowFlowReply> {
-    const pages = await this.patches.latest();
+    return this.openPatchView(context, await this.patches.latest());
+  }
+
+  async notificationDetails(
+    token: string,
+    context: WowFlowContext,
+  ): Promise<WowFlowReply> {
+    return this.openPatchView(
+      context,
+      await this.patches.notificationPages(
+        token,
+        context.guildId,
+        context.channelId,
+      ),
+      true,
+    );
+  }
+
+  private async openPatchView(
+    context: WowFlowContext,
+    pages: EmbedBuilder[],
+    details = false,
+  ): Promise<WowFlowReply> {
     if (pages.length === 1) return { embeds: pages, components: [] };
     const token = randomUUID();
     const session: Session = {
@@ -191,7 +213,7 @@ export class WowInteractionService {
       patchPages: pages.map((page) => patchPageSchema.parse(page.toJSON())),
     };
     await this.save(token, session);
-    return this.patchPage(token, session, pages.length - 1);
+    return this.patchPage(token, session, details ? 0 : pages.length - 1);
   }
 
   async chooseCharacter(

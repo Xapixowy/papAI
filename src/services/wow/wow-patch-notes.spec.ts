@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Client } from 'discord.js';
 import { parsePatchNotesNews } from '@Services/wow/wow-patch-notes-source.service';
 import {
-  patchNotesMessages,
+  patchNotesNotification,
   patchNotesPages,
   formatPatchSummary,
 } from '@Services/wow/wow-patch-notes-format';
@@ -165,7 +165,7 @@ describe('Official Forever patch notes', () => {
     ).toBe('Classes & items\n• Damage → 20 – 30\nOld | New |');
   });
 
-  it('splits long notes without dropping text, respects Discord limits and puts the AI summary last', () => {
+  it('keeps every detail page but publishes only the AI summary and its controls', () => {
     const renderer = new WowEmbedService(
       new Client({ intents: [] }),
       new ConfigService({
@@ -181,47 +181,43 @@ describe('Official Forever patch notes', () => {
       blocks: undefined,
       text: 'A'.repeat(25_000),
     };
-    const batches = patchNotesMessages(
+    const pages = patchNotesPages(
       renderer,
       entry,
       '• A simple explanation for players.',
       false,
-    ).map((batch) => batch.map((e) => e.toJSON()));
-    const embeds = batches.flat();
-    expect(embeds.at(-1)?.title).toContain('AI summary');
+    ).map((e) => e.toJSON());
     expect(
-      embeds
+      pages
         .slice(0, -1)
         .map((e) => e.description)
         .join(''),
     ).toBe(entry.text);
-    for (const batch of batches) {
-      // Reusing a URL hides later embeds in the Discord client.
-      const urls = batch.flatMap((e) => (e.url ? [e.url] : []));
-      expect(new Set(urls).size).toBe(urls.length);
-      expect(batch.length).toBeLessThanOrEqual(10);
-      expect(
-        batch.every(
-          (e) => e.description!.length <= 4096 && e.title!.length <= 256,
-        ),
-      ).toBe(true);
-      expect(
-        batch.reduce(
-          (n, e) =>
-            n +
-            e.title!.length +
-            e.description!.length +
-            e.footer!.text.length +
-            (e.author?.name.length ?? 0),
-          0,
-        ),
-      ).toBeLessThanOrEqual(6000);
-    }
-    const fallback = patchNotesMessages(renderer, entry, null, true)
-      .flat()
-      .map((e) => e.toJSON());
-    expect(fallback[0].title).toMatch(/^Updated:/);
-    expect(fallback.at(-1)?.title).toBe('AI summary unavailable');
+    expect(
+      pages.every(
+        (e) => e.description!.length <= 4096 && e.title!.length <= 256,
+      ),
+    ).toBe(true);
+    const notice = patchNotesNotification(pages.at(-1)!, 'a'.repeat(64));
+    expect(notice.embeds).toEqual([pages.at(-1)]);
+    expect(JSON.stringify(notice)).not.toContain('A'.repeat(100));
+    const buttons = notice.components[0].toJSON().components;
+    expect(
+      buttons.map((button) => ('label' in button ? button.label : '')),
+    ).toEqual(['Details', 'Source']);
+    expect(buttons[0]).toMatchObject({
+      custom_id: 'wow-patch-details/' + 'a'.repeat(64),
+    });
+    expect(buttons[1]).toMatchObject({ url: entry.url });
+    if (!('custom_id' in buttons[0])) throw new Error('Missing details ID');
+    expect(buttons[0].custom_id.length).toBeLessThanOrEqual(100);
+    const fallback = patchNotesPages(renderer, entry, null, true).map((e) =>
+      e.toJSON(),
+    );
+    expect(fallback.at(-1)?.author?.name).toMatch(/^Updated:/);
+    expect(
+      patchNotesNotification(fallback.at(-1)!, 'a'.repeat(64)).embeds[0].title,
+    ).toBe('AI summary unavailable');
   });
 
   it('keeps nested class/specification context, developer notes, conditions and source order', () => {

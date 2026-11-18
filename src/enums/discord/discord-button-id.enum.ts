@@ -3,4 +3,5 @@ export enum DiscordButtonId {
   WOW_OBSERVER_CONFIRM = 'wow-observer-confirm',
   WOW_FLOW_CANCEL = 'wow-flow-cancel',
   WOW_FLOW_PAGE = 'wow-flow-page',
+  WOW_PATCH_DETAILS = 'wow-patch-details',
 }

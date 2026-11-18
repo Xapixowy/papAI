@@ -76,7 +76,7 @@ The bot needs **View Channel**, **Send Messages** (or **Send Messages in Threads
 
 Run quote unit and registration checks with `npm test -- --runInBand src/services/quotes`. The real PostgreSQL/Redis workflow suite additionally requires `QUOTES_TEST_POSTGRES_URL` pointing to a dedicated local database named `pap_ai_quotes_test`, and `QUOTES_TEST_REDIS_URL` pointing to dedicated local Redis on port **56389**, database **14**. The suite clears only these dedicated fixtures and exercises migration rollback. Discord transport is simulated; live Discord acceptance remains a separate check.
 
-## WoW Forever patch notes (0.9.4)
+## WoW Forever patch notes (0.10.3)
 
 Use `/wow patch-notes` to open the latest Forever AI player summary in one private message. **Details** opens the complete original changes, **Previous** and **Next** browse their pages, and **Summary** returns to the overview in that same message. **Source** opens Blizzard's article. Original changes retain class/specification headings, numerical values, exceptions and developer notes. If AI is unavailable, **Details** still provides every original change.
 
@@ -84,7 +84,11 @@ AI summaries use short, separated bullets with bold subjects, exact before/after
 
 Use `/wow patch-notes ephemeral:false` for a public reply. Navigation belongs to the invoking user and channel, expires after ten minutes, and reads cached pages without fetching Blizzard or calling AI again. Run the command again after expiry to open a new message.
 
-Automatic patch notifications continue to deliver the complete changes and AI summary to the configured WoW status channel, using ordered messages when the notes exceed Discord's limits. A manual lookup never consumes pending automatic notifications. This update requires no database migration.
+Automatic patch notifications publish one AI summary with **Details** and **Source** on the configured WoW status channel. **Details** opens a new ephemeral detail viewer for each clicking member; navigation and **Summary** update only that private reply. The public summary stays unchanged. If AI is unavailable, a short notice still provides both buttons.
+
+Full notification snapshots are persisted in the existing monitor-state table. Public Details buttons use the exact notified revision after restarts, source edits, queue cleanup and status-channel reconfiguration; each opened private viewer expires after ten minutes. Reading details makes no new source or AI requests. Pending legacy multipart deliveries are consolidated into one summary without losing their retained details. Already-published messages retain their original layout.
+
+A manual lookup never consumes pending automatic notifications. This update requires no database migration.
 
 ## Project setup
 

@@ -24,7 +24,7 @@ export function wowFlowContext(interaction: {
 
 export async function replyWowFlow(
   flows: WowInteractionService,
-  interaction: ChatInputCommandInteraction,
+  interaction: ChatInputCommandInteraction | ButtonInteraction,
   action: () => Promise<WowFlowReply>,
   ephemeral = true,
 ): Promise<void> {
