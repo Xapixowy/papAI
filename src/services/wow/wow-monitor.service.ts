@@ -1,7 +1,13 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Client, EmbedBuilder, Events } from 'discord.js';
-import { DataSource, LessThan } from 'typeorm';
+import {
+  Client,
+  DiscordAPIError,
+  EmbedBuilder,
+  Events,
+  RESTJSONErrorCodes,
+} from 'discord.js';
+import { DataSource, IsNull, LessThan } from 'typeorm';
 import { DiscordChannel } from '@Database/entities/discord-channel.entity';
 import { DiscordGuild } from '@Database/entities/discord-guild.entity';
 import { WowObserver } from '@Database/entities/wow-observer.entity';
@@ -341,7 +347,12 @@ export class WowMonitorService implements OnApplicationBootstrap {
           .createQueryBuilder('n')
           .where('n.sentAt IS NULL AND n.nextAttemptAt <= now()')
           .andWhere(
-            `NOT EXISTS (SELECT 1 FROM wow_notifications older WHERE older.channel_id = n.channel_id AND older.sent_at IS NULL AND (older.created_at, older.id) < (n.created_at, n.id))`,
+            `(n.messageId IS NOT NULL OR NOT EXISTS (
+              SELECT 1 FROM wow_notifications older
+              WHERE older.channel_id = n.channel_id AND older.sent_at IS NULL
+                AND older.message_id IS NULL
+                AND (older.created_at, older.id) < (n.created_at, n.id)
+            ))`,
           )
           .orderBy('n.createdAt', 'ASC')
           .addOrderBy('n.id', 'ASC')
@@ -387,19 +398,37 @@ export class WowMonitorService implements OnApplicationBootstrap {
               !channel.isSendable()
             )
               throw new Error('Notification channel unavailable');
-            await channel.send({
+            const payload = {
               ...(token
                 ? patchNotesNotification(n.embeds[0], token)
                 : { embeds: n.embeds }),
-              allowedMentions: { parse: [] },
-              nonce: token
-                ? token.slice(0, 25)
-                : n.id.replace(/-/g, '').slice(0, 25),
-              enforceNonce: true,
-            });
-            await repository.update(n.id, { sentAt: new Date() });
+              allowedMentions: { parse: [] as [] },
+            };
+            let messageId = n.messageId;
+            if (messageId) {
+              await channel.messages.edit(messageId, payload);
+            } else {
+              const message = await channel.send({
+                ...payload,
+                nonce: token
+                  ? token.slice(0, 25)
+                  : n.id.replace(/-/g, '').slice(0, 25),
+                enforceNonce: true,
+              });
+              if (token) messageId = message.id;
+            }
+            await repository.update(n.id, { messageId, sentAt: new Date() });
             sent++;
           } catch (error) {
+            if (
+              n.messageId &&
+              error instanceof DiscordAPIError &&
+              error.code === RESTJSONErrorCodes.UnknownMessage
+            ) {
+              await repository.delete(n.id);
+              removed++;
+              continue;
+            }
             await repository.update(n.id, {
               attempts: n.attempts + 1,
               nextAttemptAt: new Date(
@@ -415,6 +444,7 @@ export class WowMonitorService implements OnApplicationBootstrap {
         }
         await repository.delete({
           sentAt: LessThan(new Date(Date.now() - 7 * 86400_000)),
+          patchSummaryInput: IsNull(),
         });
         if (notifications.length)
           this.logger.log(

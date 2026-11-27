@@ -1,9 +1,11 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { Client, EmbedBuilder, Events } from 'discord.js';
-import { DataSource } from 'typeorm';
+import { createHash } from 'node:crypto';
+import { Client, ComponentType, EmbedBuilder, Events } from 'discord.js';
+import { DataSource, EntityManager, IsNull, Not } from 'typeorm';
 import { z } from 'zod';
 import { WowMonitorState } from '@Database/entities/wow-monitor-state.entity';
+import { WowNotification } from '@Database/entities/wow-notification.entity';
 import { WowStatusWatch } from '@Database/entities/wow-status-watch.entity';
 import { GeminiService } from '@Services/api/gemini.service';
 import { WowPatchNotesSourceService } from '@Services/wow/wow-patch-notes-source.service';
@@ -13,15 +15,21 @@ import { WowEmbedService } from '@Services/wow/wow-embed.service';
 import {
   patchNotesPages,
   formatPatchSummary,
+  PATCH_SUMMARY_UNAVAILABLE_TITLE,
+  recoveredPatchSummary,
 } from '@Services/wow/wow-patch-notes-format';
 import { wowErrorDetails } from '@Services/wow/wow-error-details';
 import { CronjobName } from '@Enums/cronjob-name.enum';
+import { DiscordButtonId } from '@Enums/discord/discord-button-id.enum';
 import {
-  WowPatchNotesEntry,
   WowPatchNotesState,
+  WowPatchSummaryInput,
+  WowPatchView,
   initialPatchNotesState,
   patchNotesStateKey,
   patchNotificationKey,
+  patchNotificationToken,
+  patchViewKey,
 } from '@Types/wow/wow-patch-notes.type';
 
 const summarySchema = z.object({
@@ -118,7 +126,7 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
     return pages.map((page) => new EmbedBuilder(page));
   }
 
-  private summary(entry: WowPatchNotesEntry): Promise<string | null> {
+  private summary(entry: WowPatchSummaryInput): Promise<string | null> {
     const revision = `${entry.key}:${entry.hash}`;
     const existing = this.summariesInFlight.get(revision);
     if (existing) return existing;
@@ -130,12 +138,14 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
   }
 
   private async generateSummary(
-    entry: WowPatchNotesEntry,
+    entry: WowPatchSummaryInput,
   ): Promise<string | null> {
-    const key = `patch-summary:${entry.key}`;
-    const cached = await this.db
-      .getRepository(WowMonitorState)
-      .findOneBy({ key });
+    const legacyKey = `patch-summary:${entry.key}`;
+    const key = `${legacyKey}:${entry.hash}`;
+    const states = this.db.getRepository(WowMonitorState);
+    const cached =
+      (await states.findOneBy({ key })) ??
+      (await states.findOneBy({ key: legacyKey }));
     const previous = cached?.data as
       { hash: string; text: string | null; formatVersion?: number } | undefined;
     if (
@@ -192,6 +202,254 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
     return text;
   }
 
+  private pollSummary(
+    entry: WowPatchSummaryInput,
+    summaries: Map<string, Promise<string | null>>,
+  ): Promise<string | null> {
+    const revision = `${entry.key}:${entry.hash}`;
+    let pending = summaries.get(revision);
+    if (!pending) {
+      pending = this.summary(entry);
+      summaries.set(revision, pending);
+    }
+    return pending;
+  }
+
+  private async retrySummaries(
+    watches: WowStatusWatch[],
+    summaries: Map<string, Promise<string | null>>,
+  ): Promise<void> {
+    const activeChannels = new Map(
+      watches.map((w) => [w.guildId, w.channelId]),
+    );
+    const notifications = await this.db.getRepository(WowNotification).findBy({
+      kind: 'patch',
+      patchSummaryInput: Not(IsNull()),
+    });
+    for (const notice of notifications) {
+      if (activeChannels.get(notice.guildId) !== notice.channelId) continue;
+      const token = patchNotificationToken(notice.eventKey);
+      if (!token || !notice.patchSummaryInput) continue;
+      const text = await this.pollSummary(notice.patchSummaryInput, summaries);
+      if (!text) continue;
+
+      // Serialize the outbox rewrite with Discord delivery of the fallback.
+      await this.store.lock('wow:dispatch', async () => {
+        await this.db.transaction(async (manager) => {
+          const repository = manager.getRepository(WowNotification);
+          const current = await repository.findOne({
+            where: { id: notice.id },
+            lock: { mode: 'pessimistic_write' },
+          });
+          if (!current?.patchSummaryInput) return;
+          const states = manager.getRepository(WowMonitorState);
+          const row = await states.findOneByOrFail({
+            key: patchViewKey(token),
+          });
+          const view = row.data as WowPatchView;
+          const summary = recoveredPatchSummary(
+            this.renderer,
+            current.embeds[0],
+            text,
+          );
+          await states.update(row.key, {
+            data: { ...view, pages: [...view.pages.slice(0, -1), summary] },
+          });
+          await repository.update(current.id, {
+            embeds: [summary],
+            patchSummaryInput: null,
+            sentAt: null,
+            nextAttemptAt: new Date(),
+            attempts: 0,
+          });
+        });
+      });
+    }
+  }
+
+  private async recoverLegacySummaries(watch: WowStatusWatch): Promise<void> {
+    const { guildId, channelId } = watch;
+    const key = patchNotesStateKey(guildId, channelId);
+    const row = await this.db.getRepository(WowMonitorState).findOneBy({ key });
+    const state = row?.data as WowPatchNotesState | undefined;
+    if (!state?.initialized || state.legacySummariesChecked) return;
+
+    try {
+      const views = await this.db
+        .getRepository(WowMonitorState)
+        .createQueryBuilder('view')
+        .select(['view.key', 'view.updatedAt'])
+        .where('view.key LIKE :prefix', { prefix: patchViewKey('%') })
+        .andWhere("view.data ->> 'guildId' = :guildId", { guildId })
+        .andWhere("view.data ->> 'channelId' = :channelId", { channelId })
+        .andWhere("view.data -> 'pages' -> -1 ->> 'title' = :title", {
+          title: PATCH_SUMMARY_UNAVAILABLE_TITLE,
+        })
+        .orderBy('view.updatedAt', 'ASC')
+        .getMany();
+      const deliveries = await this.findLegacyDeliveries(watch, views);
+      if (!deliveries) return;
+
+      await this.store.lock('wow:dispatch', async () => {
+        await this.store.state(
+          key,
+          initialPatchNotesState(),
+          async (state, manager) => {
+            if (!state.initialized || state.legacySummariesChecked) return;
+            const active = await manager
+              .getRepository(WowStatusWatch)
+              .existsBy({ guildId, channelId });
+            if (!active) return;
+            const repository = manager.getRepository(WowNotification);
+            const queued = await repository.findBy({
+              guildId,
+              channelId,
+              kind: 'patch',
+              sentAt: IsNull(),
+              patchSummaryInput: IsNull(),
+            });
+            for (const notice of queued) {
+              if (
+                notice.embeds[0]?.title === PATCH_SUMMARY_UNAVAILABLE_TITLE &&
+                !deliveries.has(notice.eventKey)
+              )
+                await this.trackLegacySummary(
+                  manager,
+                  guildId,
+                  channelId,
+                  notice.eventKey,
+                  notice,
+                );
+            }
+            for (const [eventKey, delivery] of deliveries) {
+              const notice = await repository.findOneBy({
+                guildId,
+                channelId,
+                eventKey,
+                kind: 'patch',
+              });
+              await this.trackLegacySummary(
+                manager,
+                guildId,
+                channelId,
+                eventKey,
+                notice,
+                delivery,
+              );
+            }
+            state.legacySummariesChecked = true;
+          },
+        );
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Could not recover previous WoW patch summaries in channel=${channelId}: ${wowErrorDetails(error)}`,
+      );
+    }
+  }
+
+  private async findLegacyDeliveries(
+    { guildId, channelId }: WowStatusWatch,
+    views: Pick<WowMonitorState, 'key' | 'updatedAt'>[],
+  ): Promise<Map<string, { id: string; date: Date }> | null> {
+    const deliveries = new Map<string, { id: string; date: Date }>();
+    if (!views.length) return deliveries;
+    const channel = await this.client.channels.fetch(channelId);
+    if (
+      !channel?.isTextBased() ||
+      !('guildId' in channel) ||
+      channel.guildId !== guildId
+    )
+      return null;
+    const botId = this.client.user?.id;
+    if (!botId) return null;
+    const remaining = new Set(views.map((view) => view.key));
+    const earliest = views[0].updatedAt.getTime() - 60_000;
+    const prefix = `${DiscordButtonId.WOW_PATCH_DETAILS}/`;
+    let before: string | undefined;
+    while (remaining.size) {
+      const history = await channel.messages.fetch({
+        limit: 100,
+        cache: false,
+        before,
+      });
+      for (const message of history.values()) {
+        if (
+          message.author.id !== botId ||
+          message.embeds[0]?.title !== PATCH_SUMMARY_UNAVAILABLE_TITLE
+        )
+          continue;
+        for (const row of message.components) {
+          if (row.type !== ComponentType.ActionRow) continue;
+          for (const component of row.components) {
+            if (component.type !== ComponentType.Button) continue;
+            if (!component.customId?.startsWith(prefix)) continue;
+            const token = component.customId.slice(prefix.length);
+            if (remaining.delete(patchViewKey(token)))
+              deliveries.set(patchNotificationKey(token), {
+                id: message.id,
+                date: message.createdAt,
+              });
+          }
+        }
+      }
+
+      const oldest = history.last();
+      if (!oldest || history.size < 100 || oldest.createdTimestamp < earliest)
+        break;
+      before = oldest.id;
+    }
+    return deliveries;
+  }
+
+  private async trackLegacySummary(
+    manager: EntityManager,
+    guildId: string,
+    channelId: string,
+    eventKey: string,
+    notice: WowNotification | null,
+    delivery?: { id: string; date: Date },
+  ): Promise<void> {
+    const token = patchNotificationToken(eventKey);
+    if (!token || notice?.patchSummaryInput || notice?.messageId) return;
+    const row = await manager
+      .getRepository(WowMonitorState)
+      .findOneBy({ key: patchViewKey(token) });
+    const view = row?.data as WowPatchView | undefined;
+    if (view?.guildId !== guildId || view.channelId !== channelId) return;
+    const fallback = view.pages.at(-1);
+    if (
+      fallback?.title !== PATCH_SUMMARY_UNAVAILABLE_TITLE ||
+      view.pages.length < 2
+    )
+      return;
+    // Old snapshots retain the complete official changes without their original input metadata.
+    const title =
+      fallback.author?.name ?? view.pages[0].title ?? 'WoW: Forever';
+    const text = view.pages
+      .slice(0, -1)
+      .map((page) => page.description)
+      .join('\n\n');
+    const hash = createHash('sha256')
+      .update(JSON.stringify({ title, text }))
+      .digest('hex');
+    await manager.getRepository(WowNotification).save({
+      ...notice,
+      guildId,
+      channelId,
+      eventKey,
+      kind: 'patch',
+      characterSlug: null,
+      embeds: [fallback],
+      patchSummaryInput: { key: 'snapshot', hash, title, text },
+      ...(delivery && {
+        messageId: delivery.id,
+        sentAt: delivery.date,
+        createdAt: delivery.date,
+      }),
+    });
+  }
+
   @Cron('*/15 * * * *', {
     name: CronjobName.WOW_PATCH_NOTES_CHECK,
     waitForCompletion: true,
@@ -211,8 +469,10 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
           this.logger.log('Finished WoW patch notes check: watches=0.');
           return;
         }
-        const entries = await this.source.read();
         const summaries = new Map<string, Promise<string | null>>();
+        for (const watch of watches) await this.recoverLegacySummaries(watch);
+        await this.retrySummaries(watches, summaries);
+        const entries = await this.source.read();
         let queued = 0;
         let baselines = 0;
         for (const watch of watches) {
@@ -229,20 +489,22 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
                     entry.publishedAt.slice(0, 10) >= previous.latestDate),
               )
             : [];
-          const pagesByRevision = new Map<string, EmbedBuilder[]>();
+          const pagesByRevision = new Map<
+            string,
+            { pages: EmbedBuilder[]; summary: string | null }
+          >();
           for (const entry of pending) {
             const revision = `${entry.key}:${entry.hash}`;
-            if (!summaries.has(revision))
-              summaries.set(revision, this.summary(entry));
-            pagesByRevision.set(
-              revision,
-              patchNotesPages(
+            const summary = await this.pollSummary(entry, summaries);
+            pagesByRevision.set(revision, {
+              pages: patchNotesPages(
                 this.renderer,
                 entry,
-                await summaries.get(revision)!,
+                summary,
                 !!previous?.seen[entry.key],
               ),
-            );
+              summary,
+            });
           }
           await this.store.state(
             key,
@@ -261,11 +523,11 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
               for (const entry of entries) {
                 const seen = state.seen[entry.key] ?? [];
                 if (seen.includes(entry.hash)) continue;
-                const pages = state.initialized
-                  ? (pagesByRevision.get(entry.key + ':' + entry.hash) ?? [])
-                  : [];
-                if (pages.length) {
-                  const snapshot = pages.map((page) => page.toJSON());
+                const draft = state.initialized
+                  ? pagesByRevision.get(entry.key + ':' + entry.hash)
+                  : undefined;
+                if (draft) {
+                  const snapshot = draft.pages.map((page) => page.toJSON());
                   const token = await this.store.savePatchView(
                     manager,
                     watch.guildId,
@@ -280,6 +542,15 @@ export class WowPatchNotesService implements OnApplicationBootstrap {
                     eventKey: patchNotificationKey(token),
                     embeds: [snapshot.at(-1)!],
                     createdAt: new Date(createdAt + sequence++),
+                    patchSummaryInput:
+                      draft.summary === null
+                        ? {
+                            key: entry.key,
+                            hash: entry.hash,
+                            title: entry.title,
+                            text: entry.text,
+                          }
+                        : null,
                   });
                   queued++;
                 }

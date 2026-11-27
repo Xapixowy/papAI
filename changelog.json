@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.10.4",
+    "date": "2026-11-27",
+    "changes": [
+      {
+        "type": "fix",
+        "description": "Retry unavailable WoW patch note summaries every 15 minutes and update the original Discord message and its Details view when AI recovers"
+      },
+      {
+        "type": "fix",
+        "description": "Recover previously posted WoW patch note messages with unavailable summaries from Discord history and saved notes"
+      }
+    ]
+  },
+  {
     "version": "0.10.3",
     "date": "2026-11-18",
     "changes": [
