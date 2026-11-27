@@ -16,7 +16,9 @@ import {
   ButtonInteraction,
   ChatInputCommandInteraction,
   Client,
+  Collection,
   ComponentType,
+  type FetchMessagesOptions,
   MessageFlags,
   StringSelectMenuInteraction,
   TextChannel,
@@ -79,6 +81,8 @@ integration(
     const channelId = '110000000000000001';
     const userId = '120000000000000001';
     const adminId = '120000000000000002';
+    const botId = '120000000000000003';
+    const messageId = '130000000000000001';
     let db: DataSource;
     let commands: WowCommandsService;
     let source: WowSourceService;
@@ -118,7 +122,17 @@ integration(
       });
     const send = jest
       .fn<(options: unknown) => Promise<object>>()
-      .mockResolvedValue({});
+      .mockResolvedValue({ id: messageId });
+    const edit = jest.fn<(id: string, options: unknown) => Promise<void>>();
+    const history =
+      jest.fn<
+        (options: FetchMessagesOptions) => Promise<Collection<string, object>>
+      >();
+    const historyButtons = (row: ActionRowBuilder<ButtonBuilder>) =>
+      row.toJSON().components.map((button) => ({
+        ...button,
+        customId: 'custom_id' in button ? button.custom_id : null,
+      }));
 
     const latestNotice = () =>
       send.mock.calls.at(-1)![0] as {
@@ -176,6 +190,7 @@ integration(
         },
         permissionsFor: () => ({ has: () => true }),
         send,
+        messages: { edit, fetch: history },
       };
       jest
         .spyOn(client.channels, 'fetch')
@@ -242,7 +257,9 @@ integration(
 
     beforeEach(async () => {
       jest.clearAllMocks();
-      send.mockResolvedValue({});
+      send.mockResolvedValue({ id: messageId });
+      edit.mockReset().mockResolvedValue(undefined);
+      history.mockReset().mockResolvedValue(new Collection());
       if (redis) await redis.flushdb();
       await db.query(
         'TRUNCATE wow_notifications, wow_monitor_states, wow_status_watches, wow_observers, discord_guilds, discord_channels, discord_users CASCADE',
@@ -552,7 +569,7 @@ integration(
       expect(summary).not.toContain('Legacy plain summary');
       const cache = await db
         .getRepository(WowMonitorState)
-        .findOneByOrFail({ key });
+        .findOneByOrFail({ key: `${key}:${entry.hash}` });
       expect(cache.data).toMatchObject({
         hash: entry.hash,
         text: summary,
@@ -660,6 +677,160 @@ integration(
         ),
       ).toContain('Druid healing coefficient');
       expect(send).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries the stored patch revision after restart and edits its original message once Gemini recovers', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      appendPatch();
+      const entry = patchEntries.at(-1)!;
+      const failure = err(ErrorCode.GEMINI_GENERATION_ERROR);
+      generateSummary
+        .mockResolvedValueOnce(failure)
+        .mockResolvedValueOnce(failure);
+      await newPatchNotes().poll();
+      const token = publicToken();
+      const fallback = latestNotice();
+      const repo = db.getRepository(WowNotification);
+      const notice = await repo.findOneByOrFail({ kind: 'patch' });
+      await repo.update(notice.id, {
+        sentAt: new Date(Date.now() - 8 * 86400_000),
+      });
+
+      patchEntries.pop();
+      await newPatchNotes().poll();
+      expect(generateSummary).toHaveBeenCalledTimes(2);
+      expect(edit).not.toHaveBeenCalled();
+      expect(await repo.existsBy({ id: notice.id })).toBe(true);
+
+      patchRead.mockRejectedValueOnce(new Error('News source unavailable'));
+      edit.mockRejectedValueOnce(new Error('Discord unavailable'));
+      await newPatchNotes().poll();
+      expect(generateSummary).toHaveBeenCalledTimes(3);
+      expect(generateSummary.mock.calls[2][0].queryParts).toEqual([
+        { text: JSON.stringify({ title: entry.title, notes: entry.text }) },
+      ]);
+      expect(edit).toHaveBeenCalledWith(messageId, {
+        embeds: [
+          expect.objectContaining({
+            description: expect.stringContaining('**Druid**'),
+          }),
+        ],
+        components: fallback.components,
+        allowedMentions: { parse: [] },
+      });
+      const recovered = (
+        await newPatchNotes().notificationPages(token, guildId, channelId)
+      ).map((page) => page.toJSON());
+      expect(recovered[0].description).toBe(entry.text);
+      expect(recovered.at(-1)?.title).toContain('What this means for players');
+
+      await repo.update(notice.id, {
+        nextAttemptAt: new Date(Date.now() - 1000),
+      });
+      await newMonitor().dispatch();
+      await newPatchNotes().poll();
+      expect(edit).toHaveBeenCalledTimes(2);
+      expect(edit.mock.calls[1]).toEqual(edit.mock.calls[0]);
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(generateSummary).toHaveBeenCalledTimes(3);
+    });
+
+    it('sends the recovered summary as the first message if the fallback had not been delivered', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      appendPatch();
+      generateSummary.mockResolvedValueOnce(
+        err(ErrorCode.GEMINI_GENERATION_ERROR),
+      );
+      send.mockRejectedValueOnce(new Error('Discord unavailable'));
+      await newPatchNotes().poll();
+      const token = publicToken();
+      await newPatchNotes().poll();
+      expect(latestNotice().embeds[0].title).toContain(
+        'What this means for players',
+      );
+      expect(publicToken()).toBe(token);
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(edit).not.toHaveBeenCalled();
+    });
+
+    it('recovers an already posted fallback from before the upgrade even if its outbox entry was pruned', async () => {
+      await commands.setStatusChannel(guildId, adminId, channelId);
+      await newPatchNotes().poll();
+      appendPatch();
+      generateSummary.mockResolvedValueOnce(
+        err(ErrorCode.GEMINI_GENERATION_ERROR),
+      );
+      await newPatchNotes().poll();
+      const fallback = latestNotice();
+      const token = publicToken();
+      await db.getRepository(WowNotification).clear();
+      const states = db.getRepository(WowMonitorState);
+      const row = await states.findOneByOrFail({
+        key: patchNotesStateKey(guildId, channelId),
+      });
+      await states.update(row.key, {
+        data: { ...row.data, legacySummariesChecked: undefined },
+      });
+      const otherMessages = new Collection<string, object>(
+        Array.from({ length: 100 }, (_, i) => {
+          const id = `130000000000000${200 - i}`;
+          return [
+            id,
+            { id, author: { id: userId }, createdTimestamp: Date.now() },
+          ];
+        }),
+      );
+      history.mockResolvedValueOnce(otherMessages).mockResolvedValueOnce(
+        new Collection([
+          [
+            messageId,
+            {
+              id: messageId,
+              createdAt: new Date(Date.now() - 8 * 86400_000),
+              author: { id: botId },
+              embeds: fallback.embeds,
+              components: fallback.components.map((row) => ({
+                type: ComponentType.ActionRow,
+                components: historyButtons(row),
+              })),
+            },
+          ],
+        ]),
+      );
+      const bot = jest.replaceProperty(client, 'user', {
+        id: botId,
+        displayName: 'Test bot',
+        displayAvatarURL: () => undefined,
+      } as unknown as Client['user']);
+      try {
+        patchEntries.pop();
+        await newPatchNotes().poll();
+        await newPatchNotes().poll();
+      } finally {
+        bot.restore();
+      }
+      expect(history).toHaveBeenCalledTimes(2);
+      expect(history).toHaveBeenLastCalledWith({
+        limit: 100,
+        cache: false,
+        before: otherMessages.lastKey(),
+      });
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(edit).toHaveBeenCalledTimes(1);
+      expect(edit.mock.calls[0][0]).toBe(messageId);
+      const recovered = await newPatchNotes().notificationPages(
+        token,
+        guildId,
+        channelId,
+      );
+      expect(recovered[0].toJSON().description).toContain(
+        'Druid healing coefficient',
+      );
+      expect(recovered.at(-1)?.toJSON().title).toContain(
+        'What this means for players',
+      );
     });
 
     it('summarizes once across guilds and drops delivery when the guild feature is disabled', async () => {

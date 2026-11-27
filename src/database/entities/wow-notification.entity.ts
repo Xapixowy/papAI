@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import type { APIEmbed } from 'discord.js';
+import type { WowPatchSummaryInput } from '@Types/wow/wow-patch-notes.type';
 
 @Entity('wow_notifications')
 export class WowNotification {
@@ -30,6 +31,12 @@ export class WowNotification {
 
   @Column({ type: 'jsonb' })
   embeds: APIEmbed[];
+
+  @Column({ type: 'jsonb', name: 'patch_summary_input', nullable: true })
+  patchSummaryInput: WowPatchSummaryInput | null;
+
+  @Column({ type: 'text', name: 'message_id', nullable: true })
+  messageId: string | null;
 
   @Column({ type: 'int', default: 0 })
   attempts: number;

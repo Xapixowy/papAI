@@ -14,6 +14,8 @@ import {
 } from '@Types/wow/wow-patch-notes.type';
 
 const PAGE_TEXT_MAX = 2000;
+export const PATCH_SUMMARY_UNAVAILABLE_TITLE = 'AI summary unavailable';
+const PATCH_SUMMARY_TITLE = 'What this means for players · AI summary';
 
 /** AI chooses emphasis; only the renderer introduces Markdown formatting. */
 export function formatPatchSummary(bullets: WowPatchSummaryBullet[]): string {
@@ -102,11 +104,7 @@ export function patchNotesPages(
           'AI summary is currently unavailable. The complete official changes remain available alongside the source link.',
         summary ? 'info' : 'warning',
       )[0]
-      .setTitle(
-        summary
-          ? 'What this means for players · AI summary'
-          : 'AI summary unavailable',
-      )
+      .setTitle(summary ? PATCH_SUMMARY_TITLE : PATCH_SUMMARY_UNAVAILABLE_TITLE)
       .setAuthor({
         name: ((updated ? 'Updated: ' : '') + entry.title).slice(0, 256),
       })
@@ -127,6 +125,19 @@ export function patchNotesPages(
             ' · Official changes'),
     });
   });
+}
+
+export function recoveredPatchSummary(
+  renderer: WowEmbedService,
+  fallback: APIEmbed,
+  text: string,
+): APIEmbed {
+  return {
+    ...fallback,
+    title: PATCH_SUMMARY_TITLE,
+    description: text,
+    color: renderer.message(text)[0].toJSON().color,
+  };
 }
 
 export function patchNotesNotification(

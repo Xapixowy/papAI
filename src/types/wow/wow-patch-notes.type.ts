@@ -20,10 +20,16 @@ export interface WowPatchNotesEntry {
   blocks?: WowPatchNotesBlock[];
 }
 
+export type WowPatchSummaryInput = Pick<
+  WowPatchNotesEntry,
+  'key' | 'hash' | 'title' | 'text'
+>;
+
 export interface WowPatchNotesState {
   initialized: boolean;
   latestDate: string;
   seen: Record<string, string[]>;
+  legacySummariesChecked?: boolean;
 }
 
 export const patchNotesStateKey = (guildId: string, channelId: string) =>
@@ -33,6 +39,7 @@ export const initialPatchNotesState = (): WowPatchNotesState => ({
   initialized: false,
   latestDate: '',
   seen: {},
+  legacySummariesChecked: true,
 });
 export interface WowPatchView {
   guildId: string;
